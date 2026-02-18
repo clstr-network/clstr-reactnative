@@ -16,6 +16,7 @@ import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AdminProvider } from "./contexts/AdminContext";
 import { ReactivationPrompt } from "./components/auth/ReactivationPrompt";
+import { InstallPrompt } from "./components/pwa/InstallPrompt";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -271,6 +272,7 @@ const App = () => (
               <DeactivationGate>
                 <AnimatedRoutes />
                 <FloatingChatWidgetGate />
+                <InstallPrompt />
               </DeactivationGate>
             </BrowserRouter>
 

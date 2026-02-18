@@ -1,5 +1,4 @@
 import { useEffect, useCallback, useMemo } from 'react';
-import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
@@ -8,6 +7,7 @@ import { getConnectionCount, getProfileViewsCount } from '@/lib/profile-api';
 import { supabase } from '@/integrations/supabase/client';
 import { CreatePostCard } from '@/components/home/CreatePostCard';
 import { PostCard } from '@/components/home/PostCard';
+import { PostSkeleton } from '@/components/ui/skeleton-loader';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -177,8 +177,10 @@ const Feed = () => {
           <CreatePostCard onPostCreated={refreshPosts} />
 
           {isLoading && (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-white/60" />
+            <div className="space-y-4">
+              <PostSkeleton />
+              <PostSkeleton />
+              <PostSkeleton />
             </div>
           )}
 

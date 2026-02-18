@@ -74,8 +74,33 @@ export function usePushNotifications(userId?: string) {
     }
   }, []);
 
+  // Standalone awareness: auto-prompt for push on first launch in installed PWA
+  useEffect(() => {
+    if (!userId) return;
+    if (!isPushSupported() || !isPushConfigured()) return;
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    if (!isStandalone) return;
+
+    // Only auto-prompt once per user, and only if never denied
+    const key = `pwa-push-auto-prompted:${userId}`;
+    if (localStorage.getItem(key)) return;
+    if (getPermissionState() === 'denied') return;
+    if (getPermissionState() === 'granted') return; // already granted
+
+    localStorage.setItem(key, '1');
+    // Delay slightly to let the app settle on first launch
+    const timer = setTimeout(() => {
+      enableMutation.mutate();
+    }, 3000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   // Mutation to enable push notifications
   const enableMutation = useMutation({
+    retry: 1,
+    retryDelay: 2000,
     mutationFn: async () => {
       if (!userId) throw new Error("User not authenticated");
       if (!isPushSupported()) throw new Error("Push notifications not supported");

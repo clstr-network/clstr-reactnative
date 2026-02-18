@@ -706,6 +706,7 @@ export function PostCard({ post, onPostUpdated, autoShowComments = false }: Post
                 alt={`Post image ${index + 1}`}
                 className="rounded-lg w-full object-contain max-h-[500px] bg-black/20 cursor-pointer transition-opacity hover:opacity-90"
                 loading="lazy"
+                decoding="async"
                 onClick={() => setLightboxImage(img)}
               />
             ))}

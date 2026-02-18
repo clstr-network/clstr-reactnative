@@ -1,11 +1,17 @@
-// Service Worker for Push Notifications
+// Service Worker for Push Notifications + PWA offline support
 // This file MUST be served from the root of your domain
 
-const CACHE_NAME = 'alumni-connect-v1';
+const CACHE_NAME = 'clstr-pwa-v1';
+const OFFLINE_URL = '/offline.html';
 
-// Install event - cache essential assets
+// Install event — precache offline fallback
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll([OFFLINE_URL, '/logo.png', '/icons/icon-192x192.png'])
+    )
+  );
   self.skipWaiting();
 });
 
@@ -125,6 +131,39 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+// Fetch event — network-first for navigation, stale-while-revalidate for assets
+self.addEventListener('fetch', (event) => {
+  // Skip non-GET requests and chrome-extension / browser-extension URLs
+  if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
+
+  if (event.request.mode === 'navigate') {
+    // Navigation requests: network-first, fallback to offline page
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(OFFLINE_URL))
+    );
+  } else if (
+    event.request.destination === 'image' ||
+    event.request.destination === 'style' ||
+    event.request.destination === 'script'
+  ) {
+    // Static assets: stale-while-revalidate
+    event.respondWith(
+      caches.open(CACHE_NAME).then((cache) =>
+        cache.match(event.request).then((cached) => {
+          const fetched = fetch(event.request).then((response) => {
+            if (response && response.status === 200) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          }).catch(() => cached); // network fail → fall back to cache
+          return cached || fetched;
+        })
+      )
+    );
+  }
 });
 
 // Handle messages from the main thread
