@@ -1,0 +1,10 @@
+-- Placeholder migration
+--
+-- This version (20260117300000) exists in the remote Supabase migration history,
+-- but the corresponding SQL file was missing from this repo.
+--
+-- Creating this empty migration file unblocks `supabase db push` by aligning the
+-- local migrations directory with the remote migration versions.
+--
+-- If you need to reconstruct the original SQL, run `supabase db pull` and/or
+-- check the source branch where the migration was created.

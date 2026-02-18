@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "noImplicitAny": false,
+    "lib": ["ESNext"]
+  },
+  "include": [
+    "deno.d.ts",
+    "**/deno-shim.d.ts",
+    "**/*.ts"
+  ]
+}

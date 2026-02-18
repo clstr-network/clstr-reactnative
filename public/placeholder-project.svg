@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect fill="#f3f4f6" width="400" height="300"/>
+  <g transform="translate(160, 110)">
+    <rect x="0" y="0" width="80" height="80" rx="8" fill="#e5e7eb"/>
+    <path d="M20 50 L30 35 L45 55 L55 40 L70 60" stroke="#9ca3af" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="55" cy="30" r="8" fill="#9ca3af"/>
+  </g>
+  <text x="200" y="220" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#6b7280">No project image</text>
+</svg>

@@ -1,0 +1,176 @@
+{
+  "$schema": "./security_definer_registry.schema.json",
+  "_comment": "Every SECURITY DEFINER function must be registered here. CI rejects unregistered functions.",
+  "_last_audited": "2026-02-18",
+  "functions": {
+    "get_profile_safe": {
+      "purpose": "Returns caller's own full profile, including PII. Self-access only.",
+      "pii_access": true,
+      "justification": "Users must be able to read their own complete profile including personal_email.",
+      "owner": "ganesh",
+      "added": "2026-01-10"
+    },
+    "get_profile_public": {
+      "purpose": "Returns a public-facing profile for another user. No PII.",
+      "pii_access": false,
+      "justification": "Cross-user profile viewing through RPC boundary. Columns enumerated explicitly.",
+      "owner": "ganesh",
+      "added": "2026-01-10"
+    },
+    "get_profiles_by_domain": {
+      "purpose": "Returns profiles within a college domain. No PII.",
+      "pii_access": false,
+      "justification": "Domain-scoped directory listing. Only public fields returned.",
+      "owner": "ganesh",
+      "added": "2026-01-10"
+    },
+    "get_alumni_by_domain": {
+      "purpose": "Returns alumni profiles within a domain. No PII.",
+      "pii_access": false,
+      "justification": "Alumni directory. Public fields only.",
+      "owner": "ganesh",
+      "added": "2026-01-10"
+    },
+    "get_identity_context": {
+      "purpose": "Returns the caller's identity context including email, domain, role.",
+      "pii_access": true,
+      "justification": "Self-only identity resolution for auth state management.",
+      "owner": "ganesh",
+      "added": "2026-02-09"
+    },
+    "get_email_transition_status": {
+      "purpose": "Returns the caller's email transition state.",
+      "pii_access": true,
+      "justification": "Self-only check for email transition workflow.",
+      "owner": "ganesh",
+      "added": "2026-02-07"
+    },
+    "get_accepted_invite_context": {
+      "purpose": "Returns the caller's accepted invite context.",
+      "pii_access": true,
+      "justification": "Self-only invite state for alumni onboarding flow.",
+      "owner": "ganesh",
+      "added": "2026-02-09"
+    },
+    "transition_to_personal_email": {
+      "purpose": "Initiates email transition from college to personal email.",
+      "pii_access": true,
+      "justification": "Atomic transition with advisory lock + UNION duplicate check. Writes PII internally.",
+      "owner": "ganesh",
+      "added": "2026-02-07"
+    },
+    "merge_transitioned_account": {
+      "purpose": "Merges a transitioned alumni account with original profile.",
+      "pii_access": true,
+      "justification": "Account unification. Advisory lock + comprehensive safety checks.",
+      "owner": "ganesh",
+      "added": "2026-02-08"
+    },
+    "finalize_auth_email_change": {
+      "purpose": "Completes auth email change after verification.",
+      "pii_access": true,
+      "justification": "Auth email update workflow. Internal PII write only.",
+      "owner": "ganesh",
+      "added": "2026-02-08"
+    },
+    "validate_alumni_invite_token": {
+      "purpose": "Validates an alumni invite token during onboarding.",
+      "pii_access": true,
+      "justification": "Token validation requires email comparison. Does not return PII to caller.",
+      "owner": "ganesh",
+      "added": "2026-02-09"
+    },
+    "resend_alumni_invite": {
+      "purpose": "Admin resends an alumni invite email.",
+      "pii_access": true,
+      "justification": "Admin-only (is_platform_admin check). Reads invite email for resend.",
+      "owner": "ganesh",
+      "added": "2026-02-09"
+    },
+    "cancel_alumni_invite": {
+      "purpose": "Admin cancels a pending alumni invite.",
+      "pii_access": false,
+      "justification": "Admin-only invite lifecycle management.",
+      "owner": "ganesh",
+      "added": "2026-02-10"
+    },
+    "send_alumni_invite": {
+      "purpose": "Admin sends a new alumni invite.",
+      "pii_access": true,
+      "justification": "Admin-only. Creates invite record with target email.",
+      "owner": "ganesh",
+      "added": "2026-02-09"
+    },
+    "generate_and_send_verification_code": {
+      "purpose": "Generates OTP for email verification and stores hashed code.",
+      "pii_access": true,
+      "justification": "Verification code generation. Plaintext never stored — immediately hashed.",
+      "owner": "ganesh",
+      "added": "2026-02-13"
+    },
+    "verify_email_code": {
+      "purpose": "Verifies an email verification code against stored hash.",
+      "pii_access": false,
+      "justification": "Code verification only. No PII returned.",
+      "owner": "ganesh",
+      "added": "2026-02-07"
+    },
+    "is_platform_admin": {
+      "purpose": "Checks if the current user is a platform admin.",
+      "pii_access": false,
+      "justification": "Auth check. Returns boolean only.",
+      "owner": "ganesh",
+      "added": "2026-01-30"
+    },
+    "search_all": {
+      "purpose": "Unified search across profiles, posts, events, jobs, clubs, projects.",
+      "pii_access": false,
+      "justification": "Search RPC. Returns only public fields. Per-entity LIMIT enforced.",
+      "owner": "ganesh",
+      "added": "2026-01-12"
+    },
+    "get_mutual_connection_ids": {
+      "purpose": "Returns mutual connection IDs between current user and another.",
+      "pii_access": false,
+      "justification": "Connection graph query. Returns UUIDs only.",
+      "owner": "ganesh",
+      "added": "2026-01-20"
+    },
+    "get_mutual_connections": {
+      "purpose": "Returns mutual connection profiles (public fields).",
+      "pii_access": false,
+      "justification": "Social graph display. Public profile fields only.",
+      "owner": "ganesh",
+      "added": "2026-01-20"
+    },
+    "get_unread_message_count": {
+      "purpose": "Returns count of unread messages for current user.",
+      "pii_access": false,
+      "justification": "Self-only aggregate count. No message content returned.",
+      "owner": "ganesh",
+      "added": "2026-01-12"
+    },
+    "get_conversations": {
+      "purpose": "Returns conversation list for current user.",
+      "pii_access": false,
+      "justification": "Self-only. Conversation metadata, no full message bodies in list.",
+      "owner": "ganesh",
+      "added": "2026-01-12"
+    },
+    "get_profile_stats": {
+      "purpose": "Returns profile statistics (view count, connection count, etc).",
+      "pii_access": false,
+      "justification": "Aggregate stats. No PII.",
+      "owner": "ganesh",
+      "added": "2026-02-27"
+    },
+    "sync_profile_completion": {
+      "purpose": "Recalculates profile completion percentage.",
+      "pii_access": false,
+      "justification": "Internal computation. Updates own profile only.",
+      "owner": "ganesh",
+      "added": "2026-02-24"
+    }
+  },
+  "_note": "This is a partial registry. Run `node scripts/check-definer-registry.js --discover` to find unregistered functions."
+}

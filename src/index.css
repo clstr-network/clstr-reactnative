@@ -1,0 +1,655 @@
+
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/700.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Remove tap highlight colors on all interactive elements */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+button:focus,
+button:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 250 83.3% 53.3%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 243 75.4% 58.6%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 221.2 83.2% 53.3%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 250 83.3% 53.3%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 243 75.4% 58.6%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+/* Landing page theme (scoped to the landing route) */
+@layer base {
+  .landing-theme {
+    /* Core Colors */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 100%;
+
+    /* Solana Brand Colors */
+    --primary: 161 89% 51%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 320 81% 63%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 268 100% 64%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 161 89% 51%;
+
+    --radius: 0.5rem;
+
+    /* Custom Solana Colors for Landing Page */
+    --solana-green: 161 89% 51%;
+    --solana-pink: 320 81% 63%;
+    --solana-purple: 268 100% 64%;
+    --solana-yellow: 48 100% 62%;
+    --solana-cyan: 190 100% 42%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 161 89% 51%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 161 89% 51%;
+
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HOME PAGE DESIGN SYSTEM — LOCKED RULES
+   Background: pure black (#000000)
+   Cards: gray translucent over black
+   Typography: Space Grotesk only
+   No neon. No gradients. No glow.
+   ═══════════════════════════════════════════════════════════════ */
+@layer base {
+  .home-theme {
+    /* Background — PURE BLACK */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+
+    /* Card / Container System — Gray Translucent */
+    --card: 0 0% 100% / 0.06;
+    --card-foreground: 0 0% 100%;
+
+    /* Popover */
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 100%;
+
+    /* Primary — white-based for home (clean, no brand color on surfaces) */
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+
+    /* Secondary */
+    --secondary: 0 0% 100% / 0.08;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted */
+    --muted: 0 0% 100% / 0.06;
+    --muted-foreground: 0 0% 75%;
+
+    /* Accent */
+    --accent: 0 0% 100% / 0.08;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive — NON-NEON red */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders — subtle gray */
+    --border: 0 0% 100% / 0.12;
+    --input: 0 0% 100% / 0.12;
+    --ring: 0 0% 100% / 0.25;
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 100% / 0.06;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.08;
+    --sidebar-ring: 0 0% 100% / 0.2;
+
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+/* Home page surface tiers — hierarchy through opacity */
+@layer components {
+  /* Tier 1: Composer / Profile Completion — strongest surface */
+  .home-theme .home-card-tier1 {
+    background: rgb(23, 22, 22);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.75rem;
+    color: #ffffff;
+    padding: 1rem;
+  }
+  .home-theme .home-card-tier1:hover {
+    background: rgb(30, 29, 29);
+  }
+
+  /* Tier 2: Feed cards — neutral baseline */
+  .home-theme .home-card-tier2 {
+    background: rgb(23, 22, 22);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    color: #ffffff;
+  }
+  .home-theme .home-card-tier2:hover {
+    background: rgb(30, 29, 29);
+    transition: background 0.2s ease;
+  }
+
+  /* Tier 3: Sidebars — quietest */
+  .home-theme .home-card-tier3 {
+    background: rgb(23, 22, 22);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0.75rem;
+    color: #ffffff;
+  }
+  .home-theme .home-card-tier3:hover {
+    background: rgb(30, 29, 29);
+  }
+
+  /* Override .alumni-card inside home-theme to follow tier system */
+  .home-theme .alumni-card {
+    background: rgb(23, 22, 22);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    color: #ffffff;
+    box-shadow: none;
+  }
+  .home-theme .alumni-card:hover {
+    background: rgb(30, 29, 29);
+    box-shadow: none;
+  }
+
+  /* Sidebar alumni-cards — same surface */
+  .home-theme .home-sidebar .alumni-card {
+    background: rgb(23, 22, 22);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .home-theme .home-sidebar .alumni-card:hover {
+    background: rgb(30, 29, 29);
+  }
+
+  /* Home header — glass floating above content */
+  .home-theme-header {
+    background: rgba(0, 0, 0, 0.70) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  }
+
+  /* Mobile header dropdown — higher opacity to avoid see-through overlaps */
+  .home-theme-header-solid {
+    background: rgba(0, 0, 0, 0.92) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(18px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+  }
+
+  /* Typography hierarchy for home */
+  .home-theme .home-section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+  }
+  .home-theme .home-card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    color: #ffffff;
+  }
+  .home-theme .home-body-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.90);
+    line-height: 1.75;
+  }
+  .home-theme .home-meta-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  /* Focus ring for composer input */
+  .home-theme .home-composer-trigger {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.50);
+    border-radius: 9999px;
+    transition: all 0.2s ease;
+  }
+  .home-theme .home-composer-trigger:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.70);
+  }
+  .home-theme .home-composer-trigger:focus {
+    border-color: rgba(255, 255, 255, 0.30);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.10);
+  }
+
+  /* Card component override inside home theme */
+  .home-theme [data-slot="card"],
+  .home-theme .rounded-lg.border.bg-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+
+  /* Button overrides for home */
+  .home-theme .home-btn-ghost {
+    color: rgba(255, 255, 255, 0.60);
+  }
+  .home-theme .home-btn-ghost:hover {
+    color: rgba(255, 255, 255, 0.90);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  /* Accent colors — signal only, not decoration */
+  .home-theme .home-accent-red { color: #ef4444; }
+  .home-theme .home-accent-yellow { color: #eab308; }
+  .home-theme .home-accent-green { color: #22c55e; }
+
+  /* Scrollbar styling for home */
+  .home-theme ::-webkit-scrollbar {
+    width: 6px;
+  }
+  .home-theme ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .home-theme ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+  }
+  .home-theme ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  /* Minimal scrollbar styling for messaging lists */
+  .overflow-y-auto::-webkit-scrollbar {
+    width: 4px;
+  }
+  .overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .overflow-y-auto::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+  }
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  
+  /* Firefox scrollbar styling */
+  .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  }
+}
+
+@layer components {
+  .landing-theme .gradient-cta {
+    background: linear-gradient(135deg, hsl(161, 89%, 51%) 0%, hsl(320, 81%, 63%) 100%);
+  }
+
+  .landing-theme .nav-link {
+    @apply text-foreground/90 hover:text-primary transition-colors duration-200 font-medium;
+  }
+
+  .landing-theme .nav-link-active {
+    @apply text-primary font-medium;
+  }
+
+  .landing-theme .sparkle {
+    @apply absolute;
+    animation: landing-sparkle 2s ease-in-out infinite;
+  }
+
+  @keyframes landing-sparkle {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(0.8);
+    }
+  }
+
+  @keyframes landing-float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .landing-theme .animate-float {
+    animation: landing-float 3s ease-in-out infinite;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Ensure body is always black for authenticated pages */
+  body:has(.home-theme) {
+    background-color: #000000 !important;
+  }
+
+  /* Also ensure html element has black background for home-theme pages */
+  html:has(.home-theme) {
+    background-color: #000000 !important;
+  }
+}
+
+@layer components {
+  .alumni-card {
+    @apply bg-card text-card-foreground rounded-lg md:rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300 p-4;
+  }
+
+  /* Mobile-first responsive utilities */
+  .touch-target {
+    @apply min-h-touch min-w-touch;
+  }
+
+  .touch-target-lg {
+    @apply min-h-touch-lg min-w-touch-lg;
+  }
+
+  /* Responsive layout helpers */
+  .mobile-stack {
+    @apply flex flex-col;
+  }
+
+  .desktop-row {
+    @apply md:flex-row;
+  }
+
+  /* Safe area padding for mobile devices */
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  /* Hide on mobile */
+  .hide-mobile {
+    @apply hidden md:flex;
+  }
+
+  /* Show only on mobile */
+  .show-mobile {
+    @apply flex md:hidden;
+  }
+
+  /* Full width on mobile */
+  .mobile-full {
+    @apply w-full md:w-auto;
+  }
+
+  /* Responsive text sizing */
+  .text-responsive-lg {
+    @apply text-lg md:text-xl lg:text-2xl;
+  }
+
+  .text-responsive-base {
+    @apply text-sm md:text-base;
+  }
+
+  .container {
+    @apply px-3 md:px-4;
+  }
+  
+  .alumni-button-primary {
+    @apply bg-alumni-primary text-white px-4 py-2 rounded-md hover:bg-alumni-primary/90 transition-colors;
+  }
+  
+  .alumni-button-secondary {
+    @apply bg-alumni-secondary text-white px-4 py-2 rounded-md hover:bg-alumni-secondary/90 transition-colors;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-alumni-primary to-alumni-secondary bg-clip-text text-transparent;
+  }
+}
+
+/* Landing page custom styles */
+.nav-link {
+  @apply text-foreground/80 hover:text-foreground font-medium transition-colors;
+}
+
+.nav-link-active {
+  @apply text-foreground font-semibold;
+}
+
+/* Sparkle animation */
+.sparkle {
+  position: absolute;
+  animation: sparkle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sparkle-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Solana color palette */
+.bg-solana-purple {
+  background-color: #9945FF;
+}
+
+.bg-solana-green {
+  background-color: #14F195;
+}
+
+.bg-solana-pink {
+  background-color: #ff1b6b;
+}
+
+.bg-solana-cyan {
+  background-color: #00bcd4;
+}
+
+.bg-solana-yellow {
+  background-color: #ffeb3b;
+}
+
+.bg-solana-dark {
+  background-color: #0a0a0a;
+}
+
+.text-solana-green {
+  color: #14F195;
+}
+
+.text-solana-purple {
+  color: #9945FF;
+}
+
+.text-solana-pink {
+  color: #ff1b6b;
+}
+
+.text-solana-cyan {
+  color: #00bcd4;
+}
+
+.text-solana-yellow {
+  color: #ffeb3b;
+}
+
+.text-solana-dark {
+  color: #0a0a0a;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY CLASSES — Scrollbar hide, button glow, micro-interactions
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Hide scrollbar for horizontal scrolling containers */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Button micro-interaction glow on hover */
+.home-theme .btn-glow:hover {
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.08);
+}
+
+/* Navbar backdrop blur enhancement when scrolling */
+.home-theme .navbar-scrolled {
+  background: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(32px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Reduced motion: disable all custom animations */
+@media (prefers-reduced-motion: reduce) {
+  .home-theme *,
+  .home-theme *::before,
+  .home-theme *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

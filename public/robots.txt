@@ -1,0 +1,25 @@
+User-agent: Googlebot
+Allow: /
+Disallow: /onboarding
+Disallow: /settings
+Disallow: /auth/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /onboarding
+Disallow: /settings
+Disallow: /auth/
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: *
+Allow: /
+Disallow: /onboarding
+Disallow: /settings
+Disallow: /auth/
+
+Sitemap: https://clstr.network/sitemap.xml
