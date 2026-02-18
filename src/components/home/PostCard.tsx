@@ -13,7 +13,9 @@ import {
   deletePost, 
   updatePost, 
   reportPost, 
+  undoReportPost,
   hidePost, 
+  unhidePost,
   voteOnPoll, 
   hasUserVotedOnPoll, 
   toggleSavePost,
@@ -50,6 +52,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { ToastAction } from '@/components/ui/toast';
 import { ShareModal } from './ShareModal';
 import { RepostModal } from './RepostModal';
 import { ReactionPicker, ReactionDisplay } from './ReactionPicker';
@@ -102,6 +105,7 @@ export function PostCard({ post, onPostUpdated, autoShowComments = false }: Post
   const [userHasVoted, setUserHasVoted] = useState(false);
   const [localPoll, setLocalPoll] = useState(post.poll);
   const [showInlineComments, setShowInlineComments] = useState(autoShowComments);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   
   // LinkedIn-style engagement state
   const [userReaction, setUserReaction] = useState<ReactionType | null>(post.userReaction || (post.liked ? 'like' : null));
@@ -291,35 +295,63 @@ export function PostCard({ post, onPostUpdated, autoShowComments = false }: Post
     
     try {
       const result = await toggleSavePost(post.id);
+
+      const applySavedStateToCache = (savedState: boolean) => {
+        const updateSavedInCache = (old: any) => {
+          if (!old) return old;
+          if (old.pages) {
+            return {
+              ...old,
+              pages: old.pages.map((page: any) => ({
+                ...page,
+                posts: page.posts?.map((p: any) =>
+                  p.id === post.id ? { ...p, saved: savedState } : p
+                ),
+              })),
+            };
+          }
+          return old;
+        };
+
+        queryClient.setQueriesData(
+          { predicate: (q) => q.queryKey.includes('home-feed') || q.queryKey.includes('feed-posts') || q.queryKey.includes('saved-items') },
+          updateSavedInCache
+        );
+      };
       
       toast({
         title: result.saved ? 'Post saved' : 'Post unsaved',
         description: result.saved 
-          ? 'You can find this post in your saved items'
-          : 'Post removed from saved items',
+          ? 'Saved to your items.'
+          : 'Removed from saved items.',
+        action: (
+          <ToastAction
+            altText="Undo save action"
+            className="h-9 min-w-[68px] px-3.5 text-sm sm:h-8 sm:min-w-0 sm:px-3"
+            onClick={async () => {
+              try {
+                const undoResult = await toggleSavePost(post.id);
+                applySavedStateToCache(undoResult.saved);
+                onPostUpdated?.();
+                toast({
+                  title: 'Action undone',
+                  description: undoResult.saved ? 'Saved again.' : 'Removed again.',
+                });
+              } catch (error) {
+                toast({
+                  title: 'Undo failed',
+                  description: error instanceof Error ? error.message : 'Please try again',
+                  variant: 'destructive',
+                });
+              }
+            }}
+          >
+            Undo
+          </ToastAction>
+        ),
       });
 
-      // Optimistic cache update across all feed query keys
-      const updateSavedInCache = (old: any) => {
-        if (!old) return old;
-        if (old.pages) {
-          return {
-            ...old,
-            pages: old.pages.map((page: any) => ({
-              ...page,
-              posts: page.posts?.map((p: any) => 
-                p.id === post.id ? { ...p, saved: result.saved } : p
-              ),
-            })),
-          };
-        }
-        return old;
-      };
-
-      queryClient.setQueriesData(
-        { predicate: (q) => q.queryKey.includes('home-feed') || q.queryKey.includes('feed-posts') || q.queryKey.includes('saved-items') },
-        updateSavedInCache
-      );
+      applySavedStateToCache(result.saved);
       
       onPostUpdated?.();
     } catch (error) {
@@ -393,7 +425,30 @@ export function PostCard({ post, onPostUpdated, autoShowComments = false }: Post
       await reportPost(post.id, reportReason);
       toast({
         title: 'Post reported',
-        description: 'Thank you for helping keep our community safe',
+        description: 'Thanks for your report.',
+        action: (
+          <ToastAction
+            altText="Undo report post"
+            className="h-9 min-w-[68px] px-3.5 text-sm sm:h-8 sm:min-w-0 sm:px-3"
+            onClick={async () => {
+              try {
+                await undoReportPost(post.id);
+                toast({
+                  title: 'Report removed',
+                  description: 'Report undone.',
+                });
+              } catch (error) {
+                toast({
+                  title: 'Undo failed',
+                  description: error instanceof Error ? error.message : 'Please try again',
+                  variant: 'destructive',
+                });
+              }
+            }}
+          >
+            Undo
+          </ToastAction>
+        ),
       });
       setIsReportDialogOpen(false);
       setReportReason('');
@@ -413,7 +468,31 @@ export function PostCard({ post, onPostUpdated, autoShowComments = false }: Post
       await hidePost(post.id);
       toast({
         title: 'Post hidden',
-        description: "You won't see posts like this in your feed",
+        description: 'Hidden from your feed.',
+        action: (
+          <ToastAction
+            altText="Undo hide post"
+            className="h-9 min-w-[68px] px-3.5 text-sm sm:h-8 sm:min-w-0 sm:px-3"
+            onClick={async () => {
+              try {
+                await unhidePost(post.id);
+                onPostUpdated?.();
+                toast({
+                  title: 'Post unhidden',
+                  description: 'Visible in feed again.',
+                });
+              } catch (error) {
+                toast({
+                  title: 'Undo failed',
+                  description: error instanceof Error ? error.message : 'Please try again',
+                  variant: 'destructive',
+                });
+              }
+            }}
+          >
+            Undo
+          </ToastAction>
+        ),
       });
       onPostUpdated?.();
     } catch (error) {
@@ -562,43 +641,45 @@ export function PostCard({ post, onPostUpdated, autoShowComments = false }: Post
                 <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent
+              align="end"
+              className="w-44 rounded-xl border border-zinc-200 bg-white p-1 text-zinc-900 shadow-lg"
+            >
               {isOwnPost && (canEditOwnContent || canDeleteOwnContent) && (
                 <>
                   {canEditOwnContent && (
                     <DropdownMenuItem onClick={() => {
                       setEditContent(post.content);
                       setIsEditDialogOpen(true);
-                    }}>
-                      <Edit className="h-4 w-4 mr-2" />
+                    }} className="h-10 rounded-lg px-3 text-sm font-medium text-zinc-900 focus:bg-zinc-100 focus:text-zinc-900">
+                      <Edit className="h-4 w-4 mr-2 text-zinc-900" />
                       Edit post
                     </DropdownMenuItem>
                   )}
                   {canDeleteOwnContent && (
                     <DropdownMenuItem 
                       onClick={() => setIsDeleteDialogOpen(true)} 
-                      className="text-white/50"
+                      className="h-10 rounded-lg px-3 text-sm font-medium text-zinc-500 focus:bg-zinc-100 focus:text-zinc-700"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4 mr-2 text-zinc-500" />
                       Delete post
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
                 </>
               )}
-              <DropdownMenuItem onClick={handleSavePost} disabled={isSaving}>
-                <Bookmark className={`h-4 w-4 mr-2 ${isSaved ? 'fill-current' : ''}`} />
+              <DropdownMenuItem onClick={handleSavePost} disabled={isSaving} className="h-10 rounded-lg px-3 text-sm font-medium text-zinc-900 focus:bg-zinc-100 focus:text-zinc-900">
+                <Bookmark className={`h-4 w-4 mr-2 text-zinc-900 ${isSaved ? 'fill-current' : ''}`} />
                 {isSaved ? 'Unsave post' : 'Save post'}
               </DropdownMenuItem>
               {!isOwnPost && (
                 <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleHidePost}>
-                    <EyeOff className="h-4 w-4 mr-2" />
+                  <DropdownMenuItem onClick={handleHidePost} className="h-10 rounded-lg px-3 text-sm font-medium text-zinc-900 focus:bg-zinc-100 focus:text-zinc-900">
+                    <EyeOff className="h-4 w-4 mr-2 text-zinc-900" />
                     Hide post
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsReportDialogOpen(true)} disabled={!canReportContent}>
-                    <Flag className="h-4 w-4 mr-2" />
+                  <DropdownMenuItem onClick={() => setIsReportDialogOpen(true)} disabled={!canReportContent} className="h-10 rounded-lg px-3 text-sm font-medium text-zinc-900 focus:bg-zinc-100 focus:text-zinc-900">
+                    <Flag className="h-4 w-4 mr-2 text-zinc-900" />
                     Report post
                   </DropdownMenuItem>
                 </>
@@ -623,12 +704,26 @@ export function PostCard({ post, onPostUpdated, autoShowComments = false }: Post
                 key={index}
                 src={img}
                 alt={`Post image ${index + 1}`}
-                className="rounded-lg w-full object-cover max-h-[500px]"
+                className="rounded-lg w-full object-contain max-h-[500px] bg-black/20 cursor-pointer transition-opacity hover:opacity-90"
                 loading="lazy"
+                onClick={() => setLightboxImage(img)}
               />
             ))}
           </div>
         )}
+
+        {/* Image Lightbox */}
+        <Dialog open={!!lightboxImage} onOpenChange={() => setLightboxImage(null)}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-none bg-transparent shadow-none [&>button]:text-white [&>button]:bg-black/60 [&>button]:rounded-full [&>button]:p-1.5 [&>button]:top-2 [&>button]:right-2">
+            {lightboxImage && (
+              <img
+                src={lightboxImage}
+                alt="Full size post image"
+                className="w-auto h-auto max-w-full max-h-[90vh] mx-auto rounded-lg object-contain"
+              />
+            )}
+          </DialogContent>
+        </Dialog>
         
         {post.video && (
           ReactPlayer.canPlay(post.video) ? (

@@ -401,7 +401,24 @@ export async function getPosts(params: GetPostsParams = {}): Promise<GetPostsRes
     // Determine ordering based on sortBy parameter
     const orderColumn = sortBy === 'top' ? 'likes_count' : 'created_at';
 
+    // Pre-fetch hidden post IDs so we can exclude them before pagination
+    let hiddenIds = new Set<string>();
+    try {
+      const { data: hiddenRows } = await supabase
+        .from("hidden_posts")
+        .select("post_id")
+        .eq("user_id", user.id);
+
+      if (hiddenRows && hiddenRows.length > 0) {
+        hiddenIds = new Set(hiddenRows.map((r: { post_id: string }) => r.post_id));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch hidden posts, showing all:', err);
+    }
+
     // Fetch posts first (without relying on FK join which may fail)
+    // Over-fetch to compensate for hidden-post filtering
+    const fetchLimit = pageSize + 1 + hiddenIds.size;
     let query = supabase
       .from("posts")
       .select(`
@@ -416,39 +433,35 @@ export async function getPosts(params: GetPostsParams = {}): Promise<GetPostsRes
         likes_count,
         comments_count,
         shares_count,
+        reposts_count,
         created_at,
         updated_at
       `)
       .eq("college_domain", collegeDomain)
       .order(orderColumn, { ascending: false })
-      .limit(pageSize + 1);
+      .limit(fetchLimit);
 
-    // For cursor-based pagination with 'top' sort, we use likes_count
+    // For cursor-based pagination: use composite cursor for 'top' sort
     if (cursor && sortBy === 'recent') {
       query = query.lt("created_at", cursor);
     } else if (cursor && sortBy === 'top') {
-      // For top sorting, cursor is the likes_count of the last item
-      query = query.lt("likes_count", parseInt(cursor));
+      // Composite cursor: "likes_count::created_at" for deterministic pagination
+      const sepIdx = cursor.indexOf('::');
+      if (sepIdx !== -1) {
+        const cursorLikes = parseInt(cursor.substring(0, sepIdx));
+        const cursorDate = cursor.substring(sepIdx + 2);
+        query = query.or(`likes_count.lt.${cursorLikes},and(likes_count.eq.${cursorLikes},created_at.lt.${cursorDate})`);
+      } else {
+        // Fallback for legacy cursor (plain likes_count)
+        query = query.lte("likes_count", parseInt(cursor));
+      }
     }
 
     const { data, error } = await query;
     if (error) throw error;
 
-    // Filter out posts the user has hidden
-    let visiblePosts = data ?? [];
-    try {
-      const { data: hiddenRows } = await supabase
-        .from("hidden_posts")
-        .select("post_id")
-        .eq("user_id", user.id);
-
-      if (hiddenRows && hiddenRows.length > 0) {
-        const hiddenIds = new Set(hiddenRows.map((r: { post_id: string }) => r.post_id));
-        visiblePosts = visiblePosts.filter((p) => !hiddenIds.has(p.id));
-      }
-    } catch (err) {
-      console.warn('Failed to fetch hidden posts, showing all:', err);
-    }
+    // Filter out hidden posts BEFORE pagination slicing
+    const visiblePosts = (data ?? []).filter((p) => !hiddenIds.has(p.id));
 
     const posts = visiblePosts;
     const limited = posts.slice(0, pageSize);
@@ -600,9 +613,14 @@ export async function getPosts(params: GetPostsParams = {}): Promise<GetPostsRes
 
     const hasMore = posts.length > pageSize;
     // Use appropriate cursor based on sort order
-    const nextCursor = hasMore
-      ? (sortBy === 'top' ? String(posts[pageSize].likes_count) : posts[pageSize].created_at)
-      : null;
+    // For 'top' sort, use composite cursor "likes_count::created_at" for deterministic pagination
+    let nextCursor: string | null = null;
+    if (hasMore) {
+      const lastPost = limited[limited.length - 1];
+      nextCursor = sortBy === 'top'
+        ? `${lastPost.likes_count}::${lastPost.created_at}`
+        : lastPost.created_at;
+    }
 
     return {
       posts: postsWithSaved,
@@ -648,6 +666,7 @@ export async function getPostsByUser(targetUserId: string, params: GetUserPostsP
         likes_count,
         comments_count,
         shares_count,
+        reposts_count,
         created_at,
         updated_at
       `
@@ -695,43 +714,77 @@ export async function getPostsByUser(targetUserId: string, params: GetUserPostsP
       console.warn("Ignored error fetching profile for user posts:", err);
     }
 
-    // Liked state
-    let likedPostIds = new Set<string>();
+    // Fetch user reactions (with reaction type) and top reactions for each post
+    const userReactionsMap = new Map<string, ReactionType>();
+    const topReactionsMap = new Map<string, ReactionCount[]>();
+
     if (postIds.length > 0) {
       try {
         const result = await supabase
           .from("post_likes")
-          .select("post_id")
+          .select("post_id, reaction_type")
           .eq("user_id", user.id)
           .in("post_id", postIds);
 
-        const likes = result?.data ?? null;
-        const likesError = result?.error ?? null;
+        const reactions = result?.data ?? null;
+        const reactionsError = result?.error ?? null;
 
-        if (!likesError && likes) {
-          likedPostIds = new Set((likes || []).map((like: { post_id: string }) => like.post_id));
-        } else if (likesError) {
-          console.warn("Failed to fetch liked posts:", likesError);
+        if (!reactionsError && reactions) {
+          reactions.forEach((r: { post_id: string; reaction_type: string }) => {
+            userReactionsMap.set(r.post_id, r.reaction_type as ReactionType);
+          });
+        } else if (reactionsError) {
+          console.warn("Failed to fetch user reactions:", reactionsError);
+        }
+
+        // Fetch top reactions for all posts (batch query)
+        const { data: allReactions, error: allReactionsError } = await supabase
+          .from("post_likes")
+          .select("post_id, reaction_type")
+          .in("post_id", postIds);
+
+        if (!allReactionsError && allReactions) {
+          const reactionsByPost = new Map<string, Map<string, number>>();
+          allReactions.forEach((r: { post_id: string; reaction_type: string }) => {
+            if (!reactionsByPost.has(r.post_id)) {
+              reactionsByPost.set(r.post_id, new Map());
+            }
+            const postReactions = reactionsByPost.get(r.post_id)!;
+            postReactions.set(r.reaction_type, (postReactions.get(r.reaction_type) || 0) + 1);
+          });
+
+          reactionsByPost.forEach((reactions, postId) => {
+            const sorted = Array.from(reactions.entries())
+              .map(([type, count]) => ({ type: type as ReactionType, count }))
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 3);
+            topReactionsMap.set(postId, sorted);
+          });
         }
       } catch (err) {
-        console.warn("Ignored error fetching liked posts:", err);
+        console.warn("Ignored error fetching reactions:", err);
       }
     }
 
-    const normalizedPosts = limited.map((post) => ({
-      ...post,
-      poll: normalizePoll((post as unknown as { poll?: unknown })?.poll),
-      liked: likedPostIds.has(post.id),
-      user: authorProfile
-        ? {
-          id: authorProfile.id,
-          full_name: authorProfile.full_name || "Anonymous",
-          avatar_url: authorProfile.avatar_url || "",
-          role: authorProfile.role || "Member",
-          college_domain: authorProfile.college_domain || null,
-        }
-        : undefined,
-    }));
+    const normalizedPosts = limited.map((post) => {
+      const userReaction = userReactionsMap.get(post.id);
+      return {
+        ...post,
+        poll: normalizePoll((post as unknown as { poll?: unknown })?.poll),
+        liked: userReaction !== undefined,
+        userReaction: userReaction || null,
+        topReactions: topReactionsMap.get(post.id) || [],
+        user: authorProfile
+          ? {
+            id: authorProfile.id,
+            full_name: authorProfile.full_name || "Anonymous",
+            avatar_url: authorProfile.avatar_url || "",
+            role: authorProfile.role || "Member",
+            college_domain: authorProfile.college_domain || null,
+          }
+          : undefined,
+      };
+    });
 
     // Saved state
     let savedPostIds = new Set<string>();
@@ -923,6 +976,7 @@ export async function getPostById(postId: string): Promise<Post> {
         likes_count,
         comments_count,
         shares_count,
+        reposts_count,
         created_at,
         updated_at
       `)
@@ -935,67 +989,63 @@ export async function getPostById(postId: string): Promise<Post> {
       throw new Error("You can only access posts from your own college domain.");
     }
 
-    let userProfile:
-      | {
-        id: string;
-        full_name: string | null;
-        avatar_url: string | null;
-        role: string | null;
-        college_domain: string | null;
-      }
-      | null = null;
-
-    try {
-      const { data: profileRow, error: profileError } = await supabase
+    // Parallel fetch: profile, user reaction + top reactions, saved state
+    const [profileResult, reactionResult, allReactionsResult, savedResult] = await Promise.allSettled([
+      supabase
         .from("profiles")
         .select("id, full_name, avatar_url, role, college_domain")
         .eq("id", post.user_id)
-        .maybeSingle();
-
-      if (!profileError && profileRow) {
-        userProfile = profileRow;
-      } else if (profileError) {
-        console.warn("Failed to fetch profile for post detail:", profileError);
-      }
-    } catch (err) {
-      console.warn("Ignored error fetching profile for post detail:", err);
-    }
-
-    let liked = false;
-    try {
-      const { data: likeRow, error: likeError } = await supabase
+        .maybeSingle(),
+      supabase
         .from("post_likes")
-        .select("id")
+        .select("id, reaction_type")
         .eq("post_id", postId)
         .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!likeError && likeRow) {
-        liked = true;
-      } else if (likeError) {
-        console.warn("Failed to fetch liked state for post detail:", likeError);
-      }
-    } catch (err) {
-      console.warn("Ignored error fetching liked state:", err);
-    }
-
-    let saved = false;
-    try {
-      const { data: savedRow, error: savedError } = await supabase
+        .maybeSingle(),
+      supabase
+        .from("post_likes")
+        .select("reaction_type")
+        .eq("post_id", postId),
+      supabase
         .from("saved_items")
         .select("id")
         .eq("user_id", user.id)
         .eq("type", "post")
         .eq("item_id", postId)
-        .maybeSingle();
+        .maybeSingle(),
+    ]);
 
-      if (!savedError && savedRow) {
-        saved = true;
-      } else if (savedError) {
-        console.warn("Failed to fetch saved state for post detail:", savedError);
-      }
-    } catch (err) {
-      console.warn("Ignored error fetching saved state:", err);
+    // Extract profile
+    let userProfile: { id: string; full_name: string | null; avatar_url: string | null; role: string | null; college_domain: string | null } | null = null;
+    if (profileResult.status === 'fulfilled' && !profileResult.value.error && profileResult.value.data) {
+      userProfile = profileResult.value.data;
+    }
+
+    // Extract user reaction
+    let userReaction: ReactionType | null = null;
+    let liked = false;
+    if (reactionResult.status === 'fulfilled' && !reactionResult.value.error && reactionResult.value.data) {
+      liked = true;
+      userReaction = (reactionResult.value.data as { id: string; reaction_type: string }).reaction_type as ReactionType;
+    }
+
+    // Extract top reactions
+    let topReactions: ReactionCount[] = [];
+    if (allReactionsResult.status === 'fulfilled' && !allReactionsResult.value.error && allReactionsResult.value.data) {
+      const reactionCounts = new Map<string, number>();
+      allReactionsResult.value.data.forEach((r: { reaction_type: string }) => {
+        reactionCounts.set(r.reaction_type, (reactionCounts.get(r.reaction_type) || 0) + 1);
+      });
+      topReactions = Array.from(reactionCounts.entries())
+        .map(([type, count]) => ({ type: type as ReactionType, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+    }
+
+    // Extract saved state
+    let saved = false;
+    if (savedResult.status === 'fulfilled' && !savedResult.value.error && savedResult.value.data) {
+      saved = true;
     }
 
     return {
@@ -1003,6 +1053,8 @@ export async function getPostById(postId: string): Promise<Post> {
       poll: normalizePoll((post as unknown as { poll?: unknown })?.poll),
       liked,
       saved,
+      userReaction,
+      topReactions,
       user: userProfile
         ? {
           id: userProfile.id,
@@ -1891,6 +1943,22 @@ export async function reportPost(postId: string, reason: string) {
   }
 }
 
+export async function undoReportPost(postId: string) {
+  assertValidUuid(postId, "postId");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("post_reports")
+    .delete()
+    .eq("post_id", postId)
+    .eq("reporter_id", user.id);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function hidePost(postId: string) {
   assertValidUuid(postId, "postId");
   const { data: { user } } = await supabase.auth.getUser();
@@ -1903,6 +1971,22 @@ export async function hidePost(postId: string) {
       post_id: postId,
       user_id: user.id,
     });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function unhidePost(postId: string) {
+  assertValidUuid(postId, "postId");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("hidden_posts")
+    .delete()
+    .eq("post_id", postId)
+    .eq("user_id", user.id);
 
   if (error) {
     throw error;
@@ -2091,7 +2175,7 @@ export async function getSavedPosts() {
   const userIds = [...new Set(posts.map(p => p.user_id))];
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, full_name, avatar_url, role")
+    .select("id, full_name, avatar_url, role, college_domain")
     .in("id", userIds);
 
   const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
@@ -2109,7 +2193,13 @@ export async function getSavedPosts() {
     return {
       ...post,
       liked: likedPostIds.has(post.id),
-      user: userProfile || undefined,
+      user: userProfile ? {
+        id: userProfile.id,
+        full_name: userProfile.full_name || 'Anonymous',
+        avatar_url: userProfile.avatar_url || '',
+        role: userProfile.role || 'Member',
+        college_domain: userProfile.college_domain || null,
+      } : undefined,
     };
   }) || [];
 }
@@ -2447,7 +2537,23 @@ export async function getFeedWithReposts(params: GetPostsParams = {}): Promise<G
     const { pageSize = 10, cursor = null } = params;
     const collegeDomain = await ensureCollegeDomain(user.id, params.filters);
 
-    // Fetch regular posts
+    // Pre-fetch hidden post IDs so we can exclude them before pagination
+    let hiddenIds = new Set<string>();
+    try {
+      const { data: hiddenRows } = await supabase
+        .from("hidden_posts")
+        .select("post_id")
+        .eq("user_id", user.id);
+
+      if (hiddenRows && hiddenRows.length > 0) {
+        hiddenIds = new Set(hiddenRows.map((r: { post_id: string }) => r.post_id));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch hidden posts for feed:', err);
+    }
+
+    // Fetch regular posts — over-fetch to compensate for hidden post filtering
+    const fetchLimit = pageSize + 1 + hiddenIds.size;
     let postsQuery = supabase
       .from("posts")
       .select(`
@@ -2468,14 +2574,17 @@ export async function getFeedWithReposts(params: GetPostsParams = {}): Promise<G
       `)
       .eq("college_domain", collegeDomain)
       .order("created_at", { ascending: false })
-      .limit(pageSize + 1);
+      .limit(fetchLimit);
 
     if (cursor) {
       postsQuery = postsQuery.lt("created_at", cursor);
     }
 
-    const { data: posts, error: postsError } = await postsQuery;
+    const { data: rawPosts, error: postsError } = await postsQuery;
     if (postsError) throw postsError;
+
+    // Filter out hidden posts BEFORE pagination slicing
+    const posts = (rawPosts ?? []).filter((p) => !hiddenIds.has(p.id));
 
     // Fetch reposts (treated as feed items)
     let repostsQuery = supabase
@@ -2494,8 +2603,8 @@ export async function getFeedWithReposts(params: GetPostsParams = {}): Promise<G
       console.warn("Failed to fetch reposts:", repostsError);
     }
 
-    // Process posts (original logic)
-    const limited = (posts ?? []).slice(0, pageSize);
+    // Process posts — slice after hidden filtering
+    const limited = posts.slice(0, pageSize);
     const postIds = limited.map((post) => post.id);
     const userIds = [...new Set([
       ...limited.map((post) => post.user_id),
@@ -2592,8 +2701,8 @@ export async function getFeedWithReposts(params: GetPostsParams = {}): Promise<G
       };
     });
 
-    const hasMore = (posts?.length ?? 0) > pageSize;
-    const nextCursor = hasMore && posts ? posts[pageSize].created_at : null;
+    const hasMore = posts.length > pageSize;
+    const nextCursor = hasMore ? limited[limited.length - 1].created_at : null;
 
     return {
       posts: normalizedPosts,
