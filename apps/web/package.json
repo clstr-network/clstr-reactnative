@@ -1,0 +1,17 @@
+{
+  "name": "@clstr/web",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Web app workspace pointer — the web app runs from the monorepo root using the existing vite.config.ts, tailwind.config.ts, and src/ directory. This package.json exists solely to register apps/web as a workspace member for Turborepo task orchestration.",
+  "scripts": {
+    "dev": "cd ../.. && vite",
+    "build": "cd ../.. && vite build",
+    "preview": "cd ../.. && vite preview",
+    "test": "cd ../.. && vitest run",
+    "typecheck": "cd ../.. && npx tsc -p tsconfig.app.json --noEmit",
+    "lint": "cd ../.. && eslint ."
+  },
+  "dependencies": {
+    "@clstr/shared": "*"
+  }
+}

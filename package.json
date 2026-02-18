@@ -1,10 +1,15 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "clstr-network",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
+    "dev:mobile": "cd apps/mobile && npx expo start",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

@@ -5,11 +5,15 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@shared/*": [
+        "./packages/shared/src/*"
       ]
     }
   },
   "include": [
     "src",
+    "packages/shared/src",
     "*.ts",
     "*.tsx"
   ],
