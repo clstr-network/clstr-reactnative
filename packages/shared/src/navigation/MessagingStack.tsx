@@ -1,5 +1,9 @@
 /**
  * CLSTR Navigation — Messaging Stack
+ *
+ * Accepts a `screens` prop map so the consuming app (apps/mobile)
+ * can inject real screen implementations without creating a
+ * dependency from packages/shared → apps/mobile.
  */
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,17 +13,26 @@ import { tokens } from '../design/tokens';
 
 const Stack = createNativeStackNavigator<MessagingStackParamList>();
 
+// ── Placeholder fallbacks (used when no screen map is provided) ──
+
 const PlaceholderScreen = ({ title }: { title: string }) => (
   <View style={styles.container}>
     <Text style={styles.title}>{title}</Text>
-    <Text style={styles.subtitle}>Phase 2</Text>
+    <Text style={styles.subtitle}>Phase 7 — Messaging</Text>
   </View>
 );
 
-const MessagingScreen = () => <PlaceholderScreen title="Messages" />;
-const ConversationDetailScreen = () => <PlaceholderScreen title="Conversation" />;
+const DefaultMessagingScreen = () => <PlaceholderScreen title="Messages" />;
+const DefaultConversationDetailScreen = () => <PlaceholderScreen title="Conversation" />;
 
-export function MessagingStack() {
+// ── Screen registry type ──
+
+export type MessagingStackScreens = {
+  MessagingScreen?: React.ComponentType<any>;
+  ConversationDetail?: React.ComponentType<any>;
+};
+
+export function MessagingStack({ screens }: { screens?: MessagingStackScreens } = {}) {
   return (
     <Stack.Navigator
       id="MessagingStack"
@@ -28,8 +41,14 @@ export function MessagingStack() {
         contentStyle: { backgroundColor: tokens.colors.dark.background },
       }}
     >
-      <Stack.Screen name="MessagingScreen" component={MessagingScreen} />
-      <Stack.Screen name="ConversationDetail" component={ConversationDetailScreen} />
+      <Stack.Screen
+        name="MessagingScreen"
+        component={screens?.MessagingScreen ?? DefaultMessagingScreen}
+      />
+      <Stack.Screen
+        name="ConversationDetail"
+        component={screens?.ConversationDetail ?? DefaultConversationDetailScreen}
+      />
     </Stack.Navigator>
   );
 }

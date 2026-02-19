@@ -13,10 +13,12 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import type { HomeStackScreens } from './HomeStack';
 import type { ProfileStackScreens } from './ProfileStack';
+import type { MessagingStackScreens } from './MessagingStack';
 
 export interface ScreenRegistry {
   homeScreens?: HomeStackScreens;
   profileScreens?: ProfileStackScreens;
+  messagingScreens?: MessagingStackScreens;
 }
 
 const ScreenRegistryCtx = createContext<ScreenRegistry>({});
@@ -24,11 +26,12 @@ const ScreenRegistryCtx = createContext<ScreenRegistry>({});
 export function ScreenRegistryProvider({
   homeScreens,
   profileScreens,
+  messagingScreens,
   children,
 }: ScreenRegistry & { children: React.ReactNode }) {
   const value = useMemo(
-    () => ({ homeScreens, profileScreens }),
-    [homeScreens, profileScreens],
+    () => ({ homeScreens, profileScreens, messagingScreens }),
+    [homeScreens, profileScreens, messagingScreens],
   );
   return (
     <ScreenRegistryCtx.Provider value={value}>

@@ -25,9 +25,12 @@ import { FeedScreen } from './src/screens/feed/FeedScreen';
 import { PostDetailScreen } from './src/screens/feed/PostDetailScreen';
 import { ProfileScreen } from './src/screens/profile/ProfileScreen';
 import { ProfileConnectionsScreen } from './src/screens/profile/ProfileConnectionsScreen';
+import { MessagingListScreen } from './src/screens/messaging/MessagingListScreen';
+import { ConversationDetailScreen } from './src/screens/messaging/ConversationDetailScreen';
 
 import type { HomeStackScreens } from '../../packages/shared/src/navigation/HomeStack';
 import type { ProfileStackScreens } from '../../packages/shared/src/navigation/ProfileStack';
+import type { MessagingStackScreens } from '../../packages/shared/src/navigation/MessagingStack';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,6 +57,11 @@ const profileScreens: ProfileStackScreens = {
   // Settings, HelpCenter, SavedItems, SkillAnalysis → placeholder
 };
 
+const messagingScreens: MessagingStackScreens = {
+  MessagingScreen: MessagingListScreen,
+  ConversationDetail: ConversationDetailScreen,
+};
+
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -63,6 +71,7 @@ export default function App() {
             <ScreenRegistryProvider
               homeScreens={homeScreens}
               profileScreens={profileScreens}
+              messagingScreens={messagingScreens}
             >
               <NavigationContainer linking={linking}>
                 <RootNavigator />

@@ -18,6 +18,17 @@ const EXPO_ENV: Record<string, string | undefined> = {
   SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
 };
 
+// Runtime validation — fires once on module load so Metro console
+// shows actual resolved values (or 'undefined' if .env is misconfigured).
+if (__DEV__) {
+  console.log('[env.native] SUPABASE_URL =', EXPO_ENV.SUPABASE_URL ?? 'undefined');
+  console.log(
+    '[env.native] SUPABASE_ANON_KEY =',
+    EXPO_ENV.SUPABASE_ANON_KEY?.slice(0, 12) ?? 'undefined',
+    '…',
+  );
+}
+
 export function getEnvVariable(name: string): string {
   const value = EXPO_ENV[name];
 
