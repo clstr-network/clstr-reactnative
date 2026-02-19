@@ -20,3 +20,9 @@ export * from './components/ui';
 
 // Re-export hooks
 export { useAuth } from './hooks/useAuth';
+
+// Re-export navigation
+export { ScreenRegistryProvider, useScreenRegistry } from './navigation/ScreenRegistryContext';
+export type { ScreenRegistry } from './navigation/ScreenRegistryContext';
+export type { HomeStackScreens } from './navigation/HomeStack';
+export type { ProfileStackScreens } from './navigation/ProfileStack';

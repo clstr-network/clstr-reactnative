@@ -4,7 +4,7 @@
  * Mirrors the existing BottomNavigation.tsx with 5 tabs:
  * Home | Network | Events | Messages | Profile
  */
-import React from 'react';
+import React, { useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StyleSheet, Platform, Text as RNText } from 'react-native';
 import type { MainTabParamList } from './types';
@@ -16,10 +16,22 @@ import { NetworkStack } from './NetworkStack';
 import { EventsStack } from './EventsStack';
 import { MessagingStack } from './MessagingStack';
 import { ProfileStack } from './ProfileStack';
+import { useScreenRegistry } from './ScreenRegistryContext';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export function MainTabs() {
+  const { homeScreens, profileScreens } = useScreenRegistry();
+
+  // Stable wrappers that pass screens to each stack
+  const HomeStackScreen = useCallback(
+    () => <HomeStack screens={homeScreens} />,
+    [homeScreens],
+  );
+  const ProfileStackScreen = useCallback(
+    () => <ProfileStack screens={profileScreens} />,
+    [profileScreens],
+  );
   return (
     <Tab.Navigator
       id="MainTabs"
@@ -34,7 +46,7 @@ export function MainTabs() {
     >
       <Tab.Screen
         name="HomeTab"
-        component={HomeStack}
+        component={HomeStackScreen}
         options={{
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
@@ -74,7 +86,7 @@ export function MainTabs() {
       />
       <Tab.Screen
         name="ProfileTab"
-        component={ProfileStack}
+        component={ProfileStackScreen}
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => (

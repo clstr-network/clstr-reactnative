@@ -1,5 +1,9 @@
 /**
  * CLSTR Navigation — Home Stack
+ *
+ * Accepts a `screens` prop map so the consuming app (apps/mobile)
+ * can inject real screen implementations without creating a
+ * dependency from packages/shared → apps/mobile.
  */
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,6 +13,8 @@ import { tokens } from '../design/tokens';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
+// ── Placeholder fallbacks (used when no screen map is provided) ──
+
 const PlaceholderScreen = ({ title }: { title: string }) => (
   <View style={styles.container}>
     <Text style={styles.title}>{title}</Text>
@@ -16,13 +22,23 @@ const PlaceholderScreen = ({ title }: { title: string }) => (
   </View>
 );
 
-const HomeScreen = () => <PlaceholderScreen title="Home" />;
-const PostDetailScreen = () => <PlaceholderScreen title="Post Detail" />;
-const EventDetailScreen = () => <PlaceholderScreen title="Event Detail" />;
-const ProfileScreen = () => <PlaceholderScreen title="Profile" />;
-const ProfileConnectionsScreen = () => <PlaceholderScreen title="Connections" />;
+const DefaultHomeScreen = () => <PlaceholderScreen title="Home" />;
+const DefaultPostDetailScreen = () => <PlaceholderScreen title="Post Detail" />;
+const DefaultEventDetailScreen = () => <PlaceholderScreen title="Event Detail" />;
+const DefaultProfileScreen = () => <PlaceholderScreen title="Profile" />;
+const DefaultProfileConnectionsScreen = () => <PlaceholderScreen title="Connections" />;
 
-export function HomeStack() {
+// ── Screen registry type ──
+
+export type HomeStackScreens = {
+  HomeScreen?: React.ComponentType<any>;
+  PostDetail?: React.ComponentType<any>;
+  EventDetail?: React.ComponentType<any>;
+  Profile?: React.ComponentType<any>;
+  ProfileConnections?: React.ComponentType<any>;
+};
+
+export function HomeStack({ screens }: { screens?: HomeStackScreens } = {}) {
   return (
     <Stack.Navigator
       id="HomeStack"
@@ -31,11 +47,26 @@ export function HomeStack() {
         contentStyle: { backgroundColor: tokens.colors.dark.background },
       }}
     >
-      <Stack.Screen name="HomeScreen" component={HomeScreen} />
-      <Stack.Screen name="PostDetail" component={PostDetailScreen} />
-      <Stack.Screen name="EventDetail" component={EventDetailScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="ProfileConnections" component={ProfileConnectionsScreen} />
+      <Stack.Screen
+        name="HomeScreen"
+        component={screens?.HomeScreen ?? DefaultHomeScreen}
+      />
+      <Stack.Screen
+        name="PostDetail"
+        component={screens?.PostDetail ?? DefaultPostDetailScreen}
+      />
+      <Stack.Screen
+        name="EventDetail"
+        component={screens?.EventDetail ?? DefaultEventDetailScreen}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={screens?.Profile ?? DefaultProfileScreen}
+      />
+      <Stack.Screen
+        name="ProfileConnections"
+        component={screens?.ProfileConnections ?? DefaultProfileConnectionsScreen}
+      />
     </Stack.Navigator>
   );
 }

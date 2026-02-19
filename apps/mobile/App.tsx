@@ -17,7 +17,17 @@ import Toast from 'react-native-toast-message';
 
 import { ThemeProvider } from '../../packages/shared/src/design/ThemeProvider';
 import { RootNavigator } from '../../packages/shared/src/navigation/RootNavigator';
+import { ScreenRegistryProvider } from '../../packages/shared/src/navigation/ScreenRegistryContext';
 import { linking } from '../../packages/shared/src/navigation/linking';
+
+// ── Real screen implementations (injected via ScreenRegistryProvider) ──
+import { FeedScreen } from './src/screens/feed/FeedScreen';
+import { PostDetailScreen } from './src/screens/feed/PostDetailScreen';
+import { ProfileScreen } from './src/screens/profile/ProfileScreen';
+import { ProfileConnectionsScreen } from './src/screens/profile/ProfileConnectionsScreen';
+
+import type { HomeStackScreens } from '../../packages/shared/src/navigation/HomeStack';
+import type { ProfileStackScreens } from '../../packages/shared/src/navigation/ProfileStack';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,16 +38,37 @@ const queryClient = new QueryClient({
   },
 });
 
+// ── Screen maps (stable references, defined outside component) ──
+
+const homeScreens: HomeStackScreens = {
+  HomeScreen: FeedScreen,
+  PostDetail: PostDetailScreen,
+  Profile: ProfileScreen,
+  ProfileConnections: ProfileConnectionsScreen,
+  // EventDetail intentionally omitted → falls back to placeholder
+};
+
+const profileScreens: ProfileStackScreens = {
+  ProfileScreen: ProfileScreen,
+  ProfileConnections: ProfileConnectionsScreen,
+  // Settings, HelpCenter, SavedItems, SkillAnalysis → placeholder
+};
+
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider initialMode="dark">
-            <NavigationContainer linking={linking}>
-              <RootNavigator />
-              <StatusBar style="light" />
-            </NavigationContainer>
+            <ScreenRegistryProvider
+              homeScreens={homeScreens}
+              profileScreens={profileScreens}
+            >
+              <NavigationContainer linking={linking}>
+                <RootNavigator />
+                <StatusBar style="light" />
+              </NavigationContainer>
+            </ScreenRegistryProvider>
             <Toast />
           </ThemeProvider>
         </QueryClientProvider>
