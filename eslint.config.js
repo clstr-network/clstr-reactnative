@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default tseslint.config(
-  { ignores: ["dist", "external/**", "supabase/**", "src/integrations/supabase/types.ts"] },
+  { ignores: ["dist", "external/**", "supabase/**", "apps/mobile/**", "src/integrations/supabase/types.ts"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

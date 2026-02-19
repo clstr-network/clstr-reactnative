@@ -2,6 +2,8 @@
  * CLSTR Navigation — Auth Stack
  *
  * Screens shown before the user is authenticated.
+ * Login and Signup use real implementations; remaining screens
+ * are placeholders to be wired in later phases.
  */
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,20 +11,22 @@ import { View, Text, StyleSheet } from 'react-native';
 import type { AuthStackParamList } from './types';
 import { tokens } from '../design/tokens';
 
+// Real screen implementations
+import { LoginScreen } from '../screens/auth/LoginScreen';
+import { SignupScreen } from '../screens/auth/SignupScreen';
+
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 // ─── Placeholder Screens ─────────────────────────────────────
-// These will be replaced by actual page components in Phase 2+
+// These will be replaced by actual page components in later phases
 
 const PlaceholderScreen = ({ title }: { title: string }) => (
   <View style={styles.container}>
     <Text style={styles.title}>{title}</Text>
-    <Text style={styles.subtitle}>Coming in Phase 2</Text>
+    <Text style={styles.subtitle}>Coming soon</Text>
   </View>
 );
 
-const LoginScreen = () => <PlaceholderScreen title="Login" />;
-const SignupScreen = () => <PlaceholderScreen title="Sign Up" />;
 const ForgotPasswordScreen = () => <PlaceholderScreen title="Forgot Password" />;
 const VerifyEmailScreen = () => <PlaceholderScreen title="Verify Email" />;
 const MagicLinkSentScreen = () => <PlaceholderScreen title="Magic Link Sent" />;

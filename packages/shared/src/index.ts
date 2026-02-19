@@ -17,3 +17,6 @@ export type { Database, Json } from './integrations/supabase/types';
 
 // Re-export UI components
 export * from './components/ui';
+
+// Re-export hooks
+export { useAuth } from './hooks/useAuth';

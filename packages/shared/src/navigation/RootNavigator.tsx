@@ -1,21 +1,28 @@
 /**
  * CLSTR Navigation — Root Navigator
  *
- * Top-level navigator that switches between:
- * - AuthStack (not logged in)
- * - OnboardingStack (logged in but not onboarded)
- * - MainTabs (fully authenticated)
+ * Top-level navigator with 3-way conditional rendering:
+ * 1. AuthStack        → not logged in
+ * 2. OnboardingScreen → logged in but `profiles.onboarded` is false
+ * 3. MainTabs         → fully authenticated & onboarded
  *
- * Auth state is checked via Supabase session.
+ * Auth state comes from useAuth(); onboarding state is fetched from
+ * the `profiles` table and exposed via OnboardingProvider so the
+ * OnboardingScreen can call `markOnboarded()` after a successful upsert
+ * without needing a round-trip re-query.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import type { RootStackParamList } from './types';
 import { tokens } from '../design/tokens';
 
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../integrations/supabase/client';
+import { OnboardingProvider } from './OnboardingContext';
 import { AuthStack } from './AuthStack';
 import { MainTabs } from './MainTabs';
+import { OnboardingScreen } from '../screens/auth/OnboardingScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,7 +34,6 @@ const PlaceholderScreen = ({ title }: { title: string }) => (
   </View>
 );
 
-const OnboardingScreen = () => <PlaceholderScreen title="Onboarding" />;
 const MentorshipScreen = () => <PlaceholderScreen title="Mentorship" />;
 const ClubsScreen = () => <PlaceholderScreen title="Clubs" />;
 const ProjectsScreen = () => <PlaceholderScreen title="Projects" />;
@@ -36,22 +42,43 @@ const EcoCampusScreen = () => <PlaceholderScreen title="EcoCampus" />;
 const JobsScreen = () => <PlaceholderScreen title="Jobs" />;
 
 export function RootNavigator() {
-  // In Phase 1, we always show MainTabs to verify the navigation shell works.
-  // Phase 2 will wire up actual auth state checking.
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isLoading, isAuthenticated, user } = useAuth();
+  // null = still checking, false = needs onboarding, true = done
+  const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
 
+  // Query `profiles.onboarded` whenever the authenticated user changes.
+  // We key on `user` (not `user?.id`) to satisfy exhaustive-deps; the
+  // early-return handles the null case.
   useEffect(() => {
-    // Simulate auth check — in Phase 2 this will use Supabase session
-    const timer = setTimeout(() => {
-      // Default to showing Main tabs for development/testing
-      setIsAuthenticated(true);
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!user) {
+      setIsOnboarded(null);
+      return;
+    }
 
-  if (isLoading) {
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('onboarded')
+      .eq('id', user.id)
+      .single()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data) {
+          // No profile row yet → needs onboarding
+          setIsOnboarded(false);
+          return;
+        }
+        setIsOnboarded(!!data.onboarded);
+      });
+
+    return () => { cancelled = true; };
+  }, [user]);
+
+  /** Called by OnboardingScreen after successful profile upsert */
+  const markOnboarded = useCallback(() => setIsOnboarded(true), []);
+
+  // Show loading spinner while auth or onboarding state is resolving
+  if (isLoading || (isAuthenticated && isOnboarded === null)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={tokens.colors.dark.primary} />
@@ -60,31 +87,35 @@ export function RootNavigator() {
   }
 
   return (
-    <Stack.Navigator
-      id="RootStack"
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: tokens.colors.dark.background },
-        animation: 'fade',
-      }}
-    >
-      {isAuthenticated ? (
-        <>
-          <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="Mentorship" component={MentorshipScreen} />
-          <Stack.Screen name="Clubs" component={ClubsScreen} />
-          <Stack.Screen name="Projects" component={ProjectsScreen} />
-          <Stack.Screen name="Search" component={SearchScreen} />
-          <Stack.Screen name="EcoCampus" component={EcoCampusScreen} />
-          <Stack.Screen name="Jobs" component={JobsScreen} />
-        </>
-      ) : (
-        <>
+    <OnboardingProvider value={{ isOnboarded, markOnboarded }}>
+      <Stack.Navigator
+        id="RootStack"
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: tokens.colors.dark.background },
+          animation: 'fade',
+        }}
+      >
+        {!isAuthenticated ? (
+          // ─── Not authenticated ───────────────────────────
           <Stack.Screen name="Auth" component={AuthStack} />
+        ) : !isOnboarded ? (
+          // ─── Authenticated but NOT onboarded ─────────────
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        </>
-      )}
-    </Stack.Navigator>
+        ) : (
+          // ─── Fully authenticated & onboarded ─────────────
+          <>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="Mentorship" component={MentorshipScreen} />
+            <Stack.Screen name="Clubs" component={ClubsScreen} />
+            <Stack.Screen name="Projects" component={ProjectsScreen} />
+            <Stack.Screen name="Search" component={SearchScreen} />
+            <Stack.Screen name="EcoCampus" component={EcoCampusScreen} />
+            <Stack.Screen name="Jobs" component={JobsScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </OnboardingProvider>
   );
 }
 

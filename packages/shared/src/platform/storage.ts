@@ -2,10 +2,13 @@
  * Platform-specific auth storage adapter for Supabase.
  *
  * - Web: uses window.localStorage
- * - Native (iOS/Android): uses @react-native-async-storage/async-storage
+ * - Native (iOS/Android): uses expo-secure-store (encrypted on device)
+ *
+ * S4 enforcement: Do NOT override `storageKey`. Let Supabase use its
+ * default "supabase.auth.token" so both platforms share session semantics.
  */
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 interface StorageAdapter {
   getItem: (key: string) => string | null | Promise<string | null>;
@@ -23,8 +26,8 @@ export const authStorage: StorageAdapter =
           globalThis.localStorage?.removeItem(key),
       }
     : {
-        getItem: (key: string) => AsyncStorage.getItem(key),
+        getItem: (key: string) => SecureStore.getItemAsync(key),
         setItem: (key: string, value: string) =>
-          AsyncStorage.setItem(key, value),
-        removeItem: (key: string) => AsyncStorage.removeItem(key),
+          SecureStore.setItemAsync(key, value),
+        removeItem: (key: string) => SecureStore.deleteItemAsync(key),
       };

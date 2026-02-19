@@ -6,6 +6,7 @@ export { NetworkStack } from './NetworkStack';
 export { EventsStack } from './EventsStack';
 export { MessagingStack } from './MessagingStack';
 export { ProfileStack } from './ProfileStack';
+export { OnboardingProvider, useOnboarding } from './OnboardingContext';
 export { linking } from './linking';
 
 export type {

@@ -14,11 +14,21 @@
     "noImplicitAny": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "ignoreDeprecations": "5.0"
+    "ignoreDeprecations": "5.0",
+    "paths": {
+      "@clstr/core": ["../../packages/core/src/index.ts"],
+      "@clstr/core/*": ["../../packages/core/src/*"],
+      "@clstr/shared": ["../../packages/shared/src/index.ts"],
+      "@clstr/shared/*": ["../../packages/shared/src/*"]
+    }
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "../../packages/shared/src/**/*.ts",
+    "../../packages/shared/src/**/*.tsx",
+    "../../packages/core/src/**/*.ts",
+    "../../packages/core/src/**/*.tsx"
   ],
   "exclude": [
     "node_modules"
