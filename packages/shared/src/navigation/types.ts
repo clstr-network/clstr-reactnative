@@ -59,6 +59,7 @@ export type ProfileStackParamList = {
   ProfileScreen: { id?: string };
   ProfileConnections: { id: string };
   Settings: undefined;
+  Notifications: undefined;
   HelpCenter: undefined;
   SavedItems: undefined;
   SkillAnalysis: undefined;
@@ -88,8 +89,10 @@ export type RootStackParamList = {
 };
 
 // ─── Deep Linking Param mapping ──────────────────────────────
+/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-empty-object-type */
 declare global {
   namespace ReactNavigation {
     interface RootParamList extends RootStackParamList {}
   }
 }
+/* eslint-enable @typescript-eslint/no-namespace, @typescript-eslint/no-empty-object-type */

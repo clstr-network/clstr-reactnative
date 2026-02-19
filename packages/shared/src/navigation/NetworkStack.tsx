@@ -1,5 +1,9 @@
 /**
  * CLSTR Navigation — Network Stack
+ *
+ * Accepts a `screens` prop map so the consuming app (apps/mobile)
+ * can inject real screen implementations without creating a
+ * dependency from packages/shared → apps/mobile.
  */
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,6 +13,8 @@ import { tokens } from '../design/tokens';
 
 const Stack = createNativeStackNavigator<NetworkStackParamList>();
 
+// ── Placeholder fallbacks (used when no screen map is provided) ──
+
 const PlaceholderScreen = ({ title }: { title: string }) => (
   <View style={styles.container}>
     <Text style={styles.title}>{title}</Text>
@@ -16,12 +22,21 @@ const PlaceholderScreen = ({ title }: { title: string }) => (
   </View>
 );
 
-const NetworkScreen = () => <PlaceholderScreen title="Network" />;
-const ProfileScreen = () => <PlaceholderScreen title="Profile" />;
-const ProfileConnectionsScreen = () => <PlaceholderScreen title="Connections" />;
-const AlumniDirectoryScreen = () => <PlaceholderScreen title="Alumni Directory" />;
+const DefaultNetworkScreen = () => <PlaceholderScreen title="Network" />;
+const DefaultProfileScreen = () => <PlaceholderScreen title="Profile" />;
+const DefaultProfileConnectionsScreen = () => <PlaceholderScreen title="Connections" />;
+const DefaultAlumniDirectoryScreen = () => <PlaceholderScreen title="Alumni Directory" />;
 
-export function NetworkStack() {
+// ── Screen registry type ──
+
+export type NetworkStackScreens = {
+  NetworkScreen?: React.ComponentType<any>;
+  Profile?: React.ComponentType<any>;
+  ProfileConnections?: React.ComponentType<any>;
+  AlumniDirectory?: React.ComponentType<any>;
+};
+
+export function NetworkStack({ screens }: { screens?: NetworkStackScreens } = {}) {
   return (
     <Stack.Navigator
       id="NetworkStack"
@@ -30,10 +45,22 @@ export function NetworkStack() {
         contentStyle: { backgroundColor: tokens.colors.dark.background },
       }}
     >
-      <Stack.Screen name="NetworkScreen" component={NetworkScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="ProfileConnections" component={ProfileConnectionsScreen} />
-      <Stack.Screen name="AlumniDirectory" component={AlumniDirectoryScreen} />
+      <Stack.Screen
+        name="NetworkScreen"
+        component={screens?.NetworkScreen ?? DefaultNetworkScreen}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={screens?.Profile ?? DefaultProfileScreen}
+      />
+      <Stack.Screen
+        name="ProfileConnections"
+        component={screens?.ProfileConnections ?? DefaultProfileConnectionsScreen}
+      />
+      <Stack.Screen
+        name="AlumniDirectory"
+        component={screens?.AlumniDirectory ?? DefaultAlumniDirectoryScreen}
+      />
     </Stack.Navigator>
   );
 }

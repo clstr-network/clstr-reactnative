@@ -25,6 +25,7 @@ const PlaceholderScreen = ({ title }: { title: string }) => (
 const DefaultProfileScreen = () => <PlaceholderScreen title="Profile" />;
 const DefaultProfileConnectionsScreen = () => <PlaceholderScreen title="Connections" />;
 const DefaultSettingsScreen = () => <PlaceholderScreen title="Settings" />;
+const DefaultNotificationsScreen = () => <PlaceholderScreen title="Notifications" />;
 const DefaultHelpCenterScreen = () => <PlaceholderScreen title="Help Center" />;
 const DefaultSavedItemsScreen = () => <PlaceholderScreen title="Saved Items" />;
 const DefaultSkillAnalysisScreen = () => <PlaceholderScreen title="Skill Analysis" />;
@@ -35,6 +36,7 @@ export type ProfileStackScreens = {
   ProfileScreen?: React.ComponentType<any>;
   ProfileConnections?: React.ComponentType<any>;
   Settings?: React.ComponentType<any>;
+  Notifications?: React.ComponentType<any>;
   HelpCenter?: React.ComponentType<any>;
   SavedItems?: React.ComponentType<any>;
   SkillAnalysis?: React.ComponentType<any>;
@@ -60,6 +62,10 @@ export function ProfileStack({ screens }: { screens?: ProfileStackScreens } = {}
       <Stack.Screen
         name="Settings"
         component={screens?.Settings ?? DefaultSettingsScreen}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={screens?.Notifications ?? DefaultNotificationsScreen}
       />
       <Stack.Screen
         name="HelpCenter"

@@ -27,10 +27,17 @@ import { ProfileScreen } from './src/screens/profile/ProfileScreen';
 import { ProfileConnectionsScreen } from './src/screens/profile/ProfileConnectionsScreen';
 import { MessagingListScreen } from './src/screens/messaging/MessagingListScreen';
 import { ConversationDetailScreen } from './src/screens/messaging/ConversationDetailScreen';
+import { EventsScreen } from './src/screens/events/EventsScreen';
+import { EventDetailScreen } from './src/screens/events/EventDetailScreen';
+import { NetworkScreen } from './src/screens/network/NetworkScreen';
+import { SettingsScreen } from './src/screens/settings/SettingsScreen';
+import { NotificationsScreen } from './src/screens/notifications/NotificationsScreen';
 
 import type { HomeStackScreens } from '../../packages/shared/src/navigation/HomeStack';
 import type { ProfileStackScreens } from '../../packages/shared/src/navigation/ProfileStack';
 import type { MessagingStackScreens } from '../../packages/shared/src/navigation/MessagingStack';
+import type { EventsStackScreens } from '../../packages/shared/src/navigation/EventsStack';
+import type { NetworkStackScreens } from '../../packages/shared/src/navigation/NetworkStack';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,12 +61,24 @@ const homeScreens: HomeStackScreens = {
 const profileScreens: ProfileStackScreens = {
   ProfileScreen: ProfileScreen,
   ProfileConnections: ProfileConnectionsScreen,
-  // Settings, HelpCenter, SavedItems, SkillAnalysis → placeholder
+  Settings: SettingsScreen,
+  Notifications: NotificationsScreen,
 };
 
 const messagingScreens: MessagingStackScreens = {
   MessagingScreen: MessagingListScreen,
   ConversationDetail: ConversationDetailScreen,
+};
+
+const eventsScreens: EventsStackScreens = {
+  EventsScreen: EventsScreen,
+  EventDetail: EventDetailScreen,
+};
+
+const networkScreens: NetworkStackScreens = {
+  NetworkScreen: NetworkScreen,
+  Profile: ProfileScreen,
+  ProfileConnections: ProfileConnectionsScreen,
 };
 
 export default function App() {
@@ -72,6 +91,8 @@ export default function App() {
               homeScreens={homeScreens}
               profileScreens={profileScreens}
               messagingScreens={messagingScreens}
+              eventsScreens={eventsScreens}
+              networkScreens={networkScreens}
             >
               <NavigationContainer linking={linking}>
                 <RootNavigator />

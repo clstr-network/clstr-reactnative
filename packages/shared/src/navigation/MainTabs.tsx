@@ -21,7 +21,7 @@ import { useScreenRegistry } from './ScreenRegistryContext';
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export function MainTabs() {
-  const { homeScreens, profileScreens, messagingScreens } = useScreenRegistry();
+  const { homeScreens, profileScreens, messagingScreens, eventsScreens, networkScreens } = useScreenRegistry();
 
   // Stable wrappers that pass screens to each stack
   const HomeStackScreen = useCallback(
@@ -35,6 +35,14 @@ export function MainTabs() {
   const MessagingStackScreen = useCallback(
     () => <MessagingStack screens={messagingScreens} />,
     [messagingScreens],
+  );
+  const EventsStackScreen = useCallback(
+    () => <EventsStack screens={eventsScreens} />,
+    [eventsScreens],
+  );
+  const NetworkStackScreen = useCallback(
+    () => <NetworkStack screens={networkScreens} />,
+    [networkScreens],
   );
   return (
     <Tab.Navigator
@@ -60,7 +68,7 @@ export function MainTabs() {
       />
       <Tab.Screen
         name="NetworkTab"
-        component={NetworkStack}
+        component={NetworkStackScreen}
         options={{
           tabBarLabel: 'Network',
           tabBarIcon: ({ color, size }) => (
@@ -70,7 +78,7 @@ export function MainTabs() {
       />
       <Tab.Screen
         name="EventsTab"
-        component={EventsStack}
+        component={EventsStackScreen}
         options={{
           tabBarLabel: 'Events',
           tabBarIcon: ({ color, size }) => (
