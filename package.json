@@ -26,7 +26,10 @@
     "security:registry": "node scripts/check-definer-registry.js",
     "security:drift": "node scripts/policy-drift-check.js",
     "security:attack-sim": "node scripts/destructive-security-tests.js",
-    "security:all": "npm run security:lint-migrations && npm run security:invariants && npm run security:registry && npm run security:drift && npm run security:attack-sim"
+    "security:all": "npm run security:lint-migrations && npm run security:invariants && npm run security:registry && npm run security:drift && npm run security:attack-sim",
+    "validate:adapters": "node scripts/validate-adapters.js",
+    "typecheck": "npx tsc -p packages/core/tsconfig.json --noEmit && npx tsc -p tsconfig.app.json --noEmit",
+    "typecheck:core": "npx tsc -p packages/core/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@fontsource/space-grotesk": "^5.2.10",

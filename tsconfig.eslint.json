@@ -8,12 +8,19 @@
       ],
       "@shared/*": [
         "./packages/shared/src/*"
+      ],
+      "@clstr/core": [
+        "./packages/core/src"
+      ],
+      "@clstr/core/*": [
+        "./packages/core/src/*"
       ]
     }
   },
   "include": [
     "src",
     "packages/shared/src",
+    "packages/core/src",
     "*.ts",
     "*.tsx"
   ],
