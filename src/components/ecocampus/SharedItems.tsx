@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Grid2X2, List, MessageSquare, ShoppingCart, Loader2 } from 'lucide-react';
@@ -25,7 +26,7 @@ import {
   SharedItemIntent,
 } from '@/lib/ecocampus-api';
 import { useProfile } from '@/contexts/ProfileContext';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
 import { supabase } from '@/integrations/supabase/client';
 
 // Query keys for consistent cache management
@@ -88,7 +89,7 @@ const SharedItems = () => {
 
   useEffect(() => {
     const channel = supabase
-      .channel('shared-items-public')
+      .channel(CHANNELS.marketplace.sharedItemsPublic())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_items' }, () => {
         queryClient.invalidateQueries({ queryKey: ECOCAMPUS_QUERY_KEYS.sharedItems });
       })
@@ -104,7 +105,7 @@ const SharedItems = () => {
     if (!domain) return;
 
     const channel = supabase
-      .channel('ecocampus-profiles-shared-items')
+      .channel(CHANNELS.marketplace.sharedItemsProfiles())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `college_domain=eq.${domain}` }, () => {
         queryClient.invalidateQueries({ queryKey: ECOCAMPUS_QUERY_KEYS.sharedItems });
       })
@@ -121,7 +122,7 @@ const SharedItems = () => {
     assertValidUuid(profile.id, 'profileId');
 
     const channel = supabase
-      .channel(`shared-item-intents-${profile.id}`)
+      .channel(CHANNELS.marketplace.sharedItemIntents(profile.id))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shared_item_intents', filter: `requester_id=eq.${profile.id}` },
@@ -165,7 +166,7 @@ const SharedItems = () => {
     if (effectiveType === 'donate') return 'Free';
 
     const rawPrice = item.price?.trim() || '';
-    const basePrice = rawPrice.startsWith('₹') ? rawPrice : rawPrice ? `₹${rawPrice}` : '₹0';
+    const basePrice = rawPrice.startsWith('Ã¢â€šÂ¹') ? rawPrice : rawPrice ? `Ã¢â€šÂ¹${rawPrice}` : 'Ã¢â€šÂ¹0';
     if (effectiveType === 'rent') {
       return item.rent_unit ? `${basePrice}/${item.rent_unit}` : basePrice;
     }
@@ -418,7 +419,7 @@ const SharedItems = () => {
                     </div>
 
                     <div className="text-xs text-white/35 mb-3 space-y-0.5">
-                      <p className="truncate">📍 {item.location || 'Pickup point not specified'}</p>
+                      <p className="truncate">Ã°Å¸â€œÂ {item.location || 'Pickup point not specified'}</p>
                     </div>
 
                     <div className="flex gap-2">

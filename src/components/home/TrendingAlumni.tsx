@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Button } from "@/components/ui/button";
 import { UserPlus, Check } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
@@ -9,7 +10,8 @@ import { UserBadge, UserType, normalizeUserType } from "@/components/ui/user-bad
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { assertValidUuid } from "@/lib/uuid";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 import { getConnectionStatusesForUsers, sendConnectionRequest, countMutualConnectionsBatch } from "@/lib/social-api";
 
 interface ConnectionProfile {
@@ -100,18 +102,18 @@ const TrendingConnections = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ['network'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
     },
   });
 
   const refresh = useMemo(
     () => () => {
       queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ['network'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
     },
     [queryClient, queryKey]
   );
@@ -120,7 +122,7 @@ const TrendingConnections = () => {
     if (!profile?.id) return;
 
     const channel = supabase
-      .channel(`trending-connections-${profile.id}`)
+      .channel(CHANNELS.social.trendingConnections(profile.id))
       .on(
         "postgres_changes",
         {

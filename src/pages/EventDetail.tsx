@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getEventById, getEventByIdPublic } from "@/lib/events-api";
@@ -10,7 +11,7 @@ import { PublicEventCard } from "@/components/events/PublicEventCard";
 import { SEO } from "@/components/SEO";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { isValidUuid } from "@/lib/uuid";
+import { isValidUuid } from "@clstr/shared/utils/uuid";
 
 const EventSkeleton = () => (
   <Card className="max-w-2xl mx-auto">
@@ -130,7 +131,7 @@ const EventDetail = () => {
     if (!isValidEventId) return;
 
     const channel = supabase
-      .channel(`event-detail-${eventId}`)
+      .channel(CHANNELS.events.eventDetail(eventId))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "events", filter: `id=eq.${eventId}` },
@@ -185,7 +186,7 @@ const EventDetail = () => {
       <div className="container max-w-3xl py-8">
         <SEO
           title="Unable to load event"
-          description="We couldn’t load this event right now. Please try again."
+          description="We couldnâ€™t load this event right now. Please try again."
           type="website"
         />
         <ErrorState

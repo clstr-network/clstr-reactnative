@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Bell, Check, X, Loader2, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
@@ -12,7 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { acceptConnectionRequest, rejectConnectionRequest } from "@/lib/social-api";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
 interface Notification {
   id: string;
@@ -55,7 +57,7 @@ export function NotificationDropdown() {
       setUserId(nextUserId);
 
       if (!nextUserId) {
-        queryClient.removeQueries({ queryKey: ['notifications'] });
+        queryClient.removeQueries({ queryKey: QUERY_KEYS.social.notifications() });
       }
     });
 
@@ -252,7 +254,7 @@ export function NotificationDropdown() {
       assertValidUuid(userId, "userId");
 
       channel = supabase
-        .channel(`notifications-realtime-${userId}`)
+        .channel(CHANNELS.social.notificationsRealtime(userId))
         .on(
           "postgres_changes",
           {
@@ -327,9 +329,9 @@ export function NotificationDropdown() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.all(userId) });
-      queryClient.invalidateQueries({ queryKey: ["network"] });
-      queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["connectedUsers"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
       toast({
         title: "Connection accepted",
         description: "You're now connected.",
@@ -364,9 +366,9 @@ export function NotificationDropdown() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.all(userId) });
-      queryClient.invalidateQueries({ queryKey: ["network"] });
-      queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["connectedUsers"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
       toast({
         title: "Request declined",
       });
@@ -400,23 +402,23 @@ export function NotificationDropdown() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "connection":
-        return "👤";
+        return "ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â¤";
       case "like":
-        return "❤️";
+        return "ÃƒÂ¢Ã‚ÂÃ‚Â¤ÃƒÂ¯Ã‚Â¸Ã‚Â";
       case "comment":
-        return "💬";
+        return "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¬";
       case "mention":
-        return "📌";
+        return "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…â€™";
       case "event":
-        return "📅";
+        return "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦";
       case "club":
-        return "👥";
+        return "ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â¥";
       case "project":
-        return "💼";
+        return "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¼";
       case "message":
-        return "✉️";
+        return "ÃƒÂ¢Ã…â€œÃ¢â‚¬Â°ÃƒÂ¯Ã‚Â¸Ã‚Â";
       default:
-        return "🔔";
+        return "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Â";
     }
   };
 
@@ -461,7 +463,7 @@ export function NotificationDropdown() {
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    // Fire-and-forget mark as read — navigation must feel instant
+    // Fire-and-forget mark as read ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â navigation must feel instant
     if (!notification.read) {
       markAsReadMutation.mutate(notification.id);
     }

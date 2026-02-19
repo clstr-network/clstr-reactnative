@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
-import { ADMIN_NAV_ITEMS } from '@/types/admin';
+import { ADMIN_NAV_ITEMS } from '@clstr/shared/types/admin';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';

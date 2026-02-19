@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useProfile } from "@/contexts/ProfileContext";
 import { useIdentityContext } from "@/contexts/IdentityContext";
 import { useFeatureAccess, useRouteGuard } from "@/hooks/useFeatureAccess";
@@ -13,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Users, CheckCircle, Search, UserPlus, UserMinus, ExternalLink } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 import {
   fetchClubsWithFollowStatus,
   followClubConnection,
@@ -73,7 +74,7 @@ export default function Clubs() {
     if (!collegeDomain) return;
 
     const channel = supabase
-      .channel('clubs-realtime')
+      .channel(CHANNELS.events.clubsRealtime())
       .on(
         'postgres_changes',
         {

@@ -1,18 +1,20 @@
 
 import { useState, useEffect, useCallback } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import { useProfile } from "@/contexts/ProfileContext";
-import type { UserProfile } from "@/types/profile";
+import type { UserProfile } from "@clstr/shared/types/profile";
 import { supabase } from "@/integrations/supabase/client";
 import { getProfileById, removeProfileAvatar, uploadProfileAvatar, validateAvatarFile } from "@/lib/profile";
 import { sendConnectionRequest, checkConnectionStatus, getUserPostsCount } from "@/lib/social-api";
 import { getConnectionCount, getProfileViewsCount, trackProfileView } from "@/lib/profile-api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { assertValidUuid } from "@/lib/uuid";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 
 
 const normalizeProfileMessageConnectionStatus = (status: string | null): string | null => {
@@ -45,7 +47,7 @@ const Profile = () => {
     setConnectionStatus(normalizeProfileMessageConnectionStatus(status));
   }, [profile?.id, isCurrentUser]);
   const { data: stats } = useQuery({
-    queryKey: ["profile-stats", profile?.id],
+    queryKey: QUERY_KEYS.profile.stats(profile?.id),
     queryFn: async () => {
       if (!profile?.id) throw new Error("Profile missing");
       // Use Promise.allSettled so one failure doesn't cascade and zero out all stats
@@ -156,17 +158,17 @@ const Profile = () => {
     if (!profile?.id) return;
 
     const channel = supabase
-      .channel(`profile-stats-${profile.id}`)
+      .channel(CHANNELS.profile.stats(profile.id))
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'connections',
         filter: `requester_id=eq.${profile.id}`,
       }, async () => {
-        queryClient.invalidateQueries({ queryKey: ["profile-stats", profile.id] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profile.id) });
         if (!isCurrentUser) {
           await refreshConnectionStatus();
-          queryClient.invalidateQueries({ queryKey: ["network"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
         }
       })
       .on('postgres_changes', {
@@ -175,10 +177,10 @@ const Profile = () => {
         table: 'connections',
         filter: `receiver_id=eq.${profile.id}`,
       }, async () => {
-        queryClient.invalidateQueries({ queryKey: ["profile-stats", profile.id] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profile.id) });
         if (!isCurrentUser) {
           await refreshConnectionStatus();
-          queryClient.invalidateQueries({ queryKey: ["network"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
         }
       })
       .on('postgres_changes', {
@@ -186,13 +188,13 @@ const Profile = () => {
         schema: 'public',
         table: 'profile_views',
         filter: `profile_id=eq.${profile.id}`,
-      }, () => queryClient.invalidateQueries({ queryKey: ["profile-stats", profile.id] }))
+      }, () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profile.id) }))
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'posts',
         filter: `user_id=eq.${profile.id}`,
-      }, () => queryClient.invalidateQueries({ queryKey: ["profile-stats", profile.id] }))
+      }, () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profile.id) }))
       .subscribe();
 
     return () => {
@@ -219,7 +221,7 @@ const Profile = () => {
 
     let mounted = true;
     const channel = supabase
-      .channel(`profile-view-${profile.id}`)
+      .channel(CHANNELS.profile.view(profile.id))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${profile.id}` },
@@ -303,8 +305,8 @@ const Profile = () => {
     setConnectionStatus('pending');
     try {
       await sendConnectionRequest(profile.id);
-      queryClient.invalidateQueries({ queryKey: ["network"] });
-      queryClient.invalidateQueries({ queryKey: ["profile-stats", profile.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profile.id) });
       toast({
         title: "Connection request sent",
         description: `Your request to connect with ${displayName} has been sent.`,
@@ -435,7 +437,7 @@ const Profile = () => {
       }
 
       await updateProfile(updates);
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsEditProfileOpen(false);
     } catch (error) {
       toast({
@@ -454,7 +456,7 @@ const Profile = () => {
         if (refreshedProfile) {
           setProfile(refreshedProfile);
         }
-        queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       } catch (error) {
         console.error("Failed to refresh profile after project change:", error);
       }

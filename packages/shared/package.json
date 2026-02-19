@@ -17,6 +17,13 @@
     "./contexts/*": "./src/contexts/*.tsx",
     "./hooks/*": "./src/hooks/*.ts",
     "./types/*": "./src/types/*.ts",
+    "./api/*": "./src/api/*.ts",
+    "./utils/*": "./src/utils/*.ts",
+    "./schemas/*": "./src/schemas/*.ts",
+    "./query-keys": "./src/query-keys.ts",
+    "./realtime/channels": "./src/realtime/channels.ts",
+    "./errors": "./src/errors.ts",
+    "./supabase/*": "./src/supabase/*.ts",
     "./components/ui": "./src/components/ui/index.ts",
     "./components/ui/*": "./src/components/ui/*.tsx"
   },

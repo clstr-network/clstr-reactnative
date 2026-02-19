@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { CalendarClock, MapPin, Users, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useMemo } from "react";
@@ -6,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 import { format } from "date-fns";
 import { trackExternalRegistrationClick } from "@/lib/events-api";
 
@@ -170,7 +171,7 @@ const UpcomingEvents = () => {
     if (!profile?.id) return;
 
     const channel = supabase
-      .channel(`upcoming-events-${profile.id}`)
+      .channel(CHANNELS.events.upcoming(profile.id))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "events" },
@@ -339,7 +340,7 @@ const UpcomingEvents = () => {
                     {rsvpMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : isRegistered ? (
-                      "Registered ✓"
+                      "Registered âœ“"
                     ) : (
                       event.external_registration_link ? "Register" : "RSVP"
                     )}
@@ -370,7 +371,7 @@ const UpcomingEvents = () => {
           asChild
         >
           <Link to="/events">
-            View All Events →
+            View All Events â†’
           </Link>
         </Button>
       </div>

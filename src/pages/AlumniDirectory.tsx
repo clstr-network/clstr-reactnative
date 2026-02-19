@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useNavigate } from 'react-router-dom';
 import { Search, Loader2, UserPlus, MessageSquare, RefreshCw, GraduationCap, MapPin, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,9 +11,10 @@ import { useIdentityContext } from '@/contexts/IdentityContext';
 import { useFeatureAccess, useRouteGuard } from '@/hooks/useFeatureAccess';
 import { supabase } from '@/integrations/supabase/client';
 import { sendConnectionRequest, getConnectionStatusesForUsers } from '@/lib/social-api';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
 interface AlumniUser {
   id: string;
@@ -47,8 +49,8 @@ const AlumniDirectory = () => {
   const { profile, isLoading: profileLoading } = useProfile();
   
   // FINAL Matrix Permissions for Alumni Directory:
-  // canViewAlumniDirectory: Student ✅, Alumni ✅, Faculty ✅, Club 🚫
-  // canConnectWithAlumni: Student ✅, Alumni ✅, Faculty ✅, Club 🚫
+  // canViewAlumniDirectory: Student Ã¢Å“â€¦, Alumni Ã¢Å“â€¦, Faculty Ã¢Å“â€¦, Club Ã°Å¸Å¡Â«
+  // canConnectWithAlumni: Student Ã¢Å“â€¦, Alumni Ã¢Å“â€¦, Faculty Ã¢Å“â€¦, Club Ã°Å¸Å¡Â«
   const { 
     canViewAlumniDirectory, 
     canConnectWithAlumni,
@@ -62,7 +64,7 @@ const AlumniDirectory = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Derived domain — authoritative source is IdentityContext (server RPC)
+  // Derived domain Ã¢â‚¬â€ authoritative source is IdentityContext (server RPC)
   const { collegeDomain: identityDomain } = useIdentityContext();
   const effectiveDomain = identityDomain ?? null;
 
@@ -123,7 +125,7 @@ const AlumniDirectory = () => {
   const visibleAlumniIds = useMemo(() => (alumniData ?? []).map((u) => u.id), [alumniData]);
 
   const { data: connectionStatuses } = useQuery({
-    queryKey: ['alumni-directory', 'connection-statuses', ...visibleAlumniIds] as const,
+    queryKey: QUERY_KEYS.social.alumniDirectoryStatuses(...visibleAlumniIds),
     queryFn: async () => {
       const map = await getConnectionStatusesForUsers(visibleAlumniIds);
       return Object.fromEntries(map.entries()) as Record<string, string | null>;
@@ -217,9 +219,9 @@ const AlumniDirectory = () => {
         title: 'Connection request sent',
         description: 'Your request has been sent to this alumni',
       });
-      queryClient.invalidateQueries({ queryKey: ['network'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
     },
     onError: (error: Error, _userId, context) => {
       // Roll back to previous value on error
@@ -243,7 +245,7 @@ const AlumniDirectory = () => {
     if (!profile?.id) return;
 
     const channel = supabase
-      .channel(`alumni-directory-connections-${profile.id}`)
+      .channel(CHANNELS.social.alumniDirectoryConnections(profile.id))
       .on(
         'postgres_changes',
         {
@@ -253,10 +255,10 @@ const AlumniDirectory = () => {
           filter: `requester_id=eq.${profile.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['alumni-directory'] });
-          queryClient.invalidateQueries({ queryKey: ['network'] });
-          queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-          queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.alumniDirectory() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
         }
       )
       .on(
@@ -268,10 +270,10 @@ const AlumniDirectory = () => {
           filter: `receiver_id=eq.${profile.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['alumni-directory'] });
-          queryClient.invalidateQueries({ queryKey: ['network'] });
-          queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-          queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.alumniDirectory() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
         }
       )
       .subscribe();
@@ -290,7 +292,7 @@ const AlumniDirectory = () => {
     const channels: ReturnType<typeof supabase.channel>[] = [];
 
     const profilesChannel = supabase
-      .channel(`alumni-directory-profiles-${effectiveDomain}`)
+      .channel(CHANNELS.social.alumniDirectoryProfiles(effectiveDomain))
       .on(
         'postgres_changes',
         {
@@ -300,7 +302,7 @@ const AlumniDirectory = () => {
           filter: `college_domain=eq.${effectiveDomain}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['alumni-directory'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.alumniDirectory() });
         }
       )
       .subscribe();
@@ -309,7 +311,7 @@ const AlumniDirectory = () => {
 
     if (alumniIdsFilter) {
       const alumniProfilesChannel = supabase
-        .channel(`alumni-directory-alumni-profiles-${effectiveDomain}`)
+        .channel(CHANNELS.social.alumniDirectoryAlumniProfiles(effectiveDomain))
         .on(
           'postgres_changes',
           {
@@ -319,7 +321,7 @@ const AlumniDirectory = () => {
             filter: `user_id=in.(${alumniIdsFilter})`,
           },
           () => {
-            queryClient.invalidateQueries({ queryKey: ['alumni-directory'] });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.alumniDirectory() });
           }
         )
         .subscribe();
@@ -518,7 +520,7 @@ const AlumniDirectory = () => {
             )}
           </div>
 
-          {/* Result count — muted metadata */}
+          {/* Result count Ã¢â‚¬â€ muted metadata */}
           {!alumniLoading && !alumniError && (
             <p className="text-xs text-white/30">{filteredAlumni.length} alumni found</p>
           )}
@@ -583,7 +585,7 @@ const AlumniDirectory = () => {
                     )}
                     {(alum.branch || alum.graduation_year) && (
                       <p className="text-xs text-white/35 truncate">
-                        {[alum.branch, alum.graduation_year ? `Class of ${alum.graduation_year}` : null].filter(Boolean).join(' • ')}
+                        {[alum.branch, alum.graduation_year ? `Class of ${alum.graduation_year}` : null].filter(Boolean).join(' Ã¢â‚¬Â¢ ')}
                       </p>
                     )}
                   </div>

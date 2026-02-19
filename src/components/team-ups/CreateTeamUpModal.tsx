@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -47,7 +48,7 @@ const EVENT_TYPES: { label: string; value: TeamUpEventType }[] = [
   { label: "Hackathon", value: "hackathon" },
   { label: "College Event / Fest", value: "college_event" },
   { label: "Competition", value: "competition" },
-  { label: "Short-term Project (≤ 4 weeks)", value: "short_term_project" },
+  { label: "Short-term Project (â‰¤ 4 weeks)", value: "short_term_project" },
 ];
 
 const COMMITMENTS: { label: string; value: TeamUpCommitment }[] = [
@@ -70,8 +71,8 @@ const AVAILABILITIES: { label: string; value: TeamUpAvailability }[] = [
 ];
 
 const TIME_COMMITMENTS: { label: string; value: TeamUpTimeCommitment }[] = [
-  { label: "≤ 5 hrs/week", value: "under_5_hours" },
-  { label: "5–10 hrs/week", value: "5_to_10_hours" },
+  { label: "â‰¤ 5 hrs/week", value: "under_5_hours" },
+  { label: "5â€“10 hrs/week", value: "5_to_10_hours" },
   { label: "10+ hrs/week", value: "over_10_hours" },
 ];
 
@@ -114,7 +115,7 @@ export function CreateTeamUpModal({ open, onOpenChange }: CreateTeamUpModalProps
 
   // Fetch role definitions
   const { data: roleDefinitionsData } = useQuery({
-    queryKey: ["team-up-role-definitions"],
+    queryKey: QUERY_KEYS.teamUps.roleDefinitions(),
     queryFn: getTeamUpRoleDefinitions,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -151,8 +152,8 @@ export function CreateTeamUpModal({ open, onOpenChange }: CreateTeamUpModalProps
             ? "Your team-up is now visible to others in your college."
             : "You're now listed as looking to join a team.",
         });
-        queryClient.invalidateQueries({ queryKey: ["team-ups"] });
-        queryClient.invalidateQueries({ queryKey: ["my-team-ups"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.all() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.my() });
         resetAndClose();
       }
     },
@@ -637,7 +638,7 @@ export function CreateTeamUpModal({ open, onOpenChange }: CreateTeamUpModalProps
 
                 {/* Event Info */}
                 <h3 className="font-semibold text-lg text-white">
-                  {intent === "looking_for_teammates" ? eventName : `Looking to Join — ${eventName}`}
+                  {intent === "looking_for_teammates" ? eventName : `Looking to Join â€” ${eventName}`}
                 </h3>
                 
                 <div className="flex items-center gap-2 text-sm text-white/50">
@@ -717,7 +718,7 @@ export function CreateTeamUpModal({ open, onOpenChange }: CreateTeamUpModalProps
                       <div className="text-sm text-white/70">
                         <span className="text-white/50">Availability: </span>
                         {AVAILABILITIES.find(a => a.value === availability)?.label}
-                        {timeCommitment && ` · ${TIME_COMMITMENTS.find(t => t.value === timeCommitment)?.label}`}
+                        {timeCommitment && ` Â· ${TIME_COMMITMENTS.find(t => t.value === timeCommitment)?.label}`}
                       </div>
                     )}
 

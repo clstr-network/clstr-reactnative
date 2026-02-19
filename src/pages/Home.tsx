@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { ChevronDown, Loader2 } from "lucide-react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -147,7 +149,7 @@ const Home = () => {
     const queryKey = [...FEED_QUERY_KEY, sortOrder];
 
     const channel = supabase
-      .channel(`home-feed-${profile.id}`)
+      .channel(CHANNELS.feed.homeFeedUser(profile.id))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "posts" },
@@ -162,17 +164,17 @@ const Home = () => {
         "postgres_changes",
         { event: "*", schema: "public", table: "comments" },
         () => {
-          // Only invalidate comment-specific caches — NOT the entire feed.
+          // Only invalidate comment-specific caches Ã¢â‚¬â€ NOT the entire feed.
           // The feed's comments_count is stale until the next fetch, but this
           // avoids expensive full-feed re-renders on every comment.
-          queryClient.invalidateQueries({ queryKey: ["post-comments"] });
-          queryClient.invalidateQueries({ queryKey: ["top-comments"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed.postComments() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed.topComments() });
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "comment_likes" },
-        () => queryClient.invalidateQueries({ queryKey: ["post-comments"] })
+        () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed.postComments() })
       )
       .on(
         "postgres_changes",
@@ -264,13 +266,13 @@ const Home = () => {
           {/* MAIN FEED */}
           <div className="md:col-span-6">
             <div className="space-y-5 pt-4 pb-20 md:pb-10">
-            {/* Profile completion banner — Tier 1 */}
+            {/* Profile completion banner Ã¢â‚¬â€ Tier 1 */}
             <ProfileCompletionBanner />
 
-            {/* Personal email prompt — shown to students nearing graduation */}
+            {/* Personal email prompt Ã¢â‚¬â€ shown to students nearing graduation */}
             {shouldShowPersonalEmailPrompt && <PersonalEmailPrompt forceShow />}
 
-            {/* Post Composer — Tier 1 (visual anchor) */}
+            {/* Post Composer Ã¢â‚¬â€ Tier 1 (visual anchor) */}
             <PostComposer profile={profile} onCreate={handleCreatePost} />
 
             <div className="flex justify-end items-center text-sm text-white/50">

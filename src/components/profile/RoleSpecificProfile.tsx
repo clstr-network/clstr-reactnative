@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import type { ComponentProps } from 'react';
 import { StudentProfileSection } from './StudentProfileSection';
 import { AlumniProfileSection } from './AlumniProfileSection';
@@ -9,8 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { UserProfile } from '@/types/profile';
-import { assertValidUuid } from '@/lib/uuid';
+import type { UserProfile } from '@clstr/shared/types/profile';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
 
 interface RoleSpecificProfileProps {
   profile: UserProfile;
@@ -131,7 +132,7 @@ export const RoleSpecificProfile = ({
     if (!table) return;
 
     const channel = supabase
-      .channel(`role-profile-${table}-${profile.id}`)
+      .channel(CHANNELS.profile.roleProfile(table, profile.id))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table, filter: `user_id=eq.${profile.id}` },

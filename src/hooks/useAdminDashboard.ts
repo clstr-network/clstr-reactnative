@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
 // Types for admin dashboard data
 export interface AdminKPIs {
@@ -210,7 +212,7 @@ export function useAdminKPIs() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['admin-kpis'],
+    queryKey: QUERY_KEYS.admin.kpis(),
     queryFn: fetchAdminKPIs,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -221,21 +223,21 @@ export function useAdminKPIs() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_kpis_realtime')
+      .channel(CHANNELS.admin.kpis())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'colleges' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'recruiter_accounts' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'collab_projects' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_dashboard_kpis' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       })
       .subscribe();
 
@@ -253,7 +255,7 @@ export function useSystemAlerts() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['system-alerts'],
+    queryKey: QUERY_KEYS.admin.systemAlerts(),
     queryFn: fetchSystemAlerts,
     enabled: isAdmin,
     staleTime: 1000 * 60, // 1 minute
@@ -264,12 +266,12 @@ export function useSystemAlerts() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('system_alerts_realtime')
+      .channel(CHANNELS.admin.systemAlertsRealtime())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'system_alerts' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['system-alerts'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.systemAlerts() });
         }
       )
       .subscribe();
@@ -288,7 +290,7 @@ export function useUserGrowth(days: number = 14) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['admin-user-growth', days],
+    queryKey: QUERY_KEYS.admin.userGrowth(days),
     queryFn: () => fetchUserGrowth(days),
     enabled: isAdmin,
     staleTime: 1000 * 60 * 30, // 30 minutes
@@ -298,12 +300,12 @@ export function useUserGrowth(days: number = 14) {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel(`admin_user_growth_${days}`)
+      .channel(CHANNELS.admin.userGrowth(days))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-user-growth', days] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.userGrowth(days) });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_user_growth' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-user-growth', days] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.userGrowth(days) });
       })
       .subscribe();
 
@@ -321,7 +323,7 @@ export function useCollegeDistribution() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['admin-college-distribution'],
+    queryKey: QUERY_KEYS.admin.collegeDistribution(),
     queryFn: fetchCollegeDistribution,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 30, // 30 minutes
@@ -331,15 +333,15 @@ export function useCollegeDistribution() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_college_distribution_realtime')
+      .channel(CHANNELS.admin.collegeDistribution())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_college_stats' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-college-distribution'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collegeDistribution() });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-college-distribution'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collegeDistribution() });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'colleges' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['admin-college-distribution'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collegeDistribution() });
       })
       .subscribe();
 

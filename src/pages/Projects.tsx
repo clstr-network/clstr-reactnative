@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Link, Navigate } from "react-router-dom";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useIdentityContext } from "@/contexts/IdentityContext";
@@ -6,6 +7,7 @@ import { useFeatureAccess, useRouteGuard } from "@/hooks/useFeatureAccess";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { Button } from "@/components/ui/button";
 // Card imports removed - using dark translucent divs
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -90,7 +92,7 @@ import {
   type CreateProjectParams,
 } from "@/lib/projects-api";
 import { getSavedProjectIds, toggleSaveItem } from "@/lib/saved-api";
-import { isValidUuid } from "@/lib/uuid";
+import { isValidUuid } from "@clstr/shared/utils/uuid";
 
 export default function Projects() {
   const { profile, isLoading: profileLoading } = useProfile();
@@ -178,13 +180,7 @@ export default function Projects() {
     isLoading: projectsLoading,
     error: projectsError,
   } = useQuery({
-    queryKey: [
-      "projects",
-      collegeDomain,
-      searchQuery,
-      categoryFilter,
-      sortBy,
-    ],
+    queryKey: QUERY_KEYS.projects.list(collegeDomain, searchQuery, categoryFilter, sortBy),
     queryFn: async () => {
       if (!collegeDomain) throw new Error("College domain not found");
       return await getProjects({
@@ -207,7 +203,7 @@ export default function Projects() {
     data: myProjectsData,
     isLoading: myProjectsLoading,
   } = useQuery({
-    queryKey: ["myProjects", profile?.id],
+    queryKey: QUERY_KEYS.projects.my(profile?.id),
     queryFn: async () => {
       if (!profile?.id) throw new Error("User ID not found");
       return await getMyProjects(profile.id);
@@ -221,7 +217,7 @@ export default function Projects() {
     data: myApplicationsData,
     isLoading: myApplicationsLoading,
   } = useQuery({
-    queryKey: ["myApplications", profile?.id],
+    queryKey: QUERY_KEYS.projects.myApplications(profile?.id),
     queryFn: async () => {
       if (!profile?.id) throw new Error("User ID not found");
       return await getMyApplications(profile.id);
@@ -234,7 +230,7 @@ export default function Projects() {
     data: ownerApplicationsData,
     isLoading: ownerApplicationsLoading,
   } = useQuery({
-    queryKey: ["ownerApplications", profile?.id],
+    queryKey: QUERY_KEYS.projects.ownerApplications(profile?.id),
     queryFn: async () => {
       if (!profile?.id) throw new Error("User ID not found");
       return await getOwnerApplications(profile.id);
@@ -244,7 +240,7 @@ export default function Projects() {
   });
 
   const { data: savedProjectIdsResult } = useQuery({
-    queryKey: ["saved-project-ids", profile?.id],
+    queryKey: QUERY_KEYS.projects.savedIds(profile?.id),
     queryFn: async () => {
       if (!profile?.id) throw new Error("User ID not found");
       return await getSavedProjectIds(profile.id);
@@ -262,13 +258,7 @@ export default function Projects() {
     data: teamUpsData,
     isLoading: teamUpsLoading,
   } = useQuery({
-    queryKey: [
-      "team-ups",
-      collegeDomain,
-      teamUpIntentFilter,
-      teamUpEventFilter,
-      teamUpSearchQuery,
-    ],
+    queryKey: QUERY_KEYS.teamUps.list(collegeDomain, teamUpIntentFilter, teamUpEventFilter, teamUpSearchQuery),
     queryFn: async () => {
       if (!collegeDomain) throw new Error("College domain not found");
       return await getTeamUps({
@@ -287,7 +277,7 @@ export default function Projects() {
     data: myTeamUpsData,
     isLoading: myTeamUpsLoading,
   } = useQuery({
-    queryKey: ["my-team-ups", profile?.id],
+    queryKey: QUERY_KEYS.teamUps.my(profile?.id),
     queryFn: async () => {
       if (!profile?.id) throw new Error("User ID not found");
       return await getMyTeamUps(profile.id);
@@ -301,7 +291,7 @@ export default function Projects() {
     data: myTeamUpRequestsData,
     isLoading: myTeamUpRequestsLoading,
   } = useQuery({
-    queryKey: ["my-team-up-requests", profile?.id],
+    queryKey: QUERY_KEYS.teamUps.myRequests(profile?.id),
     queryFn: async () => {
       if (!profile?.id) throw new Error("User ID not found");
       return await getMyTeamUpRequests(profile.id);
@@ -315,7 +305,7 @@ export default function Projects() {
     data: incomingTeamUpRequestsData,
     isLoading: incomingTeamUpRequestsLoading,
   } = useQuery({
-    queryKey: ["team-up-requests", profile?.id],
+    queryKey: QUERY_KEYS.teamUps.requests(profile?.id),
     queryFn: async () => {
       if (!profile?.id) throw new Error("User ID not found");
       return await getIncomingTeamUpRequests(profile.id);
@@ -349,10 +339,10 @@ export default function Projects() {
         });
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ["team-up-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["my-team-up-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["team-ups"] });
-      queryClient.invalidateQueries({ queryKey: ["my-team-ups"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.requests() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.myRequests() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.all() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.my() });
       toast({
         title: "Request updated",
         description: "Your response has been saved.",
@@ -380,10 +370,10 @@ export default function Projects() {
         toast({ title: "Delete failed", description: result.error ?? "Unable to delete team-up", variant: "destructive" });
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ["team-ups"] });
-      queryClient.invalidateQueries({ queryKey: ["my-team-ups"] });
-      queryClient.invalidateQueries({ queryKey: ["team-up-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["my-team-up-requests"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.all() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.my() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.requests() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.myRequests() });
       toast({ title: "Team-Up deleted", description: "Your team-up has been removed." });
     },
     onError: (error) => {
@@ -402,8 +392,8 @@ export default function Projects() {
         toast({ title: "Close failed", description: result.error ?? "Unable to close team-up", variant: "destructive" });
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ["team-ups"] });
-      queryClient.invalidateQueries({ queryKey: ["my-team-ups"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.all() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.my() });
       toast({ title: "Team-Up closed", description: "Your team-up is now closed. No new requests will be accepted." });
     },
     onError: (error) => {
@@ -422,8 +412,8 @@ export default function Projects() {
         toast({ title: "Cancel failed", description: result.error ?? "Unable to cancel request", variant: "destructive" });
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ["my-team-up-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["team-up-requests"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.myRequests() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.requests() });
       toast({ title: "Request cancelled", description: "Your request has been withdrawn." });
     },
     onError: (error) => {
@@ -436,7 +426,7 @@ export default function Projects() {
     if (!profile?.id || !collegeDomain || viewMode !== "team-ups") return;
 
     const channel = supabase
-      .channel(`team-ups-${collegeDomain}-${profile.id}`)
+      .channel(CHANNELS.projects.teamUps(collegeDomain, profile.id))
       .on(
         "postgres_changes",
         {
@@ -446,8 +436,8 @@ export default function Projects() {
           filter: `college_domain=eq.${collegeDomain}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["team-ups"] });
-          queryClient.invalidateQueries({ queryKey: ["my-team-ups"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.all() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.my() });
         }
       )
       .on(
@@ -459,8 +449,8 @@ export default function Projects() {
           filter: `college_domain=eq.${collegeDomain}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["team-up-requests"] });
-          queryClient.invalidateQueries({ queryKey: ["my-team-up-requests"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.requests() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.myRequests() });
         }
       )
       .on(
@@ -472,8 +462,8 @@ export default function Projects() {
           filter: `college_domain=eq.${collegeDomain}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["team-ups"] });
-          queryClient.invalidateQueries({ queryKey: ["my-team-ups"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.all() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.my() });
         }
       )
       .subscribe();
@@ -488,7 +478,7 @@ export default function Projects() {
     if (!profile?.id || !collegeDomain) return;
 
     const channel = supabase
-      .channel(`projects-${collegeDomain}-${profile.id}`)
+      .channel(CHANNELS.projects.projects(collegeDomain, profile.id))
       .on(
         "postgres_changes",
         {
@@ -498,8 +488,8 @@ export default function Projects() {
           filter: `college_domain=eq.${collegeDomain}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["projects"] });
-          queryClient.invalidateQueries({ queryKey: ["myProjects"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.all() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.my() });
         }
       )
       .on(
@@ -511,8 +501,8 @@ export default function Projects() {
           filter: `college_domain=eq.${collegeDomain}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["projectRoles"] });
-          queryClient.invalidateQueries({ queryKey: ["projects"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.roles() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.all() });
         }
       )
       .on(
@@ -524,8 +514,8 @@ export default function Projects() {
           filter: `college_domain=eq.${collegeDomain}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["projects"] });
-          queryClient.invalidateQueries({ queryKey: ["myProjects"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.all() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.my() });
         }
       )
       .on(
@@ -537,8 +527,8 @@ export default function Projects() {
           filter: `college_domain=eq.${collegeDomain}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["myApplications"] });
-          queryClient.invalidateQueries({ queryKey: ["ownerApplications"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.myApplications() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.ownerApplications() });
         }
       )
       .subscribe();
@@ -550,7 +540,7 @@ export default function Projects() {
 
   // Fetch project roles when a project is selected
   const { data: projectRolesData } = useQuery({
-    queryKey: ["projectRoles", selectedProject?.id],
+    queryKey: QUERY_KEYS.projects.roles(selectedProject?.id),
     queryFn: async () => {
       if (!selectedProject?.id) throw new Error("Project ID not found");
       return await getProjectRoles(selectedProject.id);
@@ -593,8 +583,8 @@ export default function Projects() {
         });
         setImageFile(null);
         // Invalidate queries to refetch data
-        queryClient.invalidateQueries({ queryKey: ["projects"] });
-        queryClient.invalidateQueries({ queryKey: ["myProjects"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.all() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.my() });
       }
     },
     onError: (error) => {
@@ -627,7 +617,7 @@ export default function Projects() {
         setApplicationAvailability("");
         setSelectedRole(null);
         // Invalidate queries
-        queryClient.invalidateQueries({ queryKey: ["myApplications"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.myApplications() });
       }
     },
     onError: (error) => {
@@ -654,11 +644,11 @@ export default function Projects() {
           title: "Application Updated",
           description: `Application marked as ${statusLabel}.`,
         });
-        queryClient.invalidateQueries({ queryKey: ["ownerApplications"] });
-        queryClient.invalidateQueries({ queryKey: ["myApplications"] });
-        queryClient.invalidateQueries({ queryKey: ["projects"] });
-        queryClient.invalidateQueries({ queryKey: ["myProjects"] });
-        queryClient.invalidateQueries({ queryKey: ["projectRoles"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.ownerApplications() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.myApplications() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.all() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.my() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.roles() });
       }
     },
     onError: (error) => {
@@ -689,13 +679,13 @@ export default function Projects() {
         });
         setDeleteProjectDialogOpen(false);
         setProjectToDelete(null);
-        queryClient.invalidateQueries({ queryKey: ["projects"] });
-        queryClient.invalidateQueries({ queryKey: ["myProjects"] });
-        queryClient.invalidateQueries({ queryKey: ["ownerApplications"] });
-        queryClient.invalidateQueries({ queryKey: ["myApplications"] });
-        queryClient.invalidateQueries({ queryKey: ["projectRoles"] });
-        queryClient.invalidateQueries({ queryKey: ["saved-project-ids"] });
-        queryClient.invalidateQueries({ queryKey: ["saved-items"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.all() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.my() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.ownerApplications() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.myApplications() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.roles() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.savedIds() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.savedItems() });
       }
     },
     onError: (error) => {
@@ -882,8 +872,8 @@ export default function Projects() {
           throw new Error(result.error);
         }
 
-        queryClient.invalidateQueries({ queryKey: ["saved-project-ids"] });
-        queryClient.invalidateQueries({ queryKey: ["saved-items"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects.savedIds() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.savedItems() });
         
         toast({
           title: result.saved ? 'Project saved' : 'Project unsaved',

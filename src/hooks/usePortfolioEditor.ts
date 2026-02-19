@@ -9,12 +9,14 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ProfileData, PortfolioSettings } from "@/types/portfolio";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
+import type { ProfileData, PortfolioSettings } from "@clstr/shared/types/portfolio";
 import { userProfileToProfileData, generateSlug, embedPortfolioSettings } from "@/lib/portfolio-adapter";
 import { getPortfolioSettings, updatePortfolioSettings } from "@/lib/portfolio-api";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
 /**
  * Loads the current user's profile from Supabase, converts it to ProfileData,
@@ -38,7 +40,7 @@ export function usePortfolioEditor(userId: string | undefined) {
 
   // 1. Load full profile from Supabase
   const { data: rawProfile, isLoading } = useQuery({
-    queryKey: ["portfolio-editor-profile", userId],
+    queryKey: QUERY_KEYS.portfolio.editorProfile(userId),
     queryFn: async () => {
       if (!userId) return null;
       assertValidUuid(userId, "userId");
@@ -104,14 +106,14 @@ export function usePortfolioEditor(userId: string | undefined) {
 
     const channels = tables.map((table) =>
       supabase
-        .channel(`portfolio-editor-${table}-${userId}`)
+        .channel(CHANNELS.portfolio.editor(table, userId))
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table, filter: `profile_id=eq.${userId}` },
           () => {
             // Only refetch if the editor hasn't been dirtied by the user
             if (!isDirtyRef.current) {
-              queryClient.invalidateQueries({ queryKey: ["portfolio-editor-profile", userId] });
+              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile(userId!) });
             }
           }
         )
@@ -120,28 +122,28 @@ export function usePortfolioEditor(userId: string | undefined) {
 
     // Also listen for profiles table changes (basic info updates from Profile page)
     const profileChannel = supabase
-      .channel(`portfolio-editor-profiles-${userId}`)
+      .channel(CHANNELS.portfolio.editorProfiles(userId))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
         () => {
           if (!isDirtyRef.current) {
-            queryClient.invalidateQueries({ queryKey: ["portfolio-editor-profile", userId] });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile(userId!) });
           }
         }
       )
       .subscribe();
 
     const postsChannel = supabase
-      .channel(`portfolio-editor-posts-${userId}`)
+      .channel(CHANNELS.portfolio.editorPosts(userId))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "posts", filter: `user_id=eq.${userId}` },
         () => {
           if (!isDirtyRef.current) {
-            queryClient.invalidateQueries({ queryKey: ["portfolio-editor-profile", userId] });
-            queryClient.invalidateQueries({ queryKey: ["profile-posts", userId] });
-            queryClient.invalidateQueries({ queryKey: ["profile-stats", userId] });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile(userId!) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.posts(userId!) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(userId!) });
           }
         }
       )
@@ -212,7 +214,7 @@ export function usePortfolioEditor(userId: string | undefined) {
 
       if (error) throw error;
 
-      // ── Persist education to profile_education ──
+      // â”€â”€ Persist education to profile_education â”€â”€
       // Delete existing, then insert current
       const { error: eduDeleteErr } = await (supabase as any).from("profile_education").delete().eq("profile_id", userId);
       if (eduDeleteErr) throw eduDeleteErr;
@@ -229,7 +231,7 @@ export function usePortfolioEditor(userId: string | undefined) {
         if (eduErr) throw eduErr;
       }
 
-      // ── Persist experience to profile_experience ──
+      // â”€â”€ Persist experience to profile_experience â”€â”€
       const { error: expDeleteErr } = await (supabase as any).from("profile_experience").delete().eq("profile_id", userId);
       if (expDeleteErr) throw expDeleteErr;
       if (profile.experience.length > 0) {
@@ -245,7 +247,7 @@ export function usePortfolioEditor(userId: string | undefined) {
         if (expErr) throw expErr;
       }
 
-      // ── Persist skills to profile_skills ──
+      // â”€â”€ Persist skills to profile_skills â”€â”€
       const { error: skillsDeleteErr } = await (supabase as any).from("profile_skills").delete().eq("profile_id", userId);
       if (skillsDeleteErr) throw skillsDeleteErr;
       if (profile.skills.length > 0) {
@@ -258,7 +260,7 @@ export function usePortfolioEditor(userId: string | undefined) {
         if (skillErr) throw skillErr;
       }
 
-      // ── Persist projects to profile_projects ──
+      // â”€â”€ Persist projects to profile_projects â”€â”€
       const { error: projectsDeleteErr } = await (supabase as any).from("profile_projects").delete().eq("profile_id", userId);
       if (projectsDeleteErr) throw projectsDeleteErr;
       if (profile.projects.length > 0) {
@@ -274,15 +276,15 @@ export function usePortfolioEditor(userId: string | undefined) {
       }
 
       // Invalidate queries so both Portfolio Editor and Profile page stay in sync
-      queryClient.invalidateQueries({ queryKey: ["portfolio-editor-profile", userId] });
-      queryClient.invalidateQueries({ queryKey: ["portfolio-settings", userId] });
-      queryClient.invalidateQueries({ queryKey: ["profile-stats", userId] });
-      queryClient.invalidateQueries({ queryKey: ["profile-posts", userId] });
-      queryClient.invalidateQueries({ queryKey: ["portfolio-resolve"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolio-profile"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile(userId!) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.settings(userId!) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(userId!) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.posts(userId!) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.resolve() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.profile() });
       // Cross-invalidate Profile page caches so data stays in sync
-      queryClient.invalidateQueries({ queryKey: ["profile", userId] });
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.detail(userId!) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.all() });
 
       setIsDirty(false);
       toast({ title: "Saved", description: "Your portfolio has been updated." });

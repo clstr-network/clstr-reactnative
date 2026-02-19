@@ -2,7 +2,8 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { BasicUserProfile, UserProfile } from '@/types/profile';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
+import type { BasicUserProfile, UserProfile } from '@clstr/shared/types/profile';
 import { useNetworkStatus } from '@/hooks/useNetwork';
 import {
   getProfileById,
@@ -10,7 +11,7 @@ import {
   ProfileError
 } from '@/lib/profile';
 
-export type { BasicUserProfile, UserProfile } from '@/types/profile';
+export type { BasicUserProfile, UserProfile } from '@clstr/shared/types/profile';
 
 /**
  * @deprecated for identity/role/permission checks.
@@ -18,7 +19,7 @@ export type { BasicUserProfile, UserProfile } from '@/types/profile';
  * ProfileContext reads from the `profiles` table directly. For anything
  * related to identity resolution (role, college_email, college_domain,
  * email_transition_status), use `useIdentityContext()` from
- * `@/contexts/IdentityContext` instead — it calls the authoritative
+ * `@/contexts/IdentityContext` instead â€” it calls the authoritative
  * `get_identity_context()` RPC.
  *
  * UC-2 AUDIT FIX: Do NOT read `profile.college_domain` from this context.
@@ -283,7 +284,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (!userId) return;
 
       channel = supabase
-        .channel(`profiles-${userId}`)
+        .channel(CHANNELS.profile.profiles(userId))
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
@@ -325,7 +326,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!collegeDomain || !profile?.id) return;
 
     const channel = supabase
-      .channel(`profiles-domain-${collegeDomain}`)
+      .channel(CHANNELS.profile.profilesDomain(collegeDomain))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles', filter: `college_domain=eq.${collegeDomain}` },
@@ -380,7 +381,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Cast to ProfileUpdatePayload since UserProfile.role is string but ProfileUpdatePayload expects the enum type
       await updateProfileRecord(user.id, updates as Parameters<typeof updateProfileRecord>[1]);
 
-      // ECF-4 FIX: Use college_domain exclusively — profile.domain is deprecated
+      // ECF-4 FIX: Use college_domain exclusively â€” profile.domain is deprecated
       // and may contain stale/public-domain values.
       const previousDomain = profile?.college_domain ?? null;
       let nextDomain = previousDomain;
@@ -389,7 +390,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (!prev) return prev;
         // COMMUNITY ISOLATION: domain must always come from college_domain, never derived from email.
         // college_domain is the immutable institutional identity; auth/login email may change.
-        // ECF-4 FIX: Never fall back to `domain` — it is DEPRECATED and may contain stale values.
+        // ECF-4 FIX: Never fall back to `domain` â€” it is DEPRECATED and may contain stale values.
         nextDomain = updates.college_domain ?? prev.college_domain ?? null;
         return {
           ...prev,

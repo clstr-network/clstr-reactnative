@@ -1,7 +1,7 @@
 /**
- * Portfolio.tsx — Public portfolio page at /portfolio/:slug
+ * Portfolio.tsx â€” Public portfolio page at /portfolio/:slug
  *
- * - Resolves slug → profile ID via Supabase
+ * - Resolves slug â†’ profile ID via Supabase
  * - Fetches full profile data
  * - Converts to ProfileData via adapter
  * - Renders via PortfolioRenderer (template-based)
@@ -12,6 +12,7 @@
 
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { resolvePortfolioSlug } from "@/lib/portfolio-api";
 import { getProfileById } from "@/lib/profile";
 import { userProfileToProfileData } from "@/lib/portfolio-adapter";
@@ -21,13 +22,13 @@ import { SEO } from "@/components/SEO";
 export default function Portfolio() {
   const { slug } = useParams<{ slug: string }>();
 
-  // Step 1: Resolve slug → profile ID
+  // Step 1: Resolve slug â†’ profile ID
   const {
     data: profileId,
     isLoading: slugLoading,
     error: slugError,
   } = useQuery({
-    queryKey: ["portfolio-resolve", slug],
+    queryKey: QUERY_KEYS.portfolio.resolve(slug),
     queryFn: () => resolvePortfolioSlug(slug ?? ""),
     enabled: Boolean(slug),
     staleTime: 60_000,
@@ -40,7 +41,7 @@ export default function Portfolio() {
     isLoading: profileLoading,
     error: profileError,
   } = useQuery({
-    queryKey: ["portfolio-profile", profileId],
+    queryKey: QUERY_KEYS.portfolio.profile(profileId),
     queryFn: () => getProfileById(profileId!),
     enabled: Boolean(profileId),
     staleTime: 30_000,
@@ -52,7 +53,7 @@ export default function Portfolio() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-pulse text-white/30 text-sm">Loading portfolio…</div>
+        <div className="animate-pulse text-white/30 text-sm">Loading portfolioâ€¦</div>
       </div>
     );
   }
@@ -64,7 +65,7 @@ export default function Portfolio() {
           {error ? "Something went wrong loading this portfolio." : "Portfolio not found."}
         </p>
         <Link to="/" className="text-white/20 text-xs hover:text-white/40 transition-colors">
-          ← Back to Clstr
+          â† Back to Clstr
         </Link>
       </div>
     );
@@ -78,7 +79,7 @@ export default function Portfolio() {
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
         <p className="text-white/40 text-sm">This portfolio is currently hidden.</p>
         <Link to="/" className="text-white/20 text-xs hover:text-white/40 transition-colors">
-          ← Back to Clstr
+          â† Back to Clstr
         </Link>
       </div>
     );
@@ -112,7 +113,7 @@ export default function Portfolio() {
   return (
     <>
       <SEO
-        title={`${portfolioData.name} — Portfolio`}
+        title={`${portfolioData.name} â€” Portfolio`}
         description={portfolioData.about?.slice(0, 155) || `${portfolioData.name}'s portfolio on Clstr.`}
         type="profile"
         image={portfolioData.photo || undefined}

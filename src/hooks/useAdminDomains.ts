@@ -10,6 +10,8 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -342,7 +344,7 @@ export function useAdminDomains() {
 
   // Query for domains
   const query = useQuery({
-    queryKey: ['admin-domains'],
+    queryKey: QUERY_KEYS.admin.domains(),
     queryFn: fetchDomains,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 2, // 2 minutes
@@ -350,7 +352,7 @@ export function useAdminDomains() {
   });
 
   const collegesQuery = useQuery({
-    queryKey: ['admin-domain-colleges'],
+    queryKey: QUERY_KEYS.admin.domainColleges(),
     queryFn: fetchCollegeOptions,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5,
@@ -362,20 +364,20 @@ export function useAdminDomains() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_domains_realtime')
+      .channel(CHANNELS.admin.domains())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'college_domain_aliases' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-domains'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domains() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'colleges' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-domains'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-domain-colleges'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domains() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domainColleges() });
         }
       )
       .on(
@@ -384,7 +386,7 @@ export function useAdminDomains() {
         (payload) => {
           // Only invalidate if domain-related field changed
           if (payload.new && ((payload.new as any).domain)) {
-            queryClient.invalidateQueries({ queryKey: ['admin-domains'] });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domains() });
           }
         }
       )
@@ -407,10 +409,10 @@ export function useAdminDomains() {
       adminRole: adminUser?.role || null,
     }),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-domains'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-domain-colleges'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domains() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domainColleges() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       toast({
         title: 'Domain Approved',
         description: `${variables.domain} has been approved${variables.collegeId || variables.createNewCollege ? ' and mapped to a college' : ''}.`,
@@ -432,10 +434,10 @@ export function useAdminDomains() {
       adminRole: adminUser?.role || null,
     }),
     onSuccess: (_, domain) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-domains'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-domain-colleges'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domains() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domainColleges() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       toast({
         title: 'Domain Blocked',
         description: `${domain} has been blocked.`,

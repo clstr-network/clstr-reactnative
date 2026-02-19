@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { AlumniInviteTokenResult, AlumniInviteAcceptResult } from "@/types/alumni-invite";
+import type { AlumniInviteTokenResult, AlumniInviteAcceptResult } from "@clstr/shared/types/alumni-invite";
 
 export function useAlumniInviteClaim(token: string | null) {
   const [isValidating, setIsValidating] = useState(false);

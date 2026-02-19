@@ -19,8 +19,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { MentorStatusBadge } from '@/components/mentorship/MentorStatusBadge';
-import { HELP_TYPE_OPTIONS, COMMITMENT_LEVEL_OPTIONS, computeMentorHighlights } from '@/types/mentorship';
-import type { Mentor, MentorshipRequestFormData } from '@/types/mentorship';
+import { HELP_TYPE_OPTIONS, COMMITMENT_LEVEL_OPTIONS, computeMentorHighlights } from '@clstr/shared/types/mentorship';
+import type { Mentor, MentorshipRequestFormData } from '@clstr/shared/types/mentorship';
 
 interface MentorCardProps {
   mentor: Mentor;

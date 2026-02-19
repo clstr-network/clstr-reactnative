@@ -1,10 +1,11 @@
 import { useEffect } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 import { getJobById, shareJob } from "@/lib/jobs-api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ export default function JobDetail() {
 
   useEffect(() => {
     const channel = supabase
-      .channel(`job-${id}`)
+      .channel(CHANNELS.jobs.detail(id))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "jobs", filter: `id=eq.${id}` },

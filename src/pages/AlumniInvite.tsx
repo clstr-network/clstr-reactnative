@@ -1,7 +1,7 @@
 /**
- * Alumni Invite Claim Page — /alumni-invite?token=...
+ * Alumni Invite Claim Page â€” /alumni-invite?token=...
  *
- * Flow: validate token → show college email (read-only) → auth with personal email → accept → onboarding
+ * Flow: validate token â†’ show college email (read-only) â†’ auth with personal email â†’ accept â†’ onboarding
  */
 
 import { useState, useEffect } from "react";
@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { SEO } from "@/components/SEO";
 import { useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
 type Step = "validating" | "confirm" | "auth" | "otp" | "accepting" | "done" | "error";
 
@@ -58,7 +59,7 @@ const AlumniInvite = () => {
     }
   }, [inviteData, tokenError]);
 
-  // ─── Auth flow: send OTP to personal email ────────────────
+  // â”€â”€â”€ Auth flow: send OTP to personal email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSendOtp = async () => {
     if (!personalEmail) return;
     setIsSubmitting(true);
@@ -87,7 +88,7 @@ const AlumniInvite = () => {
     }
   };
 
-  // ─── Auth flow: verify OTP ─────────────────────────────────
+  // â”€â”€â”€ Auth flow: verify OTP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleVerifyOtp = async () => {
     if (!otpCode) return;
     setIsSubmitting(true);
@@ -103,7 +104,7 @@ const AlumniInvite = () => {
       if (error) throw error;
       if (!data.user) throw new Error("Auth user not created");
 
-      // Accept the invite (server uses auth.uid() — no user ID needed)
+      // Accept the invite (server uses auth.uid() â€” no user ID needed)
       setStep("accepting");
       const result = await acceptInvite();
 
@@ -112,10 +113,10 @@ const AlumniInvite = () => {
       }
 
       // Server-side invite context is fetched via get_accepted_invite_context() RPC
-      // in the Onboarding page. No sessionStorage needed — DB is the source of truth.
+      // in the Onboarding page. No sessionStorage needed â€” DB is the source of truth.
 
       // Invalidate identity context so IdentityProvider picks up the accepted invite
-      await queryClient.invalidateQueries({ queryKey: ["identity-context"] });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.identity.context() });
 
       setStep("done");
       toast.success("Welcome! Let's complete your alumni profile.");
@@ -130,7 +131,7 @@ const AlumniInvite = () => {
     }
   };
 
-  // ─── Auth flow: password signup ────────────────────────────
+  // â”€â”€â”€ Auth flow: password signup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handlePasswordSignup = async () => {
     if (!personalEmail || !password) return;
     setIsSubmitting(true);
@@ -151,7 +152,7 @@ const AlumniInvite = () => {
       if (error) throw error;
       if (!data.user) throw new Error("Auth user not created");
 
-      // Accept the invite (server uses auth.uid() — no user ID needed)
+      // Accept the invite (server uses auth.uid() â€” no user ID needed)
       setStep("accepting");
       const result = await acceptInvite();
 
@@ -160,10 +161,10 @@ const AlumniInvite = () => {
       }
 
       // Server-side invite context is fetched via get_accepted_invite_context() RPC
-      // in the Onboarding page. No sessionStorage needed — DB is the source of truth.
+      // in the Onboarding page. No sessionStorage needed â€” DB is the source of truth.
 
       // Invalidate identity context so IdentityProvider picks up the accepted invite
-      await queryClient.invalidateQueries({ queryKey: ["identity-context"] });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.identity.context() });
 
       setStep("done");
       toast.success("Welcome! Let's complete your alumni profile.");
@@ -176,7 +177,7 @@ const AlumniInvite = () => {
     }
   };
 
-  // ─── Dispute handler ──────────────────────────────────────
+  // â”€â”€â”€ Dispute handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDispute = async () => {
     setIsDisputing(true);
     const success = await disputeInvite(disputeReason);
@@ -191,11 +192,11 @@ const AlumniInvite = () => {
     }
   };
 
-  // ─── Render ───────────────────────────────────────────────
+  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <>
       <SEO
-        title="Alumni Invite — clstr.network"
+        title="Alumni Invite â€” clstr.network"
         description="Accept your alumni invite and join your college network on clstr.network"
       />
 
@@ -212,7 +213,7 @@ const AlumniInvite = () => {
             <p className="text-sm text-white/40 mt-1">Alumni Network</p>
           </div>
 
-          {/* ─── Validating ─────────────────────────────────── */}
+          {/* â”€â”€â”€ Validating â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {(step === "validating" || isValidating) && (
             <Card className="bg-white/5 border-white/10">
               <CardContent className="flex flex-col items-center justify-center py-16">
@@ -222,7 +223,7 @@ const AlumniInvite = () => {
             </Card>
           )}
 
-          {/* ─── Error ──────────────────────────────────────── */}
+          {/* â”€â”€â”€ Error â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === "error" && (
             <Card className="bg-white/5 border-white/10">
               <CardHeader className="text-center">
@@ -251,7 +252,7 @@ const AlumniInvite = () => {
             </Card>
           )}
 
-          {/* ─── Confirm Identity ───────────────────────────── */}
+          {/* â”€â”€â”€ Confirm Identity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === "confirm" && inviteData && (
             <Card className="bg-white/5 border-white/10">
               <CardHeader>
@@ -315,7 +316,7 @@ const AlumniInvite = () => {
                   onClick={() => setStep("auth")}
                   className="w-full bg-white text-black hover:bg-white/90"
                 >
-                  Yes, that's me — Continue
+                  Yes, that's me â€” Continue
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
 
@@ -364,7 +365,7 @@ const AlumniInvite = () => {
             </Card>
           )}
 
-          {/* ─── Auth Step (OTP or Password) ────────────────── */}
+          {/* â”€â”€â”€ Auth Step (OTP or Password) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === "auth" && (
             <Card className="bg-white/5 border-white/10">
               <CardHeader>
@@ -448,7 +449,7 @@ const AlumniInvite = () => {
             </Card>
           )}
 
-          {/* ─── OTP Verification ───────────────────────────── */}
+          {/* â”€â”€â”€ OTP Verification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === "otp" && (
             <Card className="bg-white/5 border-white/10">
               <CardHeader>
@@ -509,7 +510,7 @@ const AlumniInvite = () => {
             </Card>
           )}
 
-          {/* ─── Accepting ──────────────────────────────────── */}
+          {/* â”€â”€â”€ Accepting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === "accepting" && (
             <Card className="bg-white/5 border-white/10">
               <CardContent className="flex flex-col items-center justify-center py-16">
@@ -519,7 +520,7 @@ const AlumniInvite = () => {
             </Card>
           )}
 
-          {/* ─── Done ───────────────────────────────────────── */}
+          {/* â”€â”€â”€ Done â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === "done" && (
             <Card className="bg-white/5 border-white/10">
               <CardContent className="flex flex-col items-center justify-center py-16">

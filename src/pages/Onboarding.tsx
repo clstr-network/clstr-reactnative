@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { User as UserIcon, Briefcase, FileText, Image as ImageIcon, Loader2, AlertCircle, GraduationCap, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
@@ -22,13 +22,14 @@ import {
   validateGraduationYear,
   validateCourseDuration
 } from "@/lib/alumni-identification";
-import { getUniversityNameFromDomain, getUniversityOptions, getMajorOptions } from "@/lib/university-data";
+import { getUniversityNameFromDomain, getUniversityOptions, getMajorOptions } from "@clstr/shared/utils/university-data";
 import { getCollegeDomainFromEmailServer } from "@/lib/validation";
 import type { Database } from "@/integrations/supabase/types";
 import type { User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { useProfile } from "@/contexts/ProfileContext";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 
 const Onboarding = () => {
   const [formData, setFormData] = useState({
@@ -147,7 +148,7 @@ const Onboarding = () => {
 
     // RISK 1 MITIGATION: The real invite context is fetched server-side via
     // get_accepted_invite_context() RPC in checkAuth() below.
-    // No sessionStorage needed — DB is the source of truth.
+    // No sessionStorage needed ï¿½ DB is the source of truth.
 
     // Check if user came from club-auth with a staff role
     if (isClubAccessVerified()) {
@@ -189,7 +190,7 @@ const Onboarding = () => {
       setUser(session.user);
 
       // RISK 1 MITIGATION: Fetch invite context from server (source of truth).
-      // This replaces the sessionStorage-only approach — even if a malicious
+      // This replaces the sessionStorage-only approach ï¿½ even if a malicious
       // user tampers with sessionStorage, the DB returns the real invite data.
       try {
         const { data: inviteCtx, error: inviteErr } = await supabase.rpc(
@@ -224,7 +225,7 @@ const Onboarding = () => {
           }));
         }
       } catch {
-        // Non-fatal — if RPC fails, alumni invite data simply won't be pre-filled.
+        // Non-fatal ï¿½ if RPC fails, alumni invite data simply won't be pre-filled.
         // Normal students aren't affected.
         console.warn("Could not fetch invite context from server");
       }
@@ -450,7 +451,7 @@ const Onboarding = () => {
       // failed silently or profile row is missing), derive it from the user email
       // using server-side normalization.
       if (!college_domain) {
-        console.warn("college_domain missing from profile — deriving from email:", email);
+        console.warn("college_domain missing from profile ï¿½ deriving from email:", email);
         college_domain = await getCollegeDomainFromEmailServer(email);
       }
 
@@ -458,7 +459,7 @@ const Onboarding = () => {
         throw new Error("Could not determine your college community. Please re-authenticate with your academic email.");
       }
 
-      // Get full_name — prefer invite data, then user metadata
+      // Get full_name ï¿½ prefer invite data, then user metadata
       const full_name = alumniInviteData?.full_name ||
         user.user_metadata?.full_name ||
         `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim() ||
@@ -525,7 +526,7 @@ const Onboarding = () => {
         social_links: sanitizedSocialLinks,
         avatar_url: avatarUrl,
         college_domain: college_domain,
-        headline: `${formData.major || 'Student'} · ${formData.university || college_domain}`,
+        headline: `${formData.major || 'Student'} ï¿½ ${formData.university || college_domain}`,
         location: formData.university || college_domain,
         onboarding_complete: true, // Mark onboarding as complete
         // Store personal email separately for alumni invite flow
@@ -617,12 +618,12 @@ const Onboarding = () => {
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["identity-context"] }),
-        queryClient.invalidateQueries({ queryKey: ["profile", user.id] }),
-        queryClient.invalidateQueries({ queryKey: ["profile-stats", user.id] }),
-        queryClient.invalidateQueries({ queryKey: ["alumni-directory"] }),
-        queryClient.invalidateQueries({ queryKey: ["mentorship"] }),
-        queryClient.invalidateQueries({ queryKey: ["network"] }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.identity.context() }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.detail(user.id) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(user.id) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.alumniDirectory() }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.mentorship.all }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() }),
       ]);
 
       await refreshProfile();
@@ -776,7 +777,7 @@ const Onboarding = () => {
                   // Staff coming from club-auth - show locked role
                   <div className="p-3 rounded-lg bg-white/[0.04] border border-white/10">
                     <p className="text-sm font-medium text-white">
-                      {isDean ? "Dean — Role verified via staff authentication" : staffRoleLabel}
+                      {isDean ? "Dean ï¿½ Role verified via staff authentication" : staffRoleLabel}
                     </p>
                     <p className="text-xs text-white/40 mt-1">
                       {isDean
@@ -793,7 +794,7 @@ const Onboarding = () => {
                         <div className="flex items-center gap-2">
                           <GraduationCap className="h-4 w-4 text-white/40" />
                           <p className="text-sm font-medium text-white">
-                            {autoRole} · {academicStatusLabel}
+                            {autoRole} ï¿½ {academicStatusLabel}
                           </p>
                         </div>
                         <p className="text-xs mt-1 text-white/40">
@@ -1212,7 +1213,7 @@ const Onboarding = () => {
                             />
                           </div>
                         </div>
-                        <p className="text-xs text-white/40">Optional — you can update these later.</p>
+                        <p className="text-xs text-white/40">Optional ï¿½ you can update these later.</p>
                       </div>
                     </AccordionContent>
                   </AccordionItem>
@@ -1232,7 +1233,7 @@ const Onboarding = () => {
                 {isDean ? (
                   <p className="text-xs text-white/40">Areas you oversee or are open to engagement on</p>
                 ) : isStaffRole ? (
-                  <p className="text-xs text-white/40">Add areas you’re open to mentoring, teaching, or discussing</p>
+                  <p className="text-xs text-white/40">Add areas youï¿½re open to mentoring, teaching, or discussing</p>
                 ) : null}
                 {isStaffRole ? (
                   <>
@@ -1264,7 +1265,7 @@ const Onboarding = () => {
                           onClick={() => removeManualInterest(interest)}
                           className="px-3 py-1.5 text-xs sm:text-sm rounded-full transition-colors bg-white/[0.10] text-white hover:bg-white/[0.14]"
                         >
-                          {interest} ×
+                          {interest} ï¿½
                         </button>
                       ))}
                     </div>

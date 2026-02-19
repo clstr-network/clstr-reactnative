@@ -13,9 +13,10 @@ import type {
   AlumniInviteFilters,
   AlumniInviteListResult,
   ValidatedAlumniInviteRow,
-} from "@/types/alumni-invite";
+} from "@clstr/shared/types/alumni-invite";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
-const QUERY_KEY = "alumni-invites";
+const QUERY_KEY = QUERY_KEYS.alumniInvites.all()[0];
 
 // ─── Fetch invites (admin) ───────────────────────────────────
 
@@ -112,7 +113,7 @@ export function useAlumniInvites(filters: AlumniInviteFilters = {}) {
       bulkUpsertInvites(rows, invitedBy),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
-      queryClient.invalidateQueries({ queryKey: ['invite-ops-stats'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.identity.inviteOpsStats() });
       toast.success(`Upload complete: ${result.inserted} invites created`);
       if (result.errors.length > 0) {
         toast.warning(`${result.errors.length} rows had errors`);
@@ -133,7 +134,7 @@ export function useAlumniInvites(filters: AlumniInviteFilters = {}) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
-      queryClient.invalidateQueries({ queryKey: ['invite-ops-stats'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.identity.inviteOpsStats() });
       toast.success("Invite resent successfully");
     },
     onError: (err: Error) => {
@@ -145,7 +146,7 @@ export function useAlumniInvites(filters: AlumniInviteFilters = {}) {
     mutationFn: (inviteId: string) => cancelInvite(inviteId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
-      queryClient.invalidateQueries({ queryKey: ['invite-ops-stats'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.identity.inviteOpsStats() });
       toast.success("Invite cancelled");
     },
     onError: (err: Error) => {

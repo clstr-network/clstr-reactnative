@@ -1,5 +1,6 @@
 
 import { FormEvent, useEffect, useRef, useState, useMemo } from 'react';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Calendar, Loader2, Search, MessageSquare, Menu, X, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUnreadMessageCount, subscribeToMessages } from '@/lib/messages-api';
 import { useTypeaheadSearch } from '@/hooks/useTypeaheadSearch';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,7 +66,7 @@ const Navbar = () => {
   });
 
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['unreadMessageCount', profile?.id],
+    queryKey: QUERY_KEYS.social.unreadMessageCount(profile?.id),
     queryFn: () => {
       if (!profile?.id) throw new Error('Profile missing');
       return getUnreadMessageCount(profile.id);
@@ -79,7 +80,7 @@ const Navbar = () => {
     if (!profile?.id) return;
 
     const unsubscribe = subscribeToMessages(profile.id, () => {
-      queryClient.invalidateQueries({ queryKey: ['unreadMessageCount', profile.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.unreadMessageCount(profile.id) });
     });
 
     return () => {
@@ -224,7 +225,7 @@ const Navbar = () => {
     const parts = [profileMeta.role, profileMeta.branch, profileMeta.year_of_completion]
       .filter(Boolean)
       .map((value) => String(value));
-    if (parts.length > 0) return parts.join(' · ');
+    if (parts.length > 0) return parts.join(' Ã‚Â· ');
     return profileMeta.headline || profileMeta.university || 'Profile';
   };
 
@@ -357,7 +358,7 @@ const Navbar = () => {
                                 </div>
                                 <div className="text-xs text-white/50 truncate">
                                   {formatEventDate(eventResult.event_date)}
-                                  {eventResult.location ? ` · ${eventResult.location}` : ''}
+                                  {eventResult.location ? ` Ã‚Â· ${eventResult.location}` : ''}
                                 </div>
                               </div>
                             </button>
@@ -473,7 +474,7 @@ const Navbar = () => {
                                 </div>
                                 <div className="text-xs text-white/50 truncate">
                                   {formatEventDate(eventResult.event_date)}
-                                  {eventResult.location ? ` · ${eventResult.location}` : ''}
+                                  {eventResult.location ? ` Ã‚Â· ${eventResult.location}` : ''}
                                 </div>
                               </div>
                             </button>

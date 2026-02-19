@@ -11,7 +11,7 @@
 
 import React, { createContext, useContext } from 'react';
 import { useIdentity } from '@/hooks/useIdentity';
-import type { IdentityContext } from '@/types/identity';
+import type { IdentityContext } from '@clstr/shared/types/identity';
 
 interface IdentityContextValue {
   /** Authoritative identity, null if unauthenticated/no profile */

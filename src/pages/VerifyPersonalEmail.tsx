@@ -1,5 +1,5 @@
 /**
- * VerifyPersonalEmail — Magic link landing page.
+ * VerifyPersonalEmail â€” Magic link landing page.
  *
  * When the user clicks the verification link in the email, they land here.
  * The page reads the code from the URL query param and auto-submits it
@@ -20,6 +20,7 @@ import { verifyPersonalEmail } from "@/lib/email-transition";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
 export default function VerifyPersonalEmail() {
   const navigate = useNavigate();
@@ -67,7 +68,7 @@ export default function VerifyPersonalEmail() {
         setStatus("success");
         setMessage("Your personal email has been verified! Your lifetime access is secured.");
         // Invalidate caches so the UI reflects the change
-        await queryClient.invalidateQueries({ queryKey: ["email-transition-status"] });
+        await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.emailTransition.all() });
       } else {
         setStatus("error");
         setMessage(result.error || "Verification failed. The code may be expired or already used.");

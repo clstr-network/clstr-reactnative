@@ -1,13 +1,14 @@
 /**
- * Admin Dashboard API — @clstr/core
+ * Admin Dashboard API â€” @clstr/core
  *
  * Platform-agnostic admin CRUD. Every function receives a SupabaseClient as
  * its first parameter instead of importing the singleton.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface PlatformAdmin {
   id: string;
@@ -129,7 +130,7 @@ export interface AdminActivityLog {
 
 export const FOUNDER_EMAIL = 'founder@clstr.network';
 
-// ─── Admin Management ────────────────────────────────────────────────────────
+// â”€â”€â”€ Admin Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function getPlatformAdmins(client: SupabaseClient): Promise<PlatformAdmin[]> {
   const { data, error } = await client
@@ -216,7 +217,7 @@ export async function updateAdminLastLogin(
   }
 }
 
-// ─── KPIs & Stats ────────────────────────────────────────────────────────────
+// â”€â”€â”€ KPIs & Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function getAdminKPIs(client: SupabaseClient): Promise<AdminKPIs> {
   const { data, error } = await (client.rpc as any)('get_admin_kpis');
@@ -257,7 +258,7 @@ export async function getUserGrowth(
   return (data || []) as UserGrowth[];
 }
 
-// ─── User Management ─────────────────────────────────────────────────────────
+// â”€â”€â”€ User Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function getAdminUsers(
   client: SupabaseClient,
@@ -300,7 +301,7 @@ export async function getAdminUsers(
   };
 }
 
-// ─── System Alerts ───────────────────────────────────────────────────────────
+// â”€â”€â”€ System Alerts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function getSystemAlerts(client: SupabaseClient): Promise<SystemAlert[]> {
   const { data, error } = await client
@@ -380,7 +381,7 @@ export async function createSystemAlert(
   return data as SystemAlert;
 }
 
-// ─── Recruiter Management ────────────────────────────────────────────────────
+// â”€â”€â”€ Recruiter Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function getRecruiterAccounts(client: SupabaseClient): Promise<RecruiterAccount[]> {
   const { data, error } = await client
@@ -450,7 +451,7 @@ export async function updateRecruiterPlan(
   }
 }
 
-// ─── Settings ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function getAdminSetting(
   client: SupabaseClient,
@@ -484,7 +485,7 @@ export async function updateAdminSetting(
   }
 }
 
-// ─── Activity Logs ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Activity Logs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function logAdminActivity(
   client: SupabaseClient,
@@ -535,14 +536,14 @@ export async function getAdminActivityLogs(
   return (data || []) as AdminActivityLog[];
 }
 
-// ─── Real-time Subscriptions ─────────────────────────────────────────────────
+// â”€â”€â”€ Real-time Subscriptions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function subscribeToPlatformAdmins(
   client: SupabaseClient,
   callback: (payload: any) => void
 ) {
   return client
-    .channel('platform_admins_changes')
+    .channel(CHANNELS.admin.platformAdmins())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_admins' }, callback)
     .subscribe();
 }
@@ -552,7 +553,7 @@ export function subscribeToSystemAlerts(
   callback: (payload: any) => void
 ) {
   return client
-    .channel('system_alerts_changes')
+    .channel(CHANNELS.admin.systemAlerts())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'system_alerts' }, callback)
     .subscribe();
 }
@@ -562,7 +563,7 @@ export function subscribeToRecruiterAccounts(
   callback: (payload: any) => void
 ) {
   return client
-    .channel('recruiter_accounts_changes')
+    .channel(CHANNELS.admin.recruiterAccounts())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'recruiter_accounts' }, callback)
     .subscribe();
 }

@@ -1,5 +1,7 @@
 
 import { useState, useEffect, useMemo } from "react";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { 
   Image, 
   Video, 
@@ -79,7 +81,7 @@ const ProfilePosts = ({
     if (!profileId) return;
 
     const channel = supabase
-      .channel(`profile-posts-${profileId}`)
+      .channel(CHANNELS.profile.posts(profileId))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "posts", filter: `user_id=eq.${profileId}` },
@@ -165,7 +167,7 @@ const ProfilePosts = ({
       
       // Invalidate and refetch posts
       await queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: ["profile-stats", profileId] });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profileId) });
       
       toast({
         title: "Post created",

@@ -1,15 +1,17 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import {
   getUserSettings,
   updateUserSettings,
   type UserSettings,
   type UserSettingsUpdate,
 } from "@/lib/user-settings";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
-export const userSettingsQueryKey = (userId: string) => ["userSettings", userId] as const;
+export const userSettingsQueryKey = QUERY_KEYS.userSettings;
 
 export function useUserSettings(userId?: string) {
   const queryClient = useQueryClient();
@@ -43,7 +45,7 @@ export function useUserSettings(userId?: string) {
     if (!userId) return;
 
     const channel = supabase
-      .channel(`user_settings:${userId}`)
+      .channel(CHANNELS.identity.userSettings(userId))
       .on(
         "postgres_changes",
         {

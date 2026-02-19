@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Loader2, UserPlus, MessageSquare, RefreshCw, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import {
 } from '@/lib/social-api';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { AdvancedFilters, NetworkFilters } from '@/components/network/AdvancedFilters';
 
 interface NetworkUser {
@@ -67,9 +69,9 @@ const toNetworkUser = (
  * Computes a contextual subtitle line for network cards.
  * Replaces the redundant college name with meaningful academic context.
  *
- * - Student: "CSE • 3rd Year" or "CSE • Final Year"
- * - Alumni: "Mechanical • Class of 2021"
- * - Faculty: "Faculty • Computer Science"
+ * - Student: "CSE Ã¢â‚¬Â¢ 3rd Year" or "CSE Ã¢â‚¬Â¢ Final Year"
+ * - Alumni: "Mechanical Ã¢â‚¬Â¢ Class of 2021"
+ * - Faculty: "Faculty Ã¢â‚¬Â¢ Computer Science"
  * - Club: "Club"
  */
 function getRoleContextLine(user: NetworkUser): string {
@@ -96,20 +98,20 @@ function getRoleContextLine(user: NetworkUser): string {
     } else if (user.graduation_year) {
       yearLabel = `Class of ${user.graduation_year}`;
     }
-    return [branch, yearLabel].filter(Boolean).join(' • ') || 'Student';
+    return [branch, yearLabel].filter(Boolean).join(' Ã¢â‚¬Â¢ ') || 'Student';
   }
 
   if (role === 'alumni') {
     const gradLabel = user.graduation_year ? `Class of ${user.graduation_year}` : '';
-    return [branch, gradLabel].filter(Boolean).join(' • ') || 'Alumni';
+    return [branch, gradLabel].filter(Boolean).join(' Ã¢â‚¬Â¢ ') || 'Alumni';
   }
 
   if (role === 'faculty') {
-    return branch ? `Faculty • ${branch}` : 'Faculty';
+    return branch ? `Faculty Ã¢â‚¬Â¢ ${branch}` : 'Faculty';
   }
 
   if (role === 'club' || role === 'organization') {
-    return branch ? `Club • ${branch}` : 'Club';
+    return branch ? `Club Ã¢â‚¬Â¢ ${branch}` : 'Club';
   }
 
   return branch || '';
@@ -166,7 +168,7 @@ const Network = () => {
 
       if (error) throw error;
 
-      // RPC returns jsonb array — parse and filter out self
+      // RPC returns jsonb array Ã¢â‚¬â€ parse and filter out self
       const profiles = (Array.isArray(data) ? data : JSON.parse(data || '[]')) as NetworkUser[];
       return profiles.filter((u) => u.id !== profile.id);
     },
@@ -223,7 +225,7 @@ const Network = () => {
   const visibleUserIds = useMemo(() => (usersData ?? []).map((u) => u.id), [usersData]);
 
   const { data: connectionStatuses } = useQuery({
-    queryKey: ['network', 'connection-statuses', ...visibleUserIds] as const,
+    queryKey: QUERY_KEYS.networkKeys.connectionStatuses(...visibleUserIds),
     queryFn: async () => {
       const map = await getConnectionStatusesForUsers(visibleUserIds);
       return Object.fromEntries(map.entries()) as Record<string, string | null>;
@@ -294,7 +296,7 @@ const Network = () => {
     }
 
     if (filters.location) {
-      // Location filter not available on discovery cards yet — reserved for future
+      // Location filter not available on discovery cards yet Ã¢â‚¬â€ reserved for future
     }
 
     return filtered;
@@ -323,8 +325,8 @@ const Network = () => {
         title: 'Connection request sent',
         description: 'Your request has been sent successfully',
       });
-      queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
     },
     onError: (error: Error, _userId, context) => {
       // Roll back to previous value on error
@@ -358,8 +360,8 @@ const Network = () => {
     },
     onSuccess: () => {
       toast({ title: 'Request cancelled' });
-      queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
     },
     onError: (error: Error, _receiverId, context) => {
       if (context?.previousStatuses) {
@@ -384,9 +386,9 @@ const Network = () => {
         title: 'Connection accepted',
         description: 'You are now connected',
       });
-      queryClient.invalidateQueries({ queryKey: ['network'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
     },
     onError: (error: Error) => {
       toast({
@@ -402,9 +404,9 @@ const Network = () => {
     mutationFn: (requestId: string) => rejectConnectionRequest(requestId),
     onSuccess: () => {
       toast({ title: 'Request rejected' });
-      queryClient.invalidateQueries({ queryKey: ['network'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
     },
     onError: (error: Error) => {
       toast({
@@ -420,7 +422,7 @@ const Network = () => {
     if (!profile?.id) return;
 
     const channel = supabase
-      .channel(`network-connections-${profile.id}`)
+      .channel(CHANNELS.social.networkConnections(profile.id))
       .on(
         'postgres_changes',
         {
@@ -430,9 +432,9 @@ const Network = () => {
           filter: `requester_id=eq.${profile.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['network'] });
-          queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-          queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
         }
       )
       .on(
@@ -444,9 +446,9 @@ const Network = () => {
           filter: `receiver_id=eq.${profile.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['network'] });
-          queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
-          queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
         }
       )
       .subscribe();
@@ -546,7 +548,7 @@ const Network = () => {
             </div>
           </div>
 
-          {/* Tabs — match Posts/About/Projects styling */}
+          {/* Tabs Ã¢â‚¬â€ match Posts/About/Projects styling */}
           <div className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden">
             <div className="w-full rounded-xl bg-white/[0.04] border-b border-white/10 p-1 grid grid-cols-3 gap-1">
               {([
@@ -627,7 +629,7 @@ const Network = () => {
                         <div className="mt-1 flex items-center gap-2">
                           <UserBadge userType={user.role} size="sm" />
                           {getRoleContextLine(user) && (
-                            <span className="text-xs text-white/45 truncate">• {getRoleContextLine(user)}</span>
+                            <span className="text-xs text-white/45 truncate">Ã¢â‚¬Â¢ {getRoleContextLine(user)}</span>
                           )}
                         </div>
                       </div>
@@ -711,7 +713,7 @@ const Network = () => {
                           <div className="mt-1 flex items-center gap-2">
                             <UserBadge userType={request.requester?.role} size="sm" />
                             {request.requester && getRoleContextLine(request.requester) && (
-                              <span className="text-xs text-white/45 truncate">• {getRoleContextLine(request.requester)}</span>
+                              <span className="text-xs text-white/45 truncate">Ã¢â‚¬Â¢ {getRoleContextLine(request.requester)}</span>
                             )}
                           </div>
                           {request.message && (
@@ -785,7 +787,7 @@ const Network = () => {
                           <div className="mt-1 flex items-center gap-2">
                             <UserBadge userType={user.role} size="sm" />
                             {getRoleContextLine(user) && (
-                              <span className="text-xs text-white/45 truncate">• {getRoleContextLine(user)}</span>
+                              <span className="text-xs text-white/45 truncate">Ã¢â‚¬Â¢ {getRoleContextLine(user)}</span>
                             )}
                           </div>
                         </div>

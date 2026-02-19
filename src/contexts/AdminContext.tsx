@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { FOUNDER_EMAIL } from '@/lib/admin-constants';
 import {
   addPlatformAdmin,
@@ -110,7 +111,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     const channel = subscribeToPlatformAdmins(async () => {
       const allAdmins = await getPlatformAdmins();
       setAdminUsers(allAdmins as PlatformAdmin[]);
-      queryClient.invalidateQueries({ queryKey: ['platform-admins'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platformAdmins() });
     });
 
     return () => {
@@ -136,7 +137,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, data as PlatformAdmin];
     });
-    queryClient.invalidateQueries({ queryKey: ['platform-admins'] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platformAdmins() });
   };
 
   // Remove admin user (founder only)
@@ -158,7 +159,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         ? { ...u, is_active: false, updated_at: new Date().toISOString() }
         : u
     ));
-    queryClient.invalidateQueries({ queryKey: ['platform-admins'] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platformAdmins() });
   };
 
   // Refresh admin users from database
@@ -169,7 +170,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     if (data) {
       setAdminUsers(data as PlatformAdmin[]);
     }
-    queryClient.invalidateQueries({ queryKey: ['platform-admins'] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.platformAdmins() });
   };
 
   return (

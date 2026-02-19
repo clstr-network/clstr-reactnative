@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
 export interface TalentNode {
   id: string;
@@ -193,14 +195,14 @@ export function useAdminTalentGraph() {
   const queryClient = useQueryClient();
 
   const graphQuery = useQuery({
-    queryKey: ['admin-talent-graph'],
+    queryKey: QUERY_KEYS.admin.talentGraph(),
     queryFn: fetchTalentGraph,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5,
   });
 
   const collegesQuery = useQuery({
-    queryKey: ['admin-talent-colleges'],
+    queryKey: QUERY_KEYS.admin.talentColleges(),
     queryFn: async (): Promise<string[]> => {
       const { data } = await supabase
         .from('colleges')
@@ -217,68 +219,68 @@ export function useAdminTalentGraph() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_talent_graph_realtime')
+      .channel(CHANNELS.admin.talentGraph())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-talent-graph'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.talentGraph() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profile_skills' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-talent-graph'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.talentGraph() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'clubs' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-talent-graph'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.talentGraph() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'collab_projects' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-talent-graph'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.talentGraph() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'recruiter_accounts' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-talent-graph'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.talentGraph() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'mentorship_requests' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-talent-graph'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.talentGraph() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'club_members' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-talent-graph'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.talentGraph() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'collab_team_members' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-talent-graph'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.talentGraph() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'connections' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-talent-graph'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.talentGraph() });
         }
       )
       .subscribe();

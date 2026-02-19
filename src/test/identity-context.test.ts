@@ -8,8 +8,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { isResolvedIdentity } from '@/types/identity';
-import type { IdentityContext, IdentityError, IdentityResult, InviteOpsStats } from '@/types/identity';
+import { isResolvedIdentity } from '@clstr/shared/types/identity';
+import type { IdentityContext, IdentityError, IdentityResult, InviteOpsStats } from '@clstr/shared/types/identity';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 1. Type guard tests

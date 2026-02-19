@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -52,7 +53,7 @@ export function JoinTeamUpModal({ open, onOpenChange, teamUp, requestType }: Joi
 
   // Fetch role definitions for skill selection
   const { data: roleDefinitionsData } = useQuery({
-    queryKey: ["team-up-role-definitions"],
+    queryKey: QUERY_KEYS.teamUps.roleDefinitions(),
     queryFn: getTeamUpRoleDefinitions,
     staleTime: 5 * 60 * 1000,
   });
@@ -90,8 +91,8 @@ export function JoinTeamUpModal({ open, onOpenChange, teamUp, requestType }: Joi
             ? "The team owner will review your request."
             : "The user will review your invitation.",
         });
-        queryClient.invalidateQueries({ queryKey: ["team-up-requests"] });
-        queryClient.invalidateQueries({ queryKey: ["my-team-up-requests"] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.requests() });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.teamUps.myRequests() });
         resetAndClose();
       }
     },

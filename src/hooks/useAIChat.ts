@@ -1,15 +1,16 @@
 /**
- * useAIChat — React Query hooks for the persisted AI Career Assistant.
+ * useAIChat â€” React Query hooks for the persisted AI Career Assistant.
  *
  * Chat sessions and messages are stored in Supabase (ai_chat_sessions,
  * ai_chat_messages). Realtime subscription keeps the UI in sync.
  *
- * AI is advisory only — career guidance, networking tips, interview prep.
+ * AI is advisory only â€” career guidance, networking tips, interview prep.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import {
   createChatSession,
   getChatSessions,
@@ -19,10 +20,11 @@ import {
   deleteChatSession,
   updateChatSessionTitle,
 } from '@/lib/ai-service';
-import type { AIChatMessage, AIChatSession } from '@/types/ai';
+import type { AIChatMessage, AIChatSession } from '@clstr/shared/types/ai';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
-const SESSIONS_KEY = ['ai-chat-sessions'] as const;
-const messagesKey = (sessionId: string) => ['ai-chat-messages', sessionId] as const;
+const SESSIONS_KEY = QUERY_KEYS.aiChat.sessions();
+const messagesKey = QUERY_KEYS.aiChat.messages;
 
 /**
  * Hook for managing AI chat sessions.
@@ -69,7 +71,7 @@ export function useAIChatMessages(sessionId: string | null) {
 
   // Fetch messages for the session
   const messagesQuery = useQuery({
-    queryKey: sessionId ? messagesKey(sessionId) : ['ai-chat-messages-none'],
+    queryKey: sessionId ? messagesKey(sessionId) : QUERY_KEYS.aiChat.messagesNone(),
     queryFn: () => (sessionId ? getChatMessages(sessionId) : Promise.resolve([])),
     enabled: !!sessionId,
     staleTime: 30_000,
@@ -80,7 +82,7 @@ export function useAIChatMessages(sessionId: string | null) {
     if (!sessionId) return;
 
     const channel = supabase
-      .channel(`ai-chat-messages-${sessionId}`)
+      .channel(CHANNELS.identity.aiChatMessages(sessionId))
       .on(
         'postgres_changes',
         {
@@ -109,7 +111,7 @@ export function useAIChatMessages(sessionId: string | null) {
     };
   }, [sessionId, queryClient]);
 
-  // Send message mutation: save user message → call AI → save assistant response
+  // Send message mutation: save user message â†’ call AI â†’ save assistant response
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!sessionId) throw new Error('No active session');

@@ -6,6 +6,7 @@
 import { useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import {
   getSkillAnalysis,
   computeSkillAnalysis,
@@ -15,9 +16,9 @@ import {
   getScoreColor,
   type SkillAnalysisData,
 } from "@/lib/skill-analysis-api";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
-export const skillAnalysisQueryKey = (userId: string) => 
-  ["skillAnalysis", userId] as const;
+export const skillAnalysisQueryKey = QUERY_KEYS.skillAnalysis;
 
 export interface UseSkillAnalysisReturn {
   analysis: SkillAnalysisData | null;
@@ -75,7 +76,7 @@ export function useSkillAnalysis(userId?: string): UseSkillAnalysisReturn {
     if (!userId) return;
 
     const channel = supabase
-      .channel(`skill_analysis:${userId}`)
+      .channel(CHANNELS.identity.skillAnalysis(userId))
       .on(
         "postgres_changes",
         {

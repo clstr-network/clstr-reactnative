@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@shared": path.resolve(__dirname, "./packages/shared/src"),
+      "@clstr/shared": path.resolve(__dirname, "./packages/shared/src"),
       "@clstr/core": path.resolve(__dirname, "./packages/core/src"),
     },
   },

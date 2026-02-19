@@ -5,7 +5,7 @@
  * and renders it with the given ProfileData.
  */
 
-import type { ProfileData } from "@/types/portfolio";
+import type { ProfileData } from "@clstr/shared/types/portfolio";
 import MinimalTemplate from "./MinimalTemplate";
 import ElianaTemplate from "./ElianaTemplate";
 import TypefolioTemplate from "./TypefolioTemplate";

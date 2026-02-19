@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { updateAdminSetting, logAdminActivity } from '@/lib/admin-api';
 import { useAdmin } from '@/contexts/AdminContext';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
 export interface AdminSettingsValues {
   notifications: Record<string, boolean>;
@@ -140,7 +142,7 @@ export function useAdminSettings() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['admin-settings'],
+    queryKey: QUERY_KEYS.admin.settings(),
     queryFn: fetchAdminSettings,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5,
@@ -154,7 +156,7 @@ export function useAdminSettings() {
       await saveAdminSettings(values);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.settings() });
     },
   });
 
@@ -162,14 +164,14 @@ export function useAdminSettings() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_settings_realtime')
+      .channel(CHANNELS.admin.settings())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'admin_settings' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-system-info'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-maintenance-mode'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.settings() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.systemInfo() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.maintenanceMode() });
         }
       )
       .subscribe();
@@ -193,7 +195,7 @@ export function useSystemInfo() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['admin-system-info'],
+    queryKey: QUERY_KEYS.admin.systemInfo(),
     queryFn: fetchSystemInfo,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5,
@@ -220,12 +222,12 @@ export function useSystemInfo() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_system_info_realtime')
+      .channel(CHANNELS.admin.systemInfo())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'admin_settings', filter: `setting_key=eq.${SETTINGS_KEYS.systemInfo}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-system-info'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.systemInfo() });
         }
       )
       .subscribe();
@@ -247,7 +249,7 @@ export function useMaintenanceMode() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['admin-maintenance-mode'],
+    queryKey: QUERY_KEYS.admin.maintenanceMode(),
     queryFn: fetchMaintenanceMode,
     enabled: isAdmin,
     staleTime: 1000 * 60,
@@ -279,7 +281,7 @@ export function useMaintenanceMode() {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-maintenance-mode'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.maintenanceMode() });
     },
   });
 
@@ -287,12 +289,12 @@ export function useMaintenanceMode() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_maintenance_mode_realtime')
+      .channel(CHANNELS.admin.maintenanceMode())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'admin_settings', filter: `setting_key=eq.${SETTINGS_KEYS.maintenanceMode}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-maintenance-mode'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.maintenanceMode() });
         }
       )
       .subscribe();
@@ -409,7 +411,7 @@ export function useApiKeyRotation() {
       return newSettings;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.apiKeys() });
     },
   });
 

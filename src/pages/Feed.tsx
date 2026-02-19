@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useMemo } from 'react';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
@@ -13,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
 const Feed = () => {
   const { profile, isLoading: isProfileLoading } = useProfile();
@@ -34,7 +36,7 @@ const Feed = () => {
     retry: 1, // Only retry once to avoid infinite loops
   });
   const { data: networkStats, error: statsError, isLoading: statsLoading } = useQuery({
-    queryKey: ['profile-stats', profile?.id],
+    queryKey: QUERY_KEYS.profile.stats(profile?.id),
     queryFn: async () => {
       if (!profile?.id) throw new Error('Profile missing');
       const [connections, profileViews] = await Promise.all([
@@ -52,19 +54,19 @@ const Feed = () => {
     if (!profile?.id) return;
 
     const channel = supabase
-      .channel(`connections-count-${profile.id}`)
+      .channel(CHANNELS.social.connectionsCount(profile.id))
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'connections',
         filter: `requester_id=eq.${profile.id}`,
-      }, () => queryClient.invalidateQueries({ queryKey: ['profile-stats', profile.id] }))
+      }, () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profile.id) }))
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'connections',
         filter: `receiver_id=eq.${profile.id}`,
-      }, () => queryClient.invalidateQueries({ queryKey: ['profile-stats', profile.id] }))
+      }, () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profile.id) }))
       .subscribe();
 
     return () => {
@@ -80,7 +82,7 @@ const Feed = () => {
   useEffect(() => {
     if (!profile?.id) return;
     const channel = supabase
-      .channel('home-feed')
+      .channel(CHANNELS.feed.homeFeed())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, refreshPosts)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, refreshPosts)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, refreshPosts)
@@ -142,16 +144,16 @@ const Feed = () => {
               <div className="flex justify-between">
                 <span className="text-sm text-white/60">Connections</span>
                 <span className="text-sm font-semibold text-white/60">
-                  {statsLoading ? '…' : networkStats?.connections ?? 0}
+                  {statsLoading ? 'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : networkStats?.connections ?? 0}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-white/60">Profile Views</span>
                 <span className="text-sm font-semibold text-white/60">
                   {statsLoading
-                    ? '…'
+                    ? 'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦'
                     : statsError
-                      ? '—'
+                      ? 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'
                       : networkStats?.profileViews ?? 0}
                 </span>
               </div>

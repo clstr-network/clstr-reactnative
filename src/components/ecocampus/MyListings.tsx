@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Loader2 } from 'lucide-react';
 import {
@@ -60,7 +61,7 @@ const MyListings = () => {
   const getPriceLabel = (item: SharedItem) => {
     if (item.share_type === 'donate') return 'Free';
     const rawPrice = item.price?.trim() || '';
-    const basePrice = rawPrice.startsWith('₹') ? rawPrice : rawPrice ? `₹${rawPrice}` : '₹0';
+    const basePrice = rawPrice.startsWith('â‚¹') ? rawPrice : rawPrice ? `â‚¹${rawPrice}` : 'â‚¹0';
     if (item.share_type === 'rent') {
       return item.rent_unit ? `${basePrice}/${item.rent_unit}` : basePrice;
     }
@@ -240,7 +241,7 @@ const MyListings = () => {
   useEffect(() => {
     if (!profile?.id) return;
     const channel = supabase
-      .channel(`ecocampus-${profile.id}`)
+      .channel(CHANNELS.marketplace.userListings(profile.id))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_items', filter: `user_id=eq.${profile.id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ECOCAMPUS_QUERY_KEYS.mySharedItems(profile.id) });
         queryClient.invalidateQueries({ queryKey: ECOCAMPUS_QUERY_KEYS.sharedItems });
@@ -258,7 +259,7 @@ const MyListings = () => {
 
   return (
     <div>
-      {/* Inner tabs — translucent container */}
+      {/* Inner tabs â€” translucent container */}
       <div className="rounded-xl bg-white/[0.04] border border-white/10 p-1 flex gap-1 mb-4">
         {([{ key: 'shared' as const, label: 'My Shared Items' }, { key: 'requests' as const, label: 'My Requests' }]).map((tab) => (
           <button
@@ -458,7 +459,7 @@ const MyListings = () => {
                     {editSharedItem.share_type === 'rent' ? 'Rent Price' : 'Price'}
                   </label>
                   <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2">
-                    <span className="text-sm font-semibold text-white/50 select-none">₹</span>
+                    <span className="text-sm font-semibold text-white/50 select-none">â‚¹</span>
                     <Input
                       className="border-0 shadow-none px-0 focus-visible:ring-0 bg-transparent text-white placeholder:text-white/30"
                       value={editSharedItem.price}
@@ -536,7 +537,7 @@ const MyListings = () => {
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setIsEditSharedOpen(false)} disabled={editLoading} className="border-white/15 text-white/70 bg-transparent hover:bg-white/[0.06]">Cancel</Button>
                 <Button onClick={handleSaveShared} disabled={editLoading} className="bg-white/10 hover:bg-white/15 text-white border border-white/15">
-                  {editLoading ? 'Saving…' : 'Save'}
+                  {editLoading ? 'Savingâ€¦' : 'Save'}
                 </Button>
               </div>
             </div>
@@ -609,7 +610,7 @@ const MyListings = () => {
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setIsEditRequestOpen(false)} disabled={editLoading} className="border-white/15 text-white/70 bg-transparent hover:bg-white/[0.06]">Cancel</Button>
                 <Button onClick={handleSaveRequest} disabled={editLoading} className="bg-white/10 hover:bg-white/15 text-white border border-white/15">
-                  {editLoading ? 'Saving…' : 'Save'}
+                  {editLoading ? 'Savingâ€¦' : 'Save'}
                 </Button>
               </div>
             </div>

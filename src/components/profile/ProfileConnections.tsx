@@ -1,5 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Link } from "react-router-dom";
 import { Search, Plus, UserMinus, UserCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { UserBadge } from "@/components/ui/user-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { BasicUserProfile } from "@/types/profile";
+import { BasicUserProfile } from "@clstr/shared/types/profile";
 import {
   getConnections,
   getConnectionRequests,
@@ -21,7 +23,7 @@ import {
 } from "@/lib/social-api";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 
 type ConnectionListItem = {
   id: string;
@@ -120,7 +122,7 @@ const ProfileConnections = ({ profileId, isCurrentUser }: ProfileConnectionsProp
 
     const filter = `id=in.(${trackedIds.join(',')})`;
     const channel = supabase
-      .channel(`profile-connections-${profileId}`)
+      .channel(CHANNELS.social.profileConnections(profileId))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles', filter },
@@ -142,7 +144,7 @@ const ProfileConnections = ({ profileId, isCurrentUser }: ProfileConnectionsProp
     if (!profileId) return;
 
     const channel = supabase
-      .channel(`profile-connections-updates-${profileId}`)
+      .channel(CHANNELS.social.profileConnectionsUpdates(profileId))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "connections", filter: `requester_id=eq.${profileId}` },
@@ -180,10 +182,10 @@ const ProfileConnections = ({ profileId, isCurrentUser }: ProfileConnectionsProp
       setIsLoading(true);
       await removeConnection(connectionId);
       await loadConnections();
-      queryClient.invalidateQueries({ queryKey: ["profile-stats", profileId] });
-      queryClient.invalidateQueries({ queryKey: ["network"] });
-      queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["connectedUsers"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profileId) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
       toast({
         title: "Connection removed",
         description: "The connection has been removed from your network.",
@@ -206,10 +208,10 @@ const ProfileConnections = ({ profileId, isCurrentUser }: ProfileConnectionsProp
       await acceptConnectionRequest(requestId);
       await loadConnections();
       await loadPendingRequests();
-      queryClient.invalidateQueries({ queryKey: ["profile-stats", profileId] });
-      queryClient.invalidateQueries({ queryKey: ["network"] });
-      queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["connectedUsers"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profileId) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
       toast({
         title: "Request accepted",
         description: "Connection request has been accepted.",
@@ -231,10 +233,10 @@ const ProfileConnections = ({ profileId, isCurrentUser }: ProfileConnectionsProp
       setIsLoading(true);
       await rejectConnectionRequest(requestId);
       await loadPendingRequests();
-      queryClient.invalidateQueries({ queryKey: ["profile-stats", profileId] });
-      queryClient.invalidateQueries({ queryKey: ["network"] });
-      queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["connectedUsers"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profileId) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
       toast({
         title: "Request rejected",
         description: "Connection request has been rejected.",

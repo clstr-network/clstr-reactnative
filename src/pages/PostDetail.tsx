@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { getPostById, getPostByIdPublic } from "@/lib/social-api";
 import { useProfile } from "@/contexts/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +10,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { PostSkeleton } from "@/components/ui/skeleton-loader";
 import { PostCard } from "@/components/home/PostCard";
 import { PublicPostCard } from "@/components/home/PublicPostCard";
-import { isValidUuid } from "@/lib/uuid";
+import { isValidUuid } from "@clstr/shared/utils/uuid";
 
 const PostDetail = () => {
   const { id } = useParams();
@@ -93,7 +95,7 @@ const PostDetail = () => {
     if (!postId || !isAuthenticated) return;
 
     let channel = supabase
-      .channel(`post-detail-${postId}`)
+      .channel(CHANNELS.feed.postDetail(postId))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "posts", filter: `id=eq.${postId}` },
@@ -109,13 +111,13 @@ const PostDetail = () => {
         { event: "*", schema: "public", table: "comments", filter: `post_id=eq.${postId}` },
         () => {
           queryClient.invalidateQueries({ queryKey });
-          queryClient.invalidateQueries({ queryKey: ["post-comments", postId] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed.postComments(postId) });
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "comment_likes" },
-        () => queryClient.invalidateQueries({ queryKey: ["post-comments", postId] })
+        () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed.postComments(postId) })
       )
       .on(
         "postgres_changes",

@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { MentorStatusBadge } from '@/components/mentorship/MentorStatusBadge';
-import { HELP_TYPE_OPTIONS, computeMentorBadgeStatus } from '@/types/mentorship';
-import type { MentorHelpType, MentorshipOfferRow } from '@/types/mentorship';
+import { HELP_TYPE_OPTIONS, computeMentorBadgeStatus } from '@clstr/shared/types/mentorship';
+import type { MentorHelpType, MentorshipOfferRow } from '@clstr/shared/types/mentorship';
 import {
   Briefcase,
   Building,
@@ -74,7 +75,7 @@ export function AlumniProfileSection({
 
   // Fetch actual mentorship offer from DB to compute real badge status
   const mentorOfferQuery = useQuery({
-    queryKey: ['mentorship', 'profile-offer', resolvedUserId],
+    queryKey: QUERY_KEYS.mentorship.profileOffer(resolvedUserId),
     queryFn: async (): Promise<MentorshipOfferRow | null> => {
       if (!resolvedUserId) return null;
       assertValidUuid(resolvedUserId, 'userId');
@@ -166,9 +167,9 @@ export function AlumniProfileSection({
       }
 
       setWillingToMentor(checked);
-      queryClient.invalidateQueries({ queryKey: ['mentorship'] });
-      queryClient.invalidateQueries({ queryKey: ['mentorship', 'profile-offer', resolvedUserId] });
-      queryClient.invalidateQueries({ queryKey: ['alumni-directory'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.mentorship.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.mentorship.profileOffer(resolvedUserId) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.alumniDirectory() });
       toast({
         title: checked ? "Mentorship Enabled" : "Mentorship Disabled",
         description: checked
@@ -327,7 +328,7 @@ export function AlumniProfileSection({
               </div>
             )}
 
-            {/* Help type selector — shown when alumni clicks "Yes" */}
+            {/* Help type selector â€” shown when alumni clicks "Yes" */}
             {showOptInQuestion && (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-white/70">
@@ -368,7 +369,7 @@ export function AlumniProfileSection({
                 </div>
                 <div className="home-card-tier3 rounded-xl p-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm text-white/60 font-medium">✓ Mentorship Active</p>
+                    <p className="text-sm text-white/60 font-medium">âœ“ Mentorship Active</p>
                     <MentorStatusBadge status={actualBadgeStatus} size="sm" />
                   </div>
                   <p className="text-xs text-white/40">

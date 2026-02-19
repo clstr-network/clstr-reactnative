@@ -1,5 +1,5 @@
 /**
- * useIdentity — Authoritative identity resolution hook.
+ * useIdentity â€” Authoritative identity resolution hook.
  *
  * Calls get_identity_context() RPC once after auth, caches via React Query.
  * All feature guards, permission checks, and domain-isolation filters
@@ -11,12 +11,14 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { IdentityContext, IdentityResult, InviteOpsStats } from '@/types/identity';
-import { isResolvedIdentity } from '@/types/identity';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
+import type { IdentityContext, IdentityResult, InviteOpsStats } from '@clstr/shared/types/identity';
+import { isResolvedIdentity } from '@clstr/shared/types/identity';
 import { useCallback, useEffect } from 'react';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
-const IDENTITY_QUERY_KEY = ['identity-context'] as const;
-const OPS_STATS_QUERY_KEY = ['invite-ops-stats'] as const;
+const IDENTITY_QUERY_KEY = QUERY_KEYS.identity.context();
+const OPS_STATS_QUERY_KEY = QUERY_KEYS.identity.inviteOpsStats();
 
 /**
  * Fetch the canonical identity from the server.
@@ -36,7 +38,7 @@ async function fetchIdentity(): Promise<IdentityContext | null> {
   const result = data as unknown as IdentityResult;
 
   if (!isResolvedIdentity(result)) {
-    // User exists but has no profile yet — return a thin object
+    // User exists but has no profile yet â€” return a thin object
     // so consumers can react to onboarding state.
     if ('error' in result && result.error === 'no_profile') {
       return null;
@@ -49,7 +51,7 @@ async function fetchIdentity(): Promise<IdentityContext | null> {
 }
 
 /**
- * Primary hook — use everywhere instead of reading profile.email or auth.email.
+ * Primary hook â€” use everywhere instead of reading profile.email or auth.email.
  */
 export function useIdentity() {
   const queryClient = useQueryClient();
@@ -61,7 +63,7 @@ export function useIdentity() {
     gcTime: 1000 * 60 * 60 * 24,   // Keep in cache 24 hours for offline resilience
     refetchOnWindowFocus: false,    // don't spam RPC on tab switch
     refetchOnReconnect: true,       // Re-fetch when coming back online
-    retry: false,                   // Don't retry on network failure — use cached data
+    retry: false,                   // Don't retry on network failure â€” use cached data
   });
 
   // Invalidate identity when auth state changes (login/logout)
@@ -82,7 +84,7 @@ export function useIdentity() {
   }, [queryClient]);
 
   // LG-7 FIX: Invalidate identity cache when the user's profile row changes
-  // in realtime (e.g., admin changes role from Student → Alumni).
+  // in realtime (e.g., admin changes role from Student â†’ Alumni).
   // This closes the 5-minute stale window where useFeatureAccess could
   // return outdated permissions after a role change.
   useEffect(() => {
@@ -90,7 +92,7 @@ export function useIdentity() {
     if (!identity) return;
 
     const channel = supabase
-      .channel('identity-profile-realtime')
+      .channel(CHANNELS.identity.profileRealtime())
       .on(
         'postgres_changes',
         {
@@ -139,7 +141,7 @@ export function useIdentity() {
     /** Force re-fetch from server */
     refreshIdentity,
 
-    // ── Convenience accessors ──
+    // â”€â”€ Convenience accessors â”€â”€
 
     /** Is the user authenticated and has a resolved identity? */
     isAuthenticated: identity !== null,
@@ -171,7 +173,7 @@ export function useIdentity() {
   };
 }
 
-// ── Admin: Invite Ops Stats ──
+// â”€â”€ Admin: Invite Ops Stats â”€â”€
 
 async function fetchOpsStats(): Promise<InviteOpsStats> {
   const { data, error } = await supabase.rpc('get_invite_ops_stats');
@@ -200,7 +202,7 @@ export function useInviteOpsStats(enabled = true) {
     queryKey: OPS_STATS_QUERY_KEY,
     queryFn: fetchOpsStats,
     enabled,
-    staleTime: 30 * 1000,          // 30 s — admins want near-realtime
+    staleTime: 30 * 1000,          // 30 s â€” admins want near-realtime
     refetchInterval: 60 * 1000,    // auto-refresh every 60 s
     retry: 1,
   });

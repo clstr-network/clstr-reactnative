@@ -3,8 +3,8 @@
 // ============================================================================
 
 import { Badge } from '@/components/ui/badge';
-import type { MentorshipOfferRow, MentorBadgeStatus } from '@/types/mentorship';
-import { computeMentorBadgeStatus, getMentorBadgeConfig } from '@/types/mentorship';
+import type { MentorshipOfferRow, MentorBadgeStatus } from '@clstr/shared/types/mentorship';
+import { computeMentorBadgeStatus, getMentorBadgeConfig } from '@clstr/shared/types/mentorship';
 
 interface MentorStatusBadgeProps {
   offer?: MentorshipOfferRow | null;

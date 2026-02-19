@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileConnections from "@/components/profile/ProfileConnections";
 import { useProfile } from "@/contexts/ProfileContext";
-import { isValidUuid } from "@/lib/uuid";
+import { isValidUuid } from "@clstr/shared/utils/uuid";
 
 const ProfileConnectionsPage = () => {
   const { id } = useParams();

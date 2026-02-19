@@ -1,5 +1,5 @@
 /**
- * CommentSection – LinkedIn-style inline threaded comment system.
+ * CommentSection â€“ LinkedIn-style inline threaded comment system.
  *
  * Replaces the old drawer-based engagement model.
  * - All comments render inline below the post
@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import {
   Send,
   MoreHorizontal,
@@ -54,7 +55,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const MAX_NESTING_DEPTH = 1; // 0 = top-level, 1 = reply → 2 visible levels
+const MAX_NESTING_DEPTH = 1; // 0 = top-level, 1 = reply â†’ 2 visible levels
 const INITIAL_COMMENTS_SHOW = 3; // Show first N top-level comments; user clicks to expand
 const INITIAL_REPLIES_SHOW = 2; // Show first N replies per comment; user clicks to expand
 
@@ -81,10 +82,10 @@ export function CommentSection({
   const { toast } = useToast();
   const commentsQueryKey = useMemo(() => ['post-comments', postId] as const, [postId]);
 
-  // Single active reply input — only one reply box open at a time (LinkedIn-style)
+  // Single active reply input â€” only one reply box open at a time (LinkedIn-style)
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
 
-  // Pagination — show limited comments initially, expand on demand
+  // Pagination â€” show limited comments initially, expand on demand
   const [showAllComments, setShowAllComments] = useState(false);
 
   /* ---- Fetch all comments ---- */
@@ -97,13 +98,13 @@ export function CommentSection({
   /* ---- Real-time subscription ---- */
   useEffect(() => {
     const channel = supabase
-      .channel(`inline-comments-${postId}`)
+      .channel(CHANNELS.feed.inlineComments(postId))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'comments', filter: `post_id=eq.${postId}` },
         () => queryClient.invalidateQueries({ queryKey: commentsQueryKey }),
       )
-      // NOTE: comment_likes subscription intentionally removed — it cannot be
+      // NOTE: comment_likes subscription intentionally removed â€” it cannot be
       // filtered by post_id (column doesn't exist on that table), so it would
       // fire for every like across the entire platform. Own likes are handled
       // optimistically; other users' likes sync on the next comments refetch.
@@ -214,11 +215,11 @@ export function CommentSection({
       {/* Empty state */}
       {!isLoading && comments.length === 0 && (
         <p className="text-xs text-white/40 text-center py-3">
-          No comments yet — be the first to share your thoughts.
+          No comments yet â€” be the first to share your thoughts.
         </p>
       )}
 
-      {/* Comment list — paginated */}
+      {/* Comment list â€” paginated */}
       {!isLoading && comments.length > 0 && (
         <div className="space-y-1">
           {(showAllComments ? comments : comments.slice(0, INITIAL_COMMENTS_SHOW)).map(
@@ -359,7 +360,7 @@ function NewCommentInput({
 }
 
 /* ------------------------------------------------------------------ */
-/*  CommentItem – single comment with local reply state                */
+/*  CommentItem â€“ single comment with local reply state                */
 /* ------------------------------------------------------------------ */
 
 interface CommentItemProps {
@@ -679,7 +680,7 @@ function CommentItem({
         </div>
       </div>
 
-      {/* Inline reply input — controlled by local isReplying state */}
+      {/* Inline reply input â€” controlled by local isReplying state */}
       {isReplying && (
         <div className="ml-10 mt-2 flex gap-2 items-start animate-in fade-in slide-in-from-top-2 duration-200">
           <Avatar className="h-6 w-6 flex-shrink-0">
@@ -727,7 +728,7 @@ function CommentItem({
         </div>
       )}
 
-      {/* Replies (max 2 levels) — paginated */}
+      {/* Replies (max 2 levels) â€” paginated */}
       {comment.replies && comment.replies.length > 0 && (
         <div className="space-y-0">
           {(showAllReplies

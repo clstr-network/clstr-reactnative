@@ -18,7 +18,7 @@ import {
   MentorOfferSettings,
   StudentRequestList,
 } from '@/components/mentorship';
-import type { MentorshipStudentTab, MentorshipMentorTab, Mentor } from '@/types/mentorship';
+import type { MentorshipStudentTab, MentorshipMentorTab, Mentor } from '@clstr/shared/types/mentorship';
 
 const Mentorship = () => {
   const navigate = useNavigate();

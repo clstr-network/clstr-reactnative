@@ -14,14 +14,14 @@ import { MentorStatusBadge } from '@/components/mentorship/MentorStatusBadge';
 import {
   HELP_TYPE_OPTIONS,
   COMMITMENT_LEVEL_OPTIONS,
-} from '@/types/mentorship';
+} from '@clstr/shared/types/mentorship';
 import type {
   MentorshipOfferRow,
   MentorshipOfferFormData,
   MentorHelpType,
   MentorCommitmentLevel,
   MentorBadgeStatus,
-} from '@/types/mentorship';
+} from '@clstr/shared/types/mentorship';
 
 interface MentorOfferSettingsProps {
   myOffer: MentorshipOfferRow | null;

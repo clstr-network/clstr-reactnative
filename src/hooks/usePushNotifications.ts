@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import {
   isPushSupported,
   isPushConfigured,
@@ -21,9 +22,9 @@ import {
   type PushPermissionState,
 } from "@/lib/pushNotifications";
 import { updateUserSettings } from "@/lib/user-settings";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
-export const pushSubscriptionQueryKey = (userId: string) => 
-  ["pushSubscription", userId] as const;
+export const pushSubscriptionQueryKey = QUERY_KEYS.pushSubscription;
 
 export type PushNotificationStatus = {
   isSupported: boolean;
@@ -140,7 +141,7 @@ export function usePushNotifications(userId?: string) {
     onSuccess: () => {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: pushSubscriptionQueryKey(userId) });
-        queryClient.invalidateQueries({ queryKey: ["userSettings", userId] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userSettings(userId) });
       }
     },
   });
@@ -166,7 +167,7 @@ export function usePushNotifications(userId?: string) {
     onSuccess: () => {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: pushSubscriptionQueryKey(userId) });
-        queryClient.invalidateQueries({ queryKey: ["userSettings", userId] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userSettings(userId) });
       }
     },
   });
@@ -209,7 +210,7 @@ export function usePushNotifications(userId?: string) {
     if (!userId) return;
 
     const channel = supabase
-      .channel(`push_subscriptions:${userId}`)
+      .channel(CHANNELS.identity.pushSubscriptions(userId))
       .on(
         "postgres_changes",
         {

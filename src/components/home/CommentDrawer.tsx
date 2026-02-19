@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { MessageSquare, Send, X, ThumbsUp, Heart, Trash2, MoreHorizontal, Pencil, Check } from "lucide-react";
 import {
   Sheet,
@@ -146,7 +147,7 @@ export function CommentDrawer({
               </div>
             ) : comments.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-sm text-white/40">No comments yet — be the first to share your thoughts.</p>
+                <p className="text-sm text-white/40">No comments yet â€” be the first to share your thoughts.</p>
               </div>
             ) : (
               comments.map((comment) => (
@@ -245,7 +246,7 @@ function CommentItem({
 
     try {
       await toggleCommentLike(comment.id);
-      await queryClient.invalidateQueries({ queryKey: ["post-comments", comment.post_id] });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed.postComments(comment.post_id) });
       onRefresh?.();
     } catch (error) {
       toast({
@@ -264,7 +265,7 @@ function CommentItem({
 
     try {
       await editComment(comment.id, editContent.trim());
-      await queryClient.invalidateQueries({ queryKey: ["post-comments", comment.post_id] });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed.postComments(comment.post_id) });
       onRefresh?.();
       setIsEditing(false);
       toast({
@@ -289,7 +290,7 @@ function CommentItem({
 
     try {
       await deleteComment(comment.id);
-      await queryClient.invalidateQueries({ queryKey: ["post-comments", comment.post_id] });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed.postComments(comment.post_id) });
       // Also invalidate feed queries to update comment counts
       await queryClient.invalidateQueries({
         predicate: (query) => {

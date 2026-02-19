@@ -1,7 +1,5 @@
-/**
- * @deprecated Global /search has been retired.
- * Use the navbar typeahead (profiles + events) via useTypeaheadSearch instead.
+﻿/**
+ * search-api — Web adapter.
+ * Thin re-export layer over @clstr/core.
  */
-export const searchAll = async () => {
-  throw new Error("Global /search is deprecated. Use navbar typeahead search.");
-};
+export * from '@clstr/core/api/search-api';

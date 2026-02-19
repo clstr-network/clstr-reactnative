@@ -1,16 +1,17 @@
 /**
- * Messages API — @clstr/core
+ * Messages API â€” @clstr/core
  *
  * Platform-agnostic messaging functions.
- * Transformation: supabase singleton → client param, handleApiError → createAppError.
+ * Transformation: supabase singleton â†’ client param, handleApiError â†’ createAppError.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { assertValidUuid } from '../utils/uuid';
 import { createAppError } from '../errors';
 import { normalizeCollegeDomain } from '../schemas/validation';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type MessagingConnectionStatus = 'connected' | 'pending' | 'none' | 'blocked';
 
@@ -42,7 +43,7 @@ export interface Conversation {
 
 export const PRIVILEGED_MESSAGING_ROLES = ['Alumni', 'Faculty', 'Club', 'Organization'];
 
-// ─── Internal helpers ────────────────────────────────────────────────────────
+// â”€â”€â”€ Internal helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function fetchProfilePublic(
   client: SupabaseClient,
@@ -129,7 +130,7 @@ async function getAuthenticatedUserId(client: SupabaseClient): Promise<string> {
   return user.id;
 }
 
-// ─── Exported Functions ──────────────────────────────────────────────────────
+// â”€â”€â”€ Exported Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Assert the current user can message a partner (throws on failure). */
 export async function assertCanMessagePartner(
@@ -368,7 +369,7 @@ export function subscribeToMessages(
   callback: (payload: any) => void
 ) {
   return client
-    .channel(`messages:receiver_id=eq.${userId}`)
+    .channel(CHANNELS.social.messagesReceiver(userId))
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },

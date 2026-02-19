@@ -3,6 +3,8 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
 // Types for admin analytics data
 export interface AnalyticsOverview {
@@ -479,7 +481,7 @@ export function useAnalyticsOverview() {
   const { isAdmin } = useAdmin();
 
   return useQuery({
-    queryKey: ['admin-analytics-overview'],
+    queryKey: QUERY_KEYS.admin.analyticsOverview(),
     queryFn: fetchAnalyticsOverview,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -492,7 +494,7 @@ export function useDailyMetrics(days: number = 30) {
   const { isAdmin } = useAdmin();
 
   return useQuery({
-    queryKey: ['admin-daily-metrics', days],
+    queryKey: QUERY_KEYS.admin.dailyMetrics(days),
     queryFn: () => fetchDailyMetrics(days),
     enabled: isAdmin,
     staleTime: 1000 * 60 * 30, // 30 minutes
@@ -504,7 +506,7 @@ export function useEngagementMetrics() {
   const { isAdmin } = useAdmin();
 
   return useQuery({
-    queryKey: ['admin-engagement-metrics'],
+    queryKey: QUERY_KEYS.admin.engagementMetrics(),
     queryFn: fetchEngagementMetrics,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 10, // 10 minutes
@@ -516,7 +518,7 @@ export function useCollegeActivity() {
   const { isAdmin } = useAdmin();
 
   return useQuery({
-    queryKey: ['admin-college-activity'],
+    queryKey: QUERY_KEYS.admin.collegeActivity(),
     queryFn: fetchCollegeActivity,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 15, // 15 minutes
@@ -537,60 +539,60 @@ export function useAdminAnalytics() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_analytics_realtime')
+      .channel(CHANNELS.admin.analytics())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-analytics-overview'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-daily-metrics'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.analyticsOverview() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.dailyMetrics() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'posts' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-engagement-metrics'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-daily-metrics'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.engagementMetrics() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.dailyMetrics() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'connections' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-engagement-metrics'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-daily-metrics'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.engagementMetrics() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.dailyMetrics() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'events' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-engagement-metrics'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-daily-metrics'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.engagementMetrics() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.dailyMetrics() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'admin_user_growth' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-daily-metrics'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-analytics-overview'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.dailyMetrics() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.analyticsOverview() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'admin_engagement_metrics' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-engagement-metrics'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-daily-metrics'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.engagementMetrics() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.dailyMetrics() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'admin_dashboard_kpis' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-analytics-overview'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.analyticsOverview() });
         }
       )
       .subscribe();
@@ -625,7 +627,7 @@ export function useAdminAnalyticsSnapshot(timeRange: number) {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const query = useQuery({
-    queryKey: ['admin-analytics', timeRange],
+    queryKey: QUERY_KEYS.admin.analytics(timeRange),
     queryFn: () => fetchAnalyticsSnapshot(timeRange),
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5,
@@ -646,12 +648,12 @@ export function useAdminAnalyticsSnapshot(timeRange: number) {
     const debouncedInvalidate = () => {
       if (invalidationTimeout) clearTimeout(invalidationTimeout);
       invalidationTimeout = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['admin-analytics'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.analytics() });
       }, 500);
     };
 
     const channel = supabase
-      .channel('admin_analytics_snapshot_realtime')
+      .channel(CHANNELS.admin.analyticsSnapshot())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, debouncedInvalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, debouncedInvalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, debouncedInvalidate)

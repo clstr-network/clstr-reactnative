@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { UserProfile } from "@/types/profile";
+import type { UserProfile } from "@clstr/shared/types/profile";
 import { usePortfolioData, useActivatePortfolio } from "@/hooks/usePortfolio";
 import { toast } from "@/hooks/use-toast";
 import { UserBadge } from "@/components/ui/user-badge";

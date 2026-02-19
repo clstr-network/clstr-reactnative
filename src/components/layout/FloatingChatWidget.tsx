@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,7 +49,7 @@ export const FloatingChatWidget = () => {
 
   // Fetch conversations
   const { data: conversations = [], refetch: refetchConversations } = useQuery({
-    queryKey: ["conversations", profile?.id],
+    queryKey: QUERY_KEYS.social.conversations(profile?.id),
     queryFn: () => getConversations(profile?.id),
     enabled: isOpen && !!profile?.id,
     refetchInterval: 30000, // Refetch every 30 seconds as fallback
@@ -60,7 +61,7 @@ export const FloatingChatWidget = () => {
     isLoading: isLoadingMessages,
     refetch: refetchMessages 
   } = useQuery({
-    queryKey: ["messages", selectedConversation?.partner.id],
+    queryKey: QUERY_KEYS.social.messages(selectedConversation?.partner.id),
     queryFn: () => getMessages(selectedConversation!.partner.id, 50),
     enabled: !!selectedConversation?.partner.id,
   });
@@ -90,10 +91,10 @@ export const FloatingChatWidget = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages", selectedConversation?.partner.id] });
-      queryClient.invalidateQueries({ queryKey: ["conversations", profile?.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.messages(selectedConversation?.partner.id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations(profile?.id) });
       if (profile?.id) {
-        queryClient.invalidateQueries({ queryKey: ["unreadMessageCount", profile.id] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.unreadMessageCount(profile.id) });
       }
     },
   });
@@ -103,17 +104,17 @@ export const FloatingChatWidget = () => {
     if (!profile?.id || !isOpen) return;
 
     const unsubscribe = subscribeToMessages(profile.id, (newMessage) => {
-      queryClient.invalidateQueries({ queryKey: ["conversations", profile.id] });
-      queryClient.invalidateQueries({ queryKey: ["unreadMessageCount", profile.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations(profile.id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.unreadMessageCount(profile.id) });
 
       if (selectedConversation && (newMessage.sender_id === selectedConversation.partner.id || newMessage.receiver_id === selectedConversation.partner.id)) {
-        queryClient.invalidateQueries({ queryKey: ["messages", selectedConversation.partner.id] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.messages(selectedConversation.partner.id) });
       }
 
       if (selectedConversation && newMessage.receiver_id === profile.id && newMessage.sender_id === selectedConversation.partner.id) {
         markMessagesAsRead(selectedConversation.partner.id).finally(() => {
-          queryClient.invalidateQueries({ queryKey: ["conversations", profile.id] });
-          queryClient.invalidateQueries({ queryKey: ["unreadMessageCount", profile.id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations(profile.id) });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.unreadMessageCount(profile.id) });
         });
       }
     });
@@ -139,9 +140,9 @@ export const FloatingChatWidget = () => {
   useEffect(() => {
     if (selectedConversation) {
       markMessagesAsRead(selectedConversation.partner.id).finally(() => {
-        queryClient.invalidateQueries({ queryKey: ["conversations", profile?.id] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations(profile?.id) });
         if (profile?.id) {
-          queryClient.invalidateQueries({ queryKey: ["unreadMessageCount", profile.id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.unreadMessageCount(profile.id) });
         }
       });
     }
@@ -307,7 +308,7 @@ export const FloatingChatWidget = () => {
                   onClick={() => setSelectedConversation(null)}
                   className="text-xs text-white/60 hover:text-white hover:bg-white/[0.06] -ml-2"
                 >
-                  ← Back to conversations
+                  â† Back to conversations
                 </Button>
               </div>
               <ScrollArea className="flex-1 px-4 py-3">

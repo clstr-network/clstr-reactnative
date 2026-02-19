@@ -13,9 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminReportHistory, type AdminReportEntry } from '@/hooks/useAdminReports';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
 import { 
   FileText,
   Download,
@@ -325,7 +326,7 @@ export default function AdminReports() {
       return data as { id: string };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.reports() });
     },
   });
 
@@ -360,7 +361,7 @@ export default function AdminReports() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.reports() });
     },
   });
 

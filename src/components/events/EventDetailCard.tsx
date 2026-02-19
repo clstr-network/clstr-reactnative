@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import {
   Calendar,
   MapPin,
@@ -47,7 +48,7 @@ import {
 import { EventShareModal } from "./EventShareModal";
 import { SEO } from "@/components/SEO";
 import { trackExploreEventsCTAClick } from "@/lib/analytics";
-import { getEventStatus } from "@/lib/event-status";
+import { getEventStatus } from "@clstr/shared/utils/event-status";
 
 interface EventDetailCardProps {
   event: Event;
@@ -58,13 +59,13 @@ interface EventDetailCardProps {
  * EventDetailCard - Full interactive view for authenticated users
  * 
  * Features:
- * ✅ Full event details
- * ✅ Register/Unregister
- * ✅ Share to connections
- * ✅ Copy link
- * ✅ Delete (creator only)
- * ✅ SEO metadata
- * ✅ Explore more events CTA
+ * âœ… Full event details
+ * âœ… Register/Unregister
+ * âœ… Share to connections
+ * âœ… Copy link
+ * âœ… Delete (creator only)
+ * âœ… SEO metadata
+ * âœ… Explore more events CTA
  */
 export function EventDetailCard({ event, onEventUpdated }: EventDetailCardProps) {
   const [copiedText, copyToClipboard] = useCopyToClipboard();
@@ -203,7 +204,7 @@ export function EventDetailCard({ event, onEventUpdated }: EventDetailCardProps)
         title: "Event Deleted",
         description: "The event has been deleted successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["event-detail"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events.detail() });
       navigate("/events");
     } catch (error) {
       toast({

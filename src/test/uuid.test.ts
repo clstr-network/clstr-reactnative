@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assertValidUuid, isValidUuid } from "@/lib/uuid";
+import { assertValidUuid, isValidUuid } from "@clstr/shared/utils/uuid";
 
 describe("uuid", () => {
   describe("isValidUuid", () => {

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { ProfileData } from "@/types/portfolio";
+import type { ProfileData } from "@clstr/shared/types/portfolio";
 import { ExternalLink, Github, Linkedin } from "lucide-react";
 
 const fadeUp = {

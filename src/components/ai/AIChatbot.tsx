@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAIChatSessions, useAIChatMessages } from "@/hooks/useAIChat";
-import type { AIChatMessage } from "@/types/ai";
+import type { AIChatMessage } from "@clstr/shared/types/ai";
 
 // ============================================================================
 // Suggested prompts for career assistance

@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Avatar } from '@/components/ui/avatar';
 import { Search, Calendar, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,7 @@ import {
 } from '@/lib/ecocampus-api';
 import { useProfile } from '@/contexts/ProfileContext';
 import { supabase } from '@/integrations/supabase/client';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
 
 // Query keys for consistent cache management
 const ECOCAMPUS_QUERY_KEYS = {
@@ -74,7 +75,7 @@ const Requests = () => {
 
   useEffect(() => {
     const channel = supabase
-      .channel('item-requests-public')
+      .channel(CHANNELS.marketplace.requestsPublic())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'item_requests' }, () => {
         queryClient.invalidateQueries({ queryKey: ECOCAMPUS_QUERY_KEYS.itemRequests });
       })
@@ -90,7 +91,7 @@ const Requests = () => {
     if (!domain) return;
 
     const channel = supabase
-      .channel('ecocampus-profiles-requests')
+      .channel(CHANNELS.marketplace.requestsProfiles())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `college_domain=eq.${domain}` }, () => {
         queryClient.invalidateQueries({ queryKey: ECOCAMPUS_QUERY_KEYS.itemRequests });
       })
@@ -107,7 +108,7 @@ const Requests = () => {
     assertValidUuid(profile.id, 'profileId');
 
     const channel = supabase
-      .channel(`item-request-responses-${profile.id}`)
+      .channel(CHANNELS.marketplace.requestResponses(profile.id))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'item_request_responses', filter: `responder_id=eq.${profile.id}` },

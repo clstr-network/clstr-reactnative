@@ -1,5 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Edit3, Plus, ThumbsUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import SkillForm, { SkillItem } from "./SkillForm";
 import { toast } from "@/hooks/use-toast";
 import { useProfile } from "@/contexts/ProfileContext";
-import { SkillData } from "@/types/profile";
+import { SkillData } from "@clstr/shared/types/profile";
 import { getSkills, updateSkills, addSkill, updateSkill, deleteSkill } from "@/lib/profile-api";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -60,13 +62,13 @@ const ProfileSkills = ({ profileId, isEditable }: ProfileSkillsProps) => {
     if (!profileId) return;
 
     const channel = supabase
-      .channel(`profile-skills-${profileId}`)
+      .channel(CHANNELS.profile.skills(profileId))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profile_skills', filter: `profile_id=eq.${profileId}` },
         () => {
           loadSkills();
-          queryClient.invalidateQueries({ queryKey: ['profile', profileId] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.detail(profileId) });
         }
       )
       .subscribe();
@@ -85,7 +87,7 @@ const ProfileSkills = ({ profileId, isEditable }: ProfileSkillsProps) => {
       });
       await loadSkills();
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsAddSkillOpen(false);
       toast({
         title: "Skill added",
@@ -113,7 +115,7 @@ const ProfileSkills = ({ profileId, isEditable }: ProfileSkillsProps) => {
       });
       await loadSkills();
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsEditSkillOpen(false);
       setCurrentSkill(null);
       toast({
@@ -138,7 +140,7 @@ const ProfileSkills = ({ profileId, isEditable }: ProfileSkillsProps) => {
       await deleteSkill(id);
       await loadSkills();
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsDeleteAlertOpen(false);
       setCurrentSkill(null);
       toast({
@@ -189,7 +191,7 @@ const ProfileSkills = ({ profileId, isEditable }: ProfileSkillsProps) => {
                     </Badge>
                     {/* Network context - shows how skill is used */}
                     <p className="text-xs text-white/30 mt-2 italic">
-                      Used in projects • Available for collaboration
+                      Used in projects Ã¢â‚¬Â¢ Available for collaboration
                     </p>
                   </div>
 

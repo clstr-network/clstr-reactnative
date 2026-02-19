@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
 // Types for admin reports
 export interface ReportConfig {
@@ -375,7 +377,7 @@ export function useSkillTrends() {
   const { isAdmin } = useAdmin();
 
   return useQuery({
-    queryKey: ['admin-skill-trends'],
+    queryKey: QUERY_KEYS.admin.skillTrends(),
     queryFn: fetchSkillTrends,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 30, // 30 minutes
@@ -387,7 +389,7 @@ export function useLeadershipMetrics() {
   const { isAdmin } = useAdmin();
 
   return useQuery({
-    queryKey: ['admin-leadership-metrics'],
+    queryKey: QUERY_KEYS.admin.leadershipMetrics(),
     queryFn: fetchLeadershipMetrics,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 30, // 30 minutes
@@ -399,7 +401,7 @@ export function useAlumniEngagement() {
   const { isAdmin } = useAdmin();
 
   return useQuery({
-    queryKey: ['admin-alumni-engagement'],
+    queryKey: QUERY_KEYS.admin.alumniEngagement(),
     queryFn: fetchAlumniEngagement,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 30, // 30 minutes
@@ -421,12 +423,12 @@ export function useAdminReports() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_reports_realtime')
+      .channel(CHANNELS.admin.reports())
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'profile_skills' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-skill-trends'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.skillTrends() });
         }
       )
       .subscribe();
@@ -460,7 +462,7 @@ export function useAdminReportHistory() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['admin-reports'],
+    queryKey: QUERY_KEYS.admin.reports(),
     queryFn: fetchAdminReports,
     enabled: isAdmin,
   });
@@ -469,12 +471,12 @@ export function useAdminReportHistory() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_reports_realtime')
+      .channel(CHANNELS.admin.reports())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'admin_reports' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.reports() });
         }
       )
       .subscribe();

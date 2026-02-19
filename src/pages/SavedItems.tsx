@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useMemo, useState } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Bookmark, Briefcase, Users, MapPin, Calendar, X, Shield } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SEO } from "@/components/SEO";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
 export default function SavedItems() {
   const { profile } = useProfile();
@@ -28,7 +30,7 @@ export default function SavedItems() {
   const [removingItems, setRemovingItems] = useState<Set<string>>(new Set());
 
   // All hooks must be called unconditionally at the top
-  const queryKey = useMemo(() => ["saved-items", profile?.id] as const, [profile?.id]);
+  const queryKey = useMemo(() => QUERY_KEYS.social.savedItems(profile?.id), [profile?.id]);
 
   const { data, isLoading, isPending, isError, error } = useQuery({
     queryKey,
@@ -90,7 +92,7 @@ export default function SavedItems() {
     if (!profile?.id || !canSaveBookmarks) return;
 
     const channel = supabase
-      .channel(`saved-items-${profile.id}`)
+      .channel(CHANNELS.marketplace.savedItems(profile.id))
       .on(
         "postgres_changes",
         {
@@ -289,7 +291,7 @@ export default function SavedItems() {
                     {project.owner && (
                       <div className="flex items-center gap-2 text-sm text-white/40">
                         <span>Created by {project.owner.full_name}</span>
-                        <span>•</span>
+                        <span>â€¢</span>
                         <span>{formatDistanceToNow(new Date(project.created_at), { addSuffix: true })}</span>
                       </div>
                     )}

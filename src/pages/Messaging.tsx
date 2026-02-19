@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -18,7 +20,7 @@ import {
 } from "@/lib/messages-api";
 import { useProfile } from "@/contexts/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ConversationList from "@/components/messages/ConversationList";
 import ChatView from "@/components/messages/ChatView";
@@ -42,7 +44,7 @@ const Messaging = () => {
 
   // Fetch conversations
   const { data: conversations = [], isLoading: isLoadingConversations } = useQuery({
-    queryKey: ["conversations", profile?.id],
+    queryKey: QUERY_KEYS.social.conversations(profile?.id),
     queryFn: () => getConversations(profile?.id),
     enabled: !!profile?.id,
     refetchInterval: 30000,
@@ -50,7 +52,7 @@ const Messaging = () => {
 
   // Fetch connected users (for showing contacts that don't have conversations yet)
   const { data: connectedUsers = [], isLoading: isLoadingConnections } = useQuery({
-    queryKey: ["connectedUsers", profile?.id],
+    queryKey: QUERY_KEYS.social.connectedUsers(),
     queryFn: () => getConnectedUsers(profile?.id),
     enabled: !!profile?.id,
     staleTime: 60000,
@@ -75,7 +77,7 @@ const Messaging = () => {
 
     let mounted = true;
     const channel = supabase
-      .channel(`messaging-partner-${selectedPartner.id}`)
+      .channel(CHANNELS.social.messagingPartner(selectedPartner.id))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${selectedPartner.id}` },
@@ -181,7 +183,7 @@ const Messaging = () => {
     data: messagesData,
     isLoading: isLoadingMessages,
   } = useQuery({
-    queryKey: ["messages", activePartnerId],
+    queryKey: QUERY_KEYS.social.messages(activePartnerId),
     queryFn: () => getMessages(activePartnerId!, 50),
     enabled: !!activePartnerId,
   });
@@ -190,7 +192,7 @@ const Messaging = () => {
 
   const invalidateUnread = useCallback(() => {
     if (profile?.id) {
-      queryClient.invalidateQueries({ queryKey: ["unreadMessageCount", profile.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.unreadMessageCount(profile.id) });
     }
   }, [profile?.id, queryClient]);
 
@@ -208,9 +210,9 @@ const Messaging = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages", activePartnerId] });
-      queryClient.invalidateQueries({ queryKey: ["conversations", profile?.id] });
-      queryClient.invalidateQueries({ queryKey: ["connectedUsers", profile?.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.messages(activePartnerId) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations(profile?.id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
       invalidateUnread();
     },
   });
@@ -225,8 +227,8 @@ const Messaging = () => {
         ["conversations", profile.id],
         (old) => {
           if (!old) {
-            // No cache yet — force a full fetch
-            queryClient.invalidateQueries({ queryKey: ["conversations", profile.id] });
+            // No cache yet Ã¢â‚¬â€ force a full fetch
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations(profile.id) });
             return old;
           }
 
@@ -253,8 +255,8 @@ const Messaging = () => {
             );
           }
 
-          // New conversation partner — need to refetch to get profile info
-          queryClient.invalidateQueries({ queryKey: ["conversations", profile.id] });
+          // New conversation partner Ã¢â‚¬â€ need to refetch to get profile info
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations(profile.id) });
           return old;
         }
       );
@@ -263,13 +265,13 @@ const Messaging = () => {
 
       if (!activePartnerId) return;
       if (newMessage.sender_id === activePartnerId || newMessage.receiver_id === activePartnerId) {
-        queryClient.invalidateQueries({ queryKey: ["messages", activePartnerId] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.messages(activePartnerId) });
       }
 
       if (newMessage.receiver_id === profile.id && newMessage.sender_id === activePartnerId) {
         markMessagesAsRead(activePartnerId).finally(() => {
           invalidateUnread();
-          queryClient.invalidateQueries({ queryKey: ["conversations", profile.id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations(profile.id) });
         });
       }
     });
@@ -296,7 +298,7 @@ const Messaging = () => {
     if (!activePartnerId) return;
     markMessagesAsRead(activePartnerId).finally(() => {
       invalidateUnread();
-      queryClient.invalidateQueries({ queryKey: ["conversations", profile?.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations(profile?.id) });
     });
   }, [activePartnerId, invalidateUnread, queryClient, profile?.id]);
 

@@ -9,16 +9,17 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPortfolioSettings, updatePortfolioSettings, activatePortfolio } from "@/lib/portfolio-api";
-import type { PortfolioSettings } from "@/types/portfolio";
-import type { UserProfile } from "@/types/profile";
+import type { PortfolioSettings } from "@clstr/shared/types/portfolio";
+import type { UserProfile } from "@clstr/shared/types/profile";
 import { userProfileToProfileData } from "@/lib/portfolio-adapter";
 import { toast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
-const PORTFOLIO_SETTINGS_KEY = "portfolio-settings";
+const PORTFOLIO_SETTINGS_KEY = QUERY_KEYS.portfolio.settings;
 
 export function usePortfolioSettings(profileId: string | undefined) {
   return useQuery({
-    queryKey: [PORTFOLIO_SETTINGS_KEY, profileId],
+    queryKey: PORTFOLIO_SETTINGS_KEY(profileId!),
     queryFn: () => getPortfolioSettings(profileId!),
     enabled: Boolean(profileId),
     staleTime: 30_000,
@@ -42,7 +43,7 @@ export function useUpdatePortfolioSettings(profileId: string | undefined) {
       return updatePortfolioSettings(profileId, updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [PORTFOLIO_SETTINGS_KEY, profileId] });
+      queryClient.invalidateQueries({ queryKey: PORTFOLIO_SETTINGS_KEY(profileId!) });
     },
     onError: (error) => {
       toast({
@@ -66,9 +67,9 @@ export function useActivatePortfolio(
       return activatePortfolio(profileId, profile);
     },
     onSuccess: (slug) => {
-      queryClient.invalidateQueries({ queryKey: [PORTFOLIO_SETTINGS_KEY, profileId] });
+      queryClient.invalidateQueries({ queryKey: PORTFOLIO_SETTINGS_KEY(profileId!) });
       // Also refresh the profile to pick up updated social_links
-      queryClient.invalidateQueries({ queryKey: ["profile-stats", profileId] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(profileId!) });
       return slug;
     },
     onError: (error) => {

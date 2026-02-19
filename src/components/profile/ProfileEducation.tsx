@@ -1,12 +1,14 @@
 
 import { useState, useEffect, useCallback } from "react";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Edit3, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import EducationForm, { EducationItem } from "./EducationForm";
 import { toast } from "@/hooks/use-toast";
 import { useProfile } from "@/contexts/ProfileContext";
-import { EducationData } from "@/types/profile";
+import { EducationData } from "@clstr/shared/types/profile";
 import { addEducation, updateEducation, deleteEducation, getEducation } from "@/lib/profile-api";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -59,13 +61,13 @@ const ProfileEducation = ({ profileId, isEditable }: ProfileEducationProps) => {
     if (!profileId) return;
 
     const channel = supabase
-      .channel(`profile-education-${profileId}`)
+      .channel(CHANNELS.profile.education(profileId))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profile_education', filter: `profile_id=eq.${profileId}` },
         () => {
           loadEducation();
-          queryClient.invalidateQueries({ queryKey: ['profile', profileId] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.detail(profileId) });
         }
       )
       .subscribe();
@@ -88,7 +90,7 @@ const ProfileEducation = ({ profileId, isEditable }: ProfileEducationProps) => {
       });
       await loadEducation();
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsAddEducationOpen(false);
       toast({
         title: "Education added",
@@ -120,7 +122,7 @@ const ProfileEducation = ({ profileId, isEditable }: ProfileEducationProps) => {
       });
       await loadEducation();
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsEditEducationOpen(false);
       setCurrentEducation(null);
       toast({
@@ -145,7 +147,7 @@ const ProfileEducation = ({ profileId, isEditable }: ProfileEducationProps) => {
       await deleteEducation(id);
       await loadEducation();
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsDeleteAlertOpen(false);
       setCurrentEducation(null);
       toast({
@@ -199,7 +201,7 @@ const ProfileEducation = ({ profileId, isEditable }: ProfileEducationProps) => {
                 <div className="flex justify-between">
                   <div>
                     <h4 className="font-medium text-white/80">{edu.degree}</h4>
-                    <p className="text-sm text-white/50">{edu.school}{edu.location ? ` • ${edu.location}` : ''}</p>
+                    <p className="text-sm text-white/50">{edu.school}{edu.location ? ` Ã¢â‚¬Â¢ ${edu.location}` : ''}</p>
                     <p className="text-xs text-white/30">{edu.start_date} - {edu.end_date || 'Present'}</p>
                     {edu.description && <p className="text-sm mt-2 text-white/60">{edu.description}</p>}
                   </div>

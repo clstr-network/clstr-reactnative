@@ -2,7 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PostsTab from "./tabs/PostsTab";
 import AboutTab from "./tabs/AboutTab";
 import ProjectsTab from "./tabs/ProjectsTab";
-import type { UserProfile } from "@/types/profile";
+import type { UserProfile } from "@clstr/shared/types/profile";
 
 interface ProfileTabsProps {
   profile: UserProfile;

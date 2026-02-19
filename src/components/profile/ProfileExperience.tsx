@@ -1,12 +1,14 @@
 
 import { useState, useEffect, useCallback } from "react";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Edit3, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ExperienceForm, { ExperienceItem } from "./ExperienceForm";
 import { toast } from "@/hooks/use-toast";
 import { useProfile } from "@/contexts/ProfileContext";
-import { ExperienceData } from "@/types/profile";
+import { ExperienceData } from "@clstr/shared/types/profile";
 import { addExperience, updateExperience, deleteExperience, getExperiences } from "@/lib/profile-api";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -59,13 +61,13 @@ const ProfileExperience = ({ profileId, isEditable }: ProfileExperienceProps) =>
     if (!profileId) return;
 
     const channel = supabase
-      .channel(`profile-experience-${profileId}`)
+      .channel(CHANNELS.profile.experience(profileId))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profile_experience', filter: `profile_id=eq.${profileId}` },
         () => {
           loadExperiences();
-          queryClient.invalidateQueries({ queryKey: ['profile', profileId] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.detail(profileId) });
         }
       )
       .subscribe();
@@ -88,7 +90,7 @@ const ProfileExperience = ({ profileId, isEditable }: ProfileExperienceProps) =>
       });
       await loadExperiences();
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsAddExperienceOpen(false);
       toast({
         title: "Experience added",
@@ -120,7 +122,7 @@ const ProfileExperience = ({ profileId, isEditable }: ProfileExperienceProps) =>
       });
       await loadExperiences();
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsEditExperienceOpen(false);
       setCurrentExperience(null);
       toast({
@@ -145,7 +147,7 @@ const ProfileExperience = ({ profileId, isEditable }: ProfileExperienceProps) =>
       await deleteExperience(id);
       await loadExperiences();
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['portfolio-editor-profile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.portfolio.editorProfile() });
       setIsDeleteAlertOpen(false);
       setCurrentExperience(null);
       toast({
@@ -199,7 +201,7 @@ const ProfileExperience = ({ profileId, isEditable }: ProfileExperienceProps) =>
                 <div className="flex justify-between">
                   <div>
                     <h4 className="font-medium text-white/80">{exp.title}</h4>
-                    <p className="text-sm text-white/50">{exp.company}{exp.location ? ` • ${exp.location}` : ''}</p>
+                    <p className="text-sm text-white/50">{exp.company}{exp.location ? ` Ã¢â‚¬Â¢ ${exp.location}` : ''}</p>
                     <p className="text-xs text-white/30">{exp.start_date} - {exp.end_date || 'Present'}</p>
                     {exp.description && <p className="text-sm mt-2 text-white/60">{exp.description}</p>}
                   </div>

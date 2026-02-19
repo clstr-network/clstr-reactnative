@@ -11,7 +11,7 @@ import { useCopyToClipboard } from "@uidotdev/usehooks";
 import { useToast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { trackPublicEventView, trackExploreEventsCTAClick } from "@/lib/analytics";
-import { getEventStatus } from "@/lib/event-status";
+import { getEventStatus } from "@clstr/shared/utils/event-status";
 import { trackExternalRegistrationClick, type Event } from "@/lib/events-api";
 
 interface PublicEventCardProps {

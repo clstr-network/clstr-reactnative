@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { Search, Filter, Briefcase, MapPin, Building, ChevronRight, BookmarkPlus, Bookmark, Share2, Plus, Loader2, ExternalLink, Shield } from 'lucide-react';
 import { Can } from '@/components/auth/PermissionGuard';
@@ -36,6 +37,7 @@ import { JobPostingDialog } from '@/components/jobs/JobPostingDialog';
 import { JobApplicationDialog } from '@/components/jobs/JobApplicationDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import {
   getJobs,
   getRecommendedJobs,
@@ -146,19 +148,19 @@ const Jobs = () => {
     if (!canBrowseJobs) return; // Don't subscribe if no permission
     
     const channel = supabase
-      .channel('jobs-realtime')
+      .channel(CHANNELS.jobs.realtime())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'saved_items', filter: 'type=eq.job' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_applications' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'job_match_scores' }, () => {
         // Invalidate recommended jobs when match scores are updated
-        queryClient.invalidateQueries({ queryKey: ['jobs', 'recommended'] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
       })
       .subscribe();
 
@@ -174,7 +176,7 @@ const Jobs = () => {
       return saved;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
     },
   });
 
@@ -232,12 +234,12 @@ const Jobs = () => {
 
   // Callback for when a job is created
   const handleJobCreated = () => {
-    queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
   };
 
   // Callback for when an application is submitted
   const handleApplicationSubmitted = () => {
-    queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
   };
 
   // Access control - show restriction message if not permitted (after all hooks)
@@ -409,7 +411,7 @@ const Jobs = () => {
                 </div>
                 {profileCompletion < 50 && (
                   <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                    💡 Add your skills and interests in your profile to get better job recommendations
+                    Ã°Å¸â€™Â¡ Add your skills and interests in your profile to get better job recommendations
                   </p>
                 )}
               </div>
@@ -713,14 +715,14 @@ const JobCard = ({ job, onSave, onShare, onApply }: JobCardProps) => {
             <MapPin className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
             <span className="truncate">{job.location}</span>
           </div>
-          <span>•</span>
+          <span>Ã¢â‚¬Â¢</span>
           <div className="flex items-center">
             <Briefcase className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
             <span className="capitalize truncate">{job.job_type?.replace('-', ' ')}</span>
           </div>
           {job.is_remote && (
             <>
-              <span>•</span>
+              <span>Ã¢â‚¬Â¢</span>
               <Badge variant="outline" className="text-xs">Remote</Badge>
             </>
           )}
@@ -769,7 +771,7 @@ const JobCard = ({ job, onSave, onShare, onApply }: JobCardProps) => {
 
         {(job.salary_min || job.salary_max) && (
           <div className="text-sm text-white/60 mt-2">
-            💰 {job.currency || '$'}
+            Ã°Å¸â€™Â° {job.currency || '$'}
             {job.salary_min?.toLocaleString()}
             {job.salary_max && ` - ${job.salary_max.toLocaleString()}`}
             {job.salary_period && ` / ${job.salary_period}`}
@@ -794,7 +796,7 @@ const JobCard = ({ job, onSave, onShare, onApply }: JobCardProps) => {
             disabled={job.hasApplied}
           >
             {job.hasApplied ? (
-              'Applied ✓'
+              'Applied Ã¢Å“â€œ'
             ) : job.application_url ? (
               <>
                 Apply <ExternalLink className="ml-1 h-3.5 w-3.5 md:h-4 md:w-4" />

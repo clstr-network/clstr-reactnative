@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useIdentityContext } from "@/contexts/IdentityContext";
@@ -34,7 +36,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import type { Event as EventType } from "@/lib/events-api";
 import { deleteEvent, registerForEvent, trackExternalRegistrationClick, unregisterFromEvent, updateEvent } from "@/lib/events-api";
 import { SEO } from "@/components/SEO";
-import { assertValidUuid, isValidUuid } from "@/lib/uuid";
+import { assertValidUuid, isValidUuid } from "@clstr/shared/utils/uuid";
 import { UserBadge } from "@/components/ui/user-badge";
 import {
   fetchClubsWithFollowStatus,
@@ -165,7 +167,7 @@ export default function Events() {
   // Route guard - redirect if user cannot view events
   useRouteGuard(canViewEvents, '/home');
   
-  // Derive active tab directly from URL — single source of truth, no sync needed
+  // Derive active tab directly from URL Ã¢â‚¬â€ single source of truth, no sync needed
   const activeTab = useMemo(() => searchParams.get('tab') === 'clubs' ? 'clubs' : 'events', [searchParams]);
   
   // ============================================================================
@@ -377,7 +379,7 @@ export default function Events() {
     if (!collegeDomain) return;
 
     const channel = supabase
-      .channel('events-realtime')
+      .channel(CHANNELS.events.eventsRealtime())
       .on(
         'postgres_changes',
         {
@@ -512,7 +514,7 @@ export default function Events() {
     if (!collegeDomain || !canViewClubs) return;
 
     const channel = supabase
-      .channel("clubs-realtime")
+      .channel(CHANNELS.events.clubsRealtime())
       .on(
         "postgres_changes",
         {
@@ -703,7 +705,7 @@ export default function Events() {
         description: "Your event has been created successfully!",
       });
 
-      queryClient.invalidateQueries({ queryKey: ["event-detail"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events.detail() });
 
       setCreateEventDialogOpen(false);
       setNewEventData({
@@ -775,7 +777,7 @@ export default function Events() {
         });
       }
 
-      queryClient.invalidateQueries({ queryKey: ["event-detail"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events.detail() });
       loadEvents();
     } catch (error) {
       console.error("Error registering for event:", error);
@@ -842,7 +844,7 @@ export default function Events() {
         description: "Your event has been updated successfully!",
       });
 
-      queryClient.invalidateQueries({ queryKey: ["event-detail"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events.detail() });
       setEditEventDialogOpen(false);
       resetEditEventData();
       loadEvents();
@@ -862,7 +864,7 @@ export default function Events() {
         title: "Event Deleted",
         description: "The event has been deleted successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["event-detail"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events.detail() });
       setEventDetailsOpen(false);
       setSelectedEvent(null);
       loadEvents();
@@ -1440,7 +1442,7 @@ export default function Events() {
           )}
         </div>
 
-        {/* Primary Tabs: Events | Clubs — translucent container */}
+        {/* Primary Tabs: Events | Clubs Ã¢â‚¬â€ translucent container */}
           <div className="rounded-xl bg-white/[0.04] border border-white/10 p-1 flex gap-1">
             {([
               { key: 'events' as const, label: 'Events', count: events.length },

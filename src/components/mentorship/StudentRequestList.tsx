@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserBadge } from '@/components/ui/user-badge';
-import type { MentorshipRequest, Mentor } from '@/types/mentorship';
+import type { MentorshipRequest, Mentor } from '@clstr/shared/types/mentorship';
 
 interface StudentRequestListProps {
   requests: MentorshipRequest[];

@@ -1,16 +1,17 @@
 // ============================================================================
-// useMentorship — single hook for all mentorship data, mutations, and realtime
+// useMentorship â€” single hook for all mentorship data, mutations, and realtime
 // Reads ONLY from Supabase. No demo data, no local-only state.
 // ============================================================================
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useIdentityContext } from '@/contexts/IdentityContext';
 import { useToast } from '@/hooks/use-toast';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
 import type {
   Mentor,
   MentorshipOfferRow,
@@ -25,10 +26,11 @@ import type {
   MentorCommitmentLevel,
   MentorHighlight,
   MENTORSHIP_QUERY_KEYS as QKType,
-} from '@/types/mentorship';
-import { MENTORSHIP_QUERY_KEYS, computeMentorBadgeStatus, computeMentorHighlights } from '@/types/mentorship';
+} from '@clstr/shared/types/mentorship';
+import { MENTORSHIP_QUERY_KEYS, computeMentorBadgeStatus, computeMentorHighlights } from '@clstr/shared/types/mentorship';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
-// ── Internal helpers ──────────────────────────────────────────────────────
+// â”€â”€ Internal helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const getErrorMessage = (error: unknown, fallback = 'Something went wrong') =>
   error instanceof Error ? error.message : fallback;
@@ -79,7 +81,7 @@ function mapRequestRows(rows: MentorshipRequestQueryRow[] = []): MentorshipReque
   }));
 }
 
-// ── Default offer form ────────────────────────────────────────────────────
+// â”€â”€ Default offer form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const DEFAULT_OFFER_FORM: MentorshipOfferFormData = {
   is_active: true,
@@ -93,7 +95,7 @@ const DEFAULT_OFFER_FORM: MentorshipOfferFormData = {
   commitment_level: 'occasional',
 };
 
-// ── Hook ──────────────────────────────────────────────────────────────────
+// â”€â”€ Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useMentorship() {
   const { profile } = useProfile();
@@ -114,7 +116,7 @@ export function useMentorship() {
   const collegeDomain = identityDomain ?? null;
   const userId = profile?.id ?? null;
 
-  // ── Queries ───────────────────────────────────────────────────────────
+  // â”€â”€ Queries â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /** Fetch all active mentors in the same college domain (not paused) */
   const mentorsQuery = useQuery({
@@ -204,7 +206,7 @@ export function useMentorship() {
   /**
    * Fetch the user's own requests AS MENTEE (with mentor profile).
    * Enabled for ANY authenticated user, not just canRequestMentorship,
-   * because a user who transitions from Student → Alumni must still see
+   * because a user who transitions from Student â†’ Alumni must still see
    * and interact with their existing mentorship requests.
    * Spec rule: "Permissions apply at ACTION TIME, not HISTORICAL STATE TIME."
    */
@@ -372,17 +374,17 @@ export function useMentorship() {
     staleTime: 15_000,
   });
 
-  // ── Invalidation helper ─────────────────────────────────────────────────
+  // â”€â”€ Invalidation helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const invalidateAll = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['mentorship'] });
-    queryClient.invalidateQueries({ queryKey: ['network'] });
-    queryClient.invalidateQueries({ queryKey: ['connectedUsers'] });
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.mentorship.all });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.connectedUsers() });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.conversations() });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.notifications() });
   }, [queryClient]);
 
-  // ── Mutations ─────────────────────────────────────────────────────────
+  // â”€â”€ Mutations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /** Upsert the mentor's offer */
   const saveOfferMutation = useMutation({
@@ -569,7 +571,7 @@ export function useMentorship() {
   /**
    * Cancel a pending mentorship request.
    * Edge Case #1/#3: NOT gated by canRequestMentorship.
-   * A user who transitions from Student → Alumni must still be able to cancel
+   * A user who transitions from Student â†’ Alumni must still be able to cancel
    * their own pending requests. RLS ensures only the mentee can update their own row.
    */
   const cancelRequestMutation = useMutation({
@@ -598,8 +600,8 @@ export function useMentorship() {
   /**
    * GAP-1 FIX: Allow mentee to cancel an accepted mentorship.
    * This is a separate mutation from cancelRequestMutation because accepted
-   * mentorships have a different source state (accepted → cancelled).
-   * The DB trigger guard_mentorship_status_transition allows accepted → cancelled.
+   * mentorships have a different source state (accepted â†’ cancelled).
+   * The DB trigger guard_mentorship_status_transition allows accepted â†’ cancelled.
    */
   const cancelAcceptedMentorshipMutation = useMutation({
     mutationFn: async (requestId: string) => {
@@ -669,7 +671,7 @@ export function useMentorship() {
       }
 
       // BUG-2 (also applies here): Add .eq('mentor_id', userId) for server-side auth
-      // CRIT-C FIX: Add .eq('status', 'pending') — only pending requests can be rejected.
+      // CRIT-C FIX: Add .eq('status', 'pending') â€” only pending requests can be rejected.
       // The DB trigger catches most invalid transitions, but this prevents unnecessary
       // trigger evaluation and confusing error messages.
       const { error } = await supabase
@@ -720,9 +722,9 @@ export function useMentorship() {
     [mentorsQuery.data]
   );
 
-  // ── Realtime subscriptions ──────────────────────────────────────────────
+  // â”€â”€ Realtime subscriptions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  // Domain-scoped channels (offers, profiles — NOT requests)
+  // Domain-scoped channels (offers, profiles â€” NOT requests)
   // COMPLEX-A FIX: Removed domain-scoped mentorship-requests channel.
   // User-scoped channels (mentee/mentor) handle targeted invalidation.
   // The domain channel for offers is still useful for discovery updates.
@@ -732,14 +734,14 @@ export function useMentorship() {
 
     channels.push(
       supabase
-        .channel(`mentorship-offers-${collegeDomain}`)
+        .channel(CHANNELS.mentorship.offers(collegeDomain))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'mentorship_offers', filter: `college_domain=eq.${collegeDomain}` }, () => invalidateAll())
         .subscribe()
     );
 
     channels.push(
       supabase
-        .channel(`mentorship-profiles-${collegeDomain}`)
+        .channel(CHANNELS.mentorship.profiles(collegeDomain))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `college_domain=eq.${collegeDomain}` }, () => {
           queryClient.invalidateQueries({ queryKey: MENTORSHIP_QUERY_KEYS.mentors(collegeDomain) });
         })
@@ -759,7 +761,7 @@ export function useMentorship() {
 
     channels.push(
       supabase
-        .channel(`mentorship-requests-mentee-${userId}`)
+        .channel(CHANNELS.mentorship.requestsMentee(userId))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'mentorship_requests', filter: `mentee_id=eq.${userId}` }, () => {
           queryClient.invalidateQueries({ queryKey: MENTORSHIP_QUERY_KEYS.myRequests(userId) });
         })
@@ -768,7 +770,7 @@ export function useMentorship() {
 
     channels.push(
       supabase
-        .channel(`mentorship-requests-mentor-${userId}`)
+        .channel(CHANNELS.mentorship.requestsMentor(userId))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'mentorship_requests', filter: `mentor_id=eq.${userId}` }, () => {
           queryClient.invalidateQueries({ queryKey: MENTORSHIP_QUERY_KEYS.incomingRequests(userId) });
           queryClient.invalidateQueries({ queryKey: MENTORSHIP_QUERY_KEYS.activeRelationships(userId) });
@@ -782,7 +784,7 @@ export function useMentorship() {
     // so we need to refresh mentorship queries to reflect the new state.
     channels.push(
       supabase
-        .channel(`mentorship-connections-${userId}`)
+        .channel(CHANNELS.mentorship.connections(userId))
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'connections', filter: `requester_id=eq.${userId}` }, () => invalidateAll())
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'connections', filter: `receiver_id=eq.${userId}` }, () => invalidateAll())
         .subscribe()
@@ -798,7 +800,7 @@ export function useMentorship() {
   // The previous channel used a filter string that could exceed Supabase realtime
   // filter limits for large mentor lists, causing silent subscription failures.
 
-  // ── Error toasts ────────────────────────────────────────────────────────
+  // â”€â”€ Error toasts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   useEffect(() => {
     if (mentorsQuery.error)
@@ -820,7 +822,7 @@ export function useMentorship() {
       toast({ title: 'Error loading offer', description: getErrorMessage(myOfferQuery.error), variant: 'destructive' });
   }, [myOfferQuery.error, toast]);
 
-  // ── Derived state ───────────────────────────────────────────────────────
+  // â”€â”€ Derived state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const mentors = useMemo(() => mentorsQuery.data ?? [], [mentorsQuery.data]);
   const myRequests = useMemo(() => myRequestsQuery.data ?? [], [myRequestsQuery.data]);
@@ -856,10 +858,10 @@ export function useMentorship() {
   );
 
   /**
-   * Edge Case #1 (Student→Alumni): Does this user have ANY existing requests as mentee?
+   * Edge Case #1 (Studentâ†’Alumni): Does this user have ANY existing requests as mentee?
    * Used to show the "My Requests" tab even if they can no longer create new requests.
    * This enables role-transitioned users to see, cancel, and provide feedback on
-   * their historical mentorship requests — spec: "Permissions apply at ACTION TIME."
+   * their historical mentorship requests â€” spec: "Permissions apply at ACTION TIME."
    */
   const hasExistingMenteeRequests = myRequests.length > 0;
 

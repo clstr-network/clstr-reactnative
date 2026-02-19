@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { assertValidUuid } from '@/lib/uuid';
 import { toast } from '@/hooks/use-toast';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
 // Types
 export type UserStatus = 'active' | 'suspended' | 'pending';
@@ -347,7 +349,7 @@ export function useAdminUsers() {
 
   // Query for users
   const query = useQuery({
-    queryKey: ['admin-users'],
+    queryKey: QUERY_KEYS.admin.users(),
     queryFn: fetchUsers,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -358,34 +360,34 @@ export function useAdminUsers() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_users_realtime')
+      .channel(CHANNELS.admin.users())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.users() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'posts' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.users() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'connections' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.users() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profile_skills' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.users() });
         }
       )
       .subscribe();
@@ -399,8 +401,8 @@ export function useAdminUsers() {
   const suspendMutation = useMutation({
     mutationFn: (userId: string) => suspendUserMutation({ userId, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.users() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       toast({
         title: 'User suspended',
         description: 'The user account has been suspended successfully.',
@@ -420,8 +422,8 @@ export function useAdminUsers() {
   const activateMutation = useMutation({
     mutationFn: (userId: string) => activateUserMutation({ userId, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.users() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       toast({
         title: 'User activated',
         description: 'The user account has been activated successfully.',
@@ -441,8 +443,8 @@ export function useAdminUsers() {
   const updateRoleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: string }) => updateUserRoleMutation({ userId, role, adminRole: adminUser?.role || null }),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.users() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
       toast({
         title: 'Role updated',
         description: `User role has been changed to ${variables.role}.`,

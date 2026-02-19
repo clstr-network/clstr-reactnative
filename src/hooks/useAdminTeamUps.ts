@@ -2,11 +2,13 @@ import { useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Types
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type TeamUpStatus = 'active' | 'completed' | 'cancelled' | 'expired';
 
@@ -75,9 +77,9 @@ export interface TeamUpAdminStats {
   totalPendingRequests: number;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Fetch Functions
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function fetchTeamUps(): Promise<TeamUpAdminView[]> {
   const { data: teamUps, error } = await supabase
@@ -199,9 +201,9 @@ async function fetchHighRejectionUsers(minRequests: number = 3, minRejectionRate
   return (data || []) as HighRejectionUser[];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Admin Actions
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function cancelTeamUpFn({ teamUpId, adminRole }: { teamUpId: string; adminRole: string | null }): Promise<void> {
   assertValidUuid(teamUpId, 'teamUpId');
@@ -229,9 +231,9 @@ async function expireTeamUpFn({ teamUpId, adminRole }: { teamUpId: string; admin
   if (error) throw new Error(error.message || 'Failed to expire team-up');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Hook
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useAdminTeamUps() {
   const { isAdmin, adminUser } = useAdmin();
@@ -239,7 +241,7 @@ export function useAdminTeamUps() {
 
   // Main team-ups query
   const teamUpsQuery = useQuery({
-    queryKey: ['admin-team-ups'],
+    queryKey: QUERY_KEYS.admin.teamUps(),
     queryFn: fetchTeamUps,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 2, // 2 minutes
@@ -247,7 +249,7 @@ export function useAdminTeamUps() {
 
   // Stale team-ups query
   const staleQuery = useQuery({
-    queryKey: ['admin-team-ups-stale'],
+    queryKey: QUERY_KEYS.admin.teamUpsStale(),
     queryFn: () => fetchStaleTeamUps(7),
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -255,7 +257,7 @@ export function useAdminTeamUps() {
 
   // High rejection users query
   const highRejectionQuery = useQuery({
-    queryKey: ['admin-team-ups-high-rejection'],
+    queryKey: QUERY_KEYS.admin.teamUpsHighRejection(),
     queryFn: () => fetchHighRejectionUsers(3, 0.5),
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -282,28 +284,28 @@ export function useAdminTeamUps() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_team_ups_realtime')
+      .channel(CHANNELS.admin.teamUps())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'team_ups' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-team-ups'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-team-ups-stale'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.teamUps() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.teamUpsStale() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'team_up_members' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-team-ups'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.teamUps() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'team_up_requests' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-team-ups'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-team-ups-high-rejection'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.teamUps() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.teamUpsHighRejection() });
         }
       )
       .subscribe();
@@ -317,16 +319,16 @@ export function useAdminTeamUps() {
   const cancelMutation = useMutation({
     mutationFn: (teamUpId: string) => cancelTeamUpFn({ teamUpId, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-team-ups'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-team-ups-stale'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.teamUps() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.teamUpsStale() });
     },
   });
 
   const expireMutation = useMutation({
     mutationFn: (teamUpId: string) => expireTeamUpFn({ teamUpId, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-team-ups'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-team-ups-stale'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.teamUps() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.teamUpsStale() });
     },
   });
 

@@ -14,11 +14,12 @@ import { Autocomplete } from "@/components/ui/autocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { uploadProfileAvatar, validateAvatarFile, sanitizeSocialLinks } from "@/lib/profile";
 import { isClubAccessVerified, clearClubAccessVerified } from "./ClubAuth";
-import { getUniversityNameFromDomain, getUniversityOptions } from "@/lib/university-data";
+import { getUniversityNameFromDomain, getUniversityOptions } from "@clstr/shared/utils/university-data";
 import type { Database } from "@/integrations/supabase/types";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 
 const ClubOnboarding = () => {
   const navigate = useNavigate();
@@ -256,7 +257,7 @@ const ClubOnboarding = () => {
         social_links: sanitizedSocialLinks,
         avatar_url: avatarUrl,
         college_domain: collegeDomain,
-        headline: `${formData.clubName} · ${formData.university}`,
+        headline: `${formData.clubName} Â· ${formData.university}`,
         location: formData.university,
         onboarding_complete: true,
       };
@@ -352,10 +353,10 @@ const ClubOnboarding = () => {
       // STEP 4: Invalidate React Query caches for fresh data
       // ============================================================
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["profile", user.id] }),
-        queryClient.invalidateQueries({ queryKey: ["profile-stats", user.id] }),
-        queryClient.invalidateQueries({ queryKey: ["clubs"] }),
-        queryClient.invalidateQueries({ queryKey: ["network"] }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.detail(user.id) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile.stats(user.id) }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.clubs() }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.social.network() }),
       ]);
 
       // ============================================================
@@ -585,7 +586,7 @@ const ClubOnboarding = () => {
                 <AccordionItem value="social-links" className="border rounded-lg px-3">
                   <AccordionTrigger className="text-sm">Social Presence (Optional)</AccordionTrigger>
                   <AccordionContent className="pt-2">
-                    <p className="text-xs text-white/40 mb-3">Optional — you can add these later</p>
+                    <p className="text-xs text-white/40 mb-3">Optional â€” you can add these later</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="website">Website</Label>

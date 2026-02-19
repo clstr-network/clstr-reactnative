@@ -30,6 +30,9 @@
       "@shared/*": [
         "./packages/shared/src/*"
       ],
+      "@clstr/shared/*": [
+        "./packages/shared/src/*"
+      ],
       "@clstr/core": [
         "./packages/core/src"
       ],

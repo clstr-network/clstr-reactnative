@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import ProfileSkills from "@/components/profile/ProfileSkills";
 import ProfileExperience from "@/components/profile/ProfileExperience";
 import ProfileEducation from "@/components/profile/ProfileEducation";
-import type { UserProfile } from "@/types/profile";
+import type { UserProfile } from "@clstr/shared/types/profile";
 
 interface AboutTabProps {
   profile: UserProfile;

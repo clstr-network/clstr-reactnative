@@ -7,7 +7,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { assertValidUuid } from "@/lib/uuid";
+import { assertValidUuid } from "@clstr/shared/utils/uuid";
 
 // VAPID public key - must match the server-side private key
 // Generate with: npx web-push generate-vapid-keys

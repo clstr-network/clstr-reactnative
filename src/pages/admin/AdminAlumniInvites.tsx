@@ -1,19 +1,20 @@
 /**
  * Admin Alumni Invites Page
  *
- * Upload Excel → validate → bulk create invites → send emails.
+ * Upload Excel â†’ validate â†’ bulk create invites â†’ send emails.
  * View, filter, resend, cancel invites.
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useAlumniInvites } from "@/hooks/useAlumniInvites";
 import { useAdmin } from "@/contexts/AdminContext";
 import { supabase } from "@/integrations/supabase/client";
 import { parseAlumniExcel, validateAlumniInviteRows, getValidationSummary } from "@/lib/alumni-invite-parser";
 import { reviewAlumniInviteData, saveAIReviewResult } from "@/lib/ai-service";
-import type { AIReviewOutput } from "@/types/ai";
-import type { AlumniInviteFilters, AlumniInviteStatus, AlumniInviteValidationResult, ValidatedAlumniInviteRow } from "@/types/alumni-invite";
+import type { AIReviewOutput } from "@clstr/shared/types/ai";
+import type { AlumniInviteFilters, AlumniInviteStatus, AlumniInviteValidationResult, ValidatedAlumniInviteRow } from "@clstr/shared/types/alumni-invite";
 import {
   Upload, FileSpreadsheet, Search, Filter, RefreshCw, Send, Ban,
   CheckCircle2, Clock, AlertTriangle, XCircle, Users, Mail,
@@ -83,7 +84,7 @@ function getCooldownRemaining(invite: { last_sent_at?: string | null }): string 
 }
 
 const AdminAlumniInvites = () => {
-  // ─── State ────────────────────────────────────────────────
+  // â”€â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { adminUser } = useAdmin();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,10 +103,10 @@ const AdminAlumniInvites = () => {
     sendInviteEmail,
   } = useAlumniInvites(filters);
 
-  // ─── Realtime: subscribe to alumni_invites changes ────────
+  // â”€â”€â”€ Realtime: subscribe to alumni_invites changes â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const channel = supabase
-      .channel('admin-alumni-invites-realtime')
+      .channel(CHANNELS.admin.alumniInvites())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'alumni_invites' },
@@ -133,7 +134,7 @@ const AdminAlumniInvites = () => {
   const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set());
   const [showAIWarnings, setShowAIWarnings] = useState(false);
 
-  // ─── File upload ──────────────────────────────────────────
+  // â”€â”€â”€ File upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -167,7 +168,7 @@ const AdminAlumniInvites = () => {
         toast.success(`${summary.validCount} valid rows ready for AI review`);
       }
 
-      // ── AI Review step ──────────────────────────────────
+      // â”€â”€ AI Review step â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const validRows = results
         .filter((r) => r.valid && r.data)
         .map((r) => r.data as ValidatedAlumniInviteRow);
@@ -212,7 +213,7 @@ const AdminAlumniInvites = () => {
           if (reviewResult.warnings.length > 0) {
             toast.warning(`AI flagged ${reviewResult.warnings.length} potential issue${reviewResult.warnings.length > 1 ? "s" : ""}`);
           } else {
-            toast.success("AI review passed — no issues found");
+            toast.success("AI review passed â€” no issues found");
           }
         } catch (reviewErr) {
           console.error("AI review failed:", reviewErr);
@@ -313,7 +314,7 @@ const AdminAlumniInvites = () => {
     }
   }, [validationResults, adminUser, bulkUpload, resetUpload, excludedRows, aiReview, parsedFile]);
 
-  // ─── Pagination ───────────────────────────────────────────
+  // â”€â”€â”€ Pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const currentPage = Math.floor((filters.offset ?? 0) / PAGE_SIZE) + 1;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -321,7 +322,7 @@ const AdminAlumniInvites = () => {
     setFilters((f) => ({ ...f, offset: (page - 1) * PAGE_SIZE }));
   };
 
-  // ─── Search debounce ─────────────────────────────────────
+  // â”€â”€â”€ Search debounce â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [searchInput, setSearchInput] = useState("");
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
@@ -333,7 +334,7 @@ const AdminAlumniInvites = () => {
     }, 400);
   };
 
-  // ─── Send all pending emails ──────────────────────────────
+  // â”€â”€â”€ Send all pending emails â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [isSendingAll, setIsSendingAll] = useState(false);
   const handleSendAllEmails = useCallback(async () => {
     const pending = invites.filter((i) => i.status === "invited");
@@ -359,14 +360,14 @@ const AdminAlumniInvites = () => {
     toast.success(`Sent ${sent} emails${failed > 0 ? `, ${failed} failed` : ""}`);
   }, [invites, sendInviteEmail]);
 
-  // ─── Validation summary ───────────────────────────────────
+  // â”€â”€â”€ Validation summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const summary = getValidationSummary(validationResults);
 
-  // ─── Render ───────────────────────────────────────────────
+  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <AdminLayout>
       <div className="space-y-6 text-admin-ink">
-        {/* Ops Dashboard — pipeline health */}
+        {/* Ops Dashboard â€” pipeline health */}
         <InviteOpsDashboard />
 
         {/* Header */}
@@ -498,7 +499,7 @@ const AdminAlumniInvites = () => {
                     {invites.map((invite) => (
                       <TableRow key={invite.id} className="border-admin-border hover:bg-admin-bg-muted">
                         <TableCell className="text-admin-ink font-medium">
-                          {invite.full_name || "—"}
+                          {invite.full_name || "â€”"}
                         </TableCell>
                         <TableCell className="text-admin-ink-secondary text-xs font-mono">
                           {invite.college_email}
@@ -510,7 +511,7 @@ const AdminAlumniInvites = () => {
                           {invite.college_domain}
                         </TableCell>
                         <TableCell className="text-admin-ink-muted">
-                          {invite.grad_year || "—"}
+                          {invite.grad_year || "â€”"}
                         </TableCell>
                         <TableCell>{statusBadge(invite.status)}</TableCell>
                         <TableCell className="text-admin-ink-muted text-xs">
@@ -571,7 +572,7 @@ const AdminAlumniInvites = () => {
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-xs text-admin-ink-muted">
-              Showing {(filters.offset ?? 0) + 1}–{Math.min((filters.offset ?? 0) + PAGE_SIZE, total)} of {total}
+              Showing {(filters.offset ?? 0) + 1}â€“{Math.min((filters.offset ?? 0) + PAGE_SIZE, total)} of {total}
             </p>
             <div className="flex items-center gap-1">
               <Button
@@ -600,13 +601,13 @@ const AdminAlumniInvites = () => {
         )}
       </div>
 
-      {/* ─── Upload Preview Dialog ─────────────────────────── */}
+      {/* â”€â”€â”€ Upload Preview Dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent className="max-w-2xl bg-admin-bg-elevated border-admin-border text-admin-ink">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-blue-400" />
-              Upload Preview — {parsedFile}
+              Upload Preview â€” {parsedFile}
             </DialogTitle>
             <DialogDescription className="text-admin-ink-muted">
               Review the parsed data before creating invites
@@ -685,9 +686,9 @@ const AdminAlumniInvites = () => {
                         >
                           <div className="flex-1 min-w-0">
                             <span className="text-yellow-400 font-medium">Row {w.row_index + 1}</span>
-                            <span className="text-admin-ink-muted mx-1">·</span>
+                            <span className="text-admin-ink-muted mx-1">Â·</span>
                             <span className="text-admin-ink-secondary">{w.type.replace(/_/g, " ")}</span>
-                            <span className="text-admin-ink-muted mx-1">·</span>
+                            <span className="text-admin-ink-muted mx-1">Â·</span>
                             <span className="text-admin-ink-muted truncate">{w.message}</span>
                           </div>
                           <button
@@ -748,13 +749,13 @@ const AdminAlumniInvites = () => {
                     >
                       <TableCell className="text-admin-ink-muted text-xs">{r.row}</TableCell>
                       <TableCell className="text-admin-ink text-xs">
-                        {r.data?.full_name || "—"}
+                        {r.data?.full_name || "â€”"}
                       </TableCell>
                       <TableCell className="text-admin-ink-secondary text-xs font-mono">
-                        {r.data?.college_email || "—"}
+                        {r.data?.college_email || "â€”"}
                       </TableCell>
                       <TableCell className="text-admin-ink-secondary text-xs font-mono">
-                        {r.data?.personal_email || "—"}
+                        {r.data?.personal_email || "â€”"}
                       </TableCell>
                       <TableCell>
                         {r.valid ? (
@@ -809,7 +810,7 @@ const AdminAlumniInvites = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Error Details Dialog ──────────────────────────── */}
+      {/* â”€â”€â”€ Error Details Dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <Dialog open={showErrorsDialog} onOpenChange={setShowErrorsDialog}>
         <DialogContent className="max-w-lg bg-admin-bg-elevated border-admin-border text-admin-ink">
           <DialogHeader>
@@ -825,7 +826,7 @@ const AdminAlumniInvites = () => {
                   <p className="text-xs font-medium text-red-300">Row {r.row}</p>
                   <ul className="mt-1 space-y-0.5">
                     {r.errors.map((err, i) => (
-                      <li key={i} className="text-xs text-red-400/70">• {err}</li>
+                      <li key={i} className="text-xs text-red-400/70">â€¢ {err}</li>
                     ))}
                   </ul>
                 </div>

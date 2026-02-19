@@ -3,7 +3,9 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { useToast } from '@/hooks/use-toast';
-import { assertValidUuid, isValidUuid } from '@/lib/uuid';
+import { assertValidUuid, isValidUuid } from '@clstr/shared/utils/uuid';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { formatCollegeName, normalizeDomain, isValidDomain, isPublicEmailDomain } from '@/lib/college-utils';
 
 /**
@@ -386,7 +388,7 @@ export function useAdminColleges() {
 
   // Query for colleges
   const collegesQuery = useQuery({
-    queryKey: ['admin-colleges'],
+    queryKey: QUERY_KEYS.admin.colleges(),
     queryFn: fetchColleges,
     enabled: isAdmin,
     staleTime: COLLEGES_STALE_TIME,
@@ -399,40 +401,40 @@ export function useAdminColleges() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_colleges_realtime')
+      .channel(CHANNELS.admin.colleges())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'colleges' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'college_domain_aliases' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'posts' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'admin_college_stats' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
         }
       )
       .subscribe();
@@ -446,9 +448,9 @@ export function useAdminColleges() {
   const verifyMutation = useMutation({
     mutationFn: (collegeId: string) => verifyCollegeFn({ collegeId, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-domains'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domains() });
       toast({
         title: 'College Verified',
         description: 'The college has been verified successfully.',
@@ -467,9 +469,9 @@ export function useAdminColleges() {
   const flagMutation = useMutation({
     mutationFn: (collegeId: string) => flagCollegeFn({ collegeId, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-domains'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domains() });
       toast({
         title: 'College Flagged',
         description: 'The college has been flagged.',
@@ -489,9 +491,9 @@ export function useAdminColleges() {
     mutationFn: (payload: { collegeId: string; name?: string; city?: string; country?: string; confidenceScore?: number }) =>
       updateCollegeFn({ ...payload, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-domains'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domains() });
       toast({
         title: 'College Updated',
         description: 'The college information has been updated.',
@@ -511,9 +513,9 @@ export function useAdminColleges() {
     mutationFn: (payload: { sourceDomain: string; targetDomain: string }) =>
       mergeCollegesFn({ ...payload, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-colleges'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-domains'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.colleges() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.domains() });
       toast({
         title: 'Colleges Merged',
         description: 'The colleges have been merged successfully.',

@@ -31,8 +31,9 @@ import {
   type EmailTransitionState,
   type EmailTransitionStatus,
 } from "@/lib/email-transition";
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
-const QUERY_KEY = "email-transition-status";
+const QUERY_KEY = QUERY_KEYS.emailTransition.all()[0];
 
 export function useEmailTransition() {
   const { profile, refreshProfile } = useProfile();

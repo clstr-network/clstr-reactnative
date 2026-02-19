@@ -1,14 +1,15 @@
 /**
- * Trending Topics API — Cross-Platform
+ * Trending Topics API â€” Cross-Platform
  *
  * Provides functions to fetch trending hashtags from Supabase,
  * with realtime subscription support.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 import { createAppError } from '../errors';
 
-// ── Types ────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface RecentPost {
   id: string;
@@ -42,7 +43,7 @@ export interface GetTrendingTopicsParams {
   limit?: number;
 }
 
-// ── Helpers ──────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function isTrendingTopicsUnavailable(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
@@ -102,7 +103,7 @@ function transformTrendingTopic(raw: RawTrendingTopic, index: number): TrendingT
   };
 }
 
-// ── API Functions ────────────────────────────────────────────
+// â”€â”€ API Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Fetches trending topics from Supabase.
@@ -238,7 +239,7 @@ export async function getPostsByHashtag(
   }
 }
 
-// ── React Query Keys ─────────────────────────────────────────
+// â”€â”€ React Query Keys â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const trendingTopicsKeys = {
   all: ['trending-topics'] as const,
@@ -246,7 +247,7 @@ export const trendingTopicsKeys = {
   byHashtag: (hashtag: string) => ['trending-topics', 'hashtag', hashtag] as const,
 };
 
-// ── Realtime Subscription ────────────────────────────────────
+// â”€â”€ Realtime Subscription â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Creates a Supabase realtime subscription for trending topics updates.
@@ -258,7 +259,7 @@ export function subscribeTrendingTopics(
   onUpdate: () => void,
 ): () => void {
   const channel = client
-    .channel('trending-topics-changes')
+    .channel(CHANNELS.social.trendingTopics())
     .on(
       'postgres_changes',
       {

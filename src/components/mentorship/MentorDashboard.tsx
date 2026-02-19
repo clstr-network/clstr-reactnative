@@ -9,7 +9,7 @@ import { Bell, Users, CheckCircle2, ThumbsUp, ThumbsDown, UserPlus, Rocket, Mess
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserBadge } from '@/components/ui/user-badge';
-import type { MentorshipRequest, MentorDashboardSection, Mentor, MentorHighlight } from '@/types/mentorship';
+import type { MentorshipRequest, MentorDashboardSection, Mentor, MentorHighlight } from '@clstr/shared/types/mentorship';
 
 interface MentorDashboardProps {
   incomingRequests: MentorshipRequest[];

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { ProfileData } from "@/types/portfolio";
+import type { ProfileData } from "@clstr/shared/types/portfolio";
 import { useState } from "react";
 import { MapPin, Mail, ExternalLink, Sun, Moon } from "lucide-react";
 

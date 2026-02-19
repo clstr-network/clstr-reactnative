@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
 export type ProjectStatus = 'draft' | 'open' | 'in_progress' | 'closed' | 'archived' | 'flagged';
 
@@ -171,14 +173,14 @@ export function useAdminCollabHub() {
   const queryClient = useQueryClient();
 
   const projectsQuery = useQuery({
-    queryKey: ['admin-collab-projects'],
+    queryKey: QUERY_KEYS.admin.collabProjects(),
     queryFn: fetchCollabProjects,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 2,
   });
 
   const statsQuery = useQuery({
-    queryKey: ['admin-collab-stats'],
+    queryKey: QUERY_KEYS.admin.collabStats(),
     queryFn: async (): Promise<CollabStats> => {
       const projects = await fetchCollabProjects();
       const active = projects.filter((p) => ['open', 'in_progress'].includes(p.db_status)).length;
@@ -204,28 +206,28 @@ export function useAdminCollabHub() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_collab_realtime')
+      .channel(CHANNELS.admin.collab())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'collab_projects' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-collab-projects'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-collab-stats'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabProjects() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabStats() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'collab_team_members' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-collab-projects'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-collab-stats'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabProjects() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabStats() });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'collab_project_updates' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-collab-projects'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabProjects() });
         }
       )
       .subscribe();
@@ -239,18 +241,18 @@ export function useAdminCollabHub() {
     mutationFn: ({ projectId, status }: { projectId: string; status: ProjectStatus }) =>
       updateProjectStatusFn({ projectId, status, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-collab-projects'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-collab-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabProjects() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabStats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
     },
   });
 
   const archiveMutation = useMutation({
     mutationFn: (projectId: string) => archiveProjectFn({ projectId, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-collab-projects'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-collab-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabProjects() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabStats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
     },
   });
 
@@ -258,9 +260,9 @@ export function useAdminCollabHub() {
     mutationFn: ({ projectId, reason }: { projectId: string; reason: string }) =>
       flagProjectFn({ projectId, reason, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-collab-projects'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-collab-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabProjects() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.collabStats() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
     },
   });
 

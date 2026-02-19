@@ -42,8 +42,8 @@ import type {
   PortfolioEducation as Education,
   PortfolioExperience as Experience,
   PortfolioProject as Project,
-} from "@/types/portfolio";
-import { PORTFOLIO_TEMPLATES as templates } from "@/types/portfolio";
+} from "@clstr/shared/types/portfolio";
+import { PORTFOLIO_TEMPLATES as templates } from "@clstr/shared/types/portfolio";
 import MinimalTemplate from "@/components/profile/portfolio/MinimalTemplate";
 import ElianaTemplate from "@/components/profile/portfolio/ElianaTemplate";
 import TypefolioTemplate from "@/components/profile/portfolio/TypefolioTemplate";

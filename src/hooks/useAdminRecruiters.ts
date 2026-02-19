@@ -9,7 +9,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
-import { assertValidUuid } from '@/lib/uuid';
+import { assertValidUuid } from '@clstr/shared/utils/uuid';
+import { QUERY_KEYS } from '@clstr/shared/query-keys';
+import { CHANNELS } from '@clstr/shared/realtime/channels';
 
 // Types
 export type RecruiterPlan = 'free' | 'basic' | 'pro' | 'enterprise';
@@ -209,7 +211,7 @@ export function useAdminRecruiters() {
 
   // Query for recruiters
   const query = useQuery({
-    queryKey: ['admin-recruiters'],
+    queryKey: QUERY_KEYS.admin.recruiters(),
     queryFn: fetchRecruiters,
     enabled: isAdmin,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -220,13 +222,13 @@ export function useAdminRecruiters() {
     if (!isAdmin) return;
 
     const channel = supabase
-      .channel('admin_recruiters_realtime')
+      .channel(CHANNELS.admin.recruiters())
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'recruiter_accounts' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['admin-recruiters'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.recruiters() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
         }
       )
       .subscribe();
@@ -241,8 +243,8 @@ export function useAdminRecruiters() {
     mutationFn: (data: { company_name: string; contact_email?: string; contact_name?: string; plan_type?: RecruiterPlan }) =>
       createRecruiterMutation({ ...data, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-recruiters'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.recruiters() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
     },
   });
 
@@ -250,8 +252,8 @@ export function useAdminRecruiters() {
   const suspendMutation = useMutation({
     mutationFn: (recruiterId: string) => suspendRecruiterMutation({ recruiterId, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-recruiters'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.recruiters() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
     },
   });
 
@@ -259,8 +261,8 @@ export function useAdminRecruiters() {
   const activateMutation = useMutation({
     mutationFn: (recruiterId: string) => activateRecruiterMutation({ recruiterId, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-recruiters'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.recruiters() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
     },
   });
 
@@ -269,8 +271,8 @@ export function useAdminRecruiters() {
     mutationFn: ({ recruiterId, plan }: { recruiterId: string; plan: RecruiterPlan }) =>
       updateRecruiterPlanMutation({ recruiterId, plan, adminRole: adminUser?.role || null }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-recruiters'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-kpis'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.recruiters() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.admin.kpis() });
     },
   });
 
