@@ -8,6 +8,11 @@ export { MessagingStack } from './MessagingStack';
 export { ProfileStack } from './ProfileStack';
 export { OnboardingProvider, useOnboarding } from './OnboardingContext';
 export { linking } from './linking';
+export {
+  navigationRef,
+  onNavigationReady,
+  dispatchDeepLink,
+} from './navigationRef';
 
 export type {
   RootStackParamList,

@@ -19,6 +19,9 @@ import { ThemeProvider } from '../../packages/shared/src/design/ThemeProvider';
 import { RootNavigator } from '../../packages/shared/src/navigation/RootNavigator';
 import { ScreenRegistryProvider } from '../../packages/shared/src/navigation/ScreenRegistryContext';
 import { linking } from '../../packages/shared/src/navigation/linking';
+import { navigationRef, onNavigationReady } from '../../packages/shared/src/navigation/navigationRef';
+import { PushNotificationProvider } from './src/providers/PushNotificationProvider';
+import { DevTestOverlay } from './src/components/DevTestOverlay';
 
 // ── Real screen implementations (injected via ScreenRegistryProvider) ──
 import { FeedScreen } from './src/screens/feed/FeedScreen';
@@ -94,8 +97,15 @@ export default function App() {
               eventsScreens={eventsScreens}
               networkScreens={networkScreens}
             >
-              <NavigationContainer linking={linking}>
-                <RootNavigator />
+              <NavigationContainer
+                linking={linking}
+                ref={navigationRef}
+                onReady={onNavigationReady}
+              >
+                <PushNotificationProvider>
+                  <RootNavigator />
+                </PushNotificationProvider>
+                {__DEV__ && <DevTestOverlay />}
                 <StatusBar style="light" />
               </NavigationContainer>
             </ScreenRegistryProvider>

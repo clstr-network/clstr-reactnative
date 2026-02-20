@@ -15,14 +15,49 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "network.clstr.mobile"
+      "bundleIdentifier": "network.clstr.mobile",
+      "associatedDomains": [
+        "applinks:clstr.network"
+      ]
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "network.clstr.mobile"
+      "package": "network.clstr.mobile",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "clstr.network",
+              "pathPrefix": "/auth/callback"
+            },
+            {
+              "scheme": "https",
+              "host": "clstr.network",
+              "pathPrefix": "/post/"
+            },
+            {
+              "scheme": "https",
+              "host": "clstr.network",
+              "pathPrefix": "/profile/"
+            },
+            {
+              "scheme": "https",
+              "host": "clstr.network",
+              "pathPrefix": "/events/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -30,10 +65,29 @@
     },
     "plugins": [
       "expo-font",
-      ["expo-secure-store", {}]
+      [
+        "expo-secure-store",
+        {}
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#8B5CF6"
+        }
+      ]
     ],
+    "extra": {
+      "eas": {
+        "projectId": "025d9178-f39b-4e7d-800a-51474829b141"
+      }
+    },
     "experiments": {
       "typedRoutes": false
+    },
+    "notification": {
+      "iosDisplayInForeground": true,
+      "color": "#8B5CF6"
     }
   }
 }

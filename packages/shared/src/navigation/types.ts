@@ -12,7 +12,7 @@ export type AuthStackParamList = {
   VerifyEmail: { email?: string };
   MagicLinkSent: { email?: string };
   UpdatePassword: undefined;
-  AuthCallback: undefined;
+  AuthCallback: { url?: string } | undefined;
   AcademicEmailRequired: undefined;
   VerifyPersonalEmail: undefined;
   ClubAuth: undefined;

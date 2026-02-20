@@ -14,6 +14,7 @@ import { tokens } from '../design/tokens';
 // Real screen implementations
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { SignupScreen } from '../screens/auth/SignupScreen';
+import { AuthCallbackScreen } from '../screens/auth/AuthCallbackScreen';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
@@ -31,7 +32,6 @@ const ForgotPasswordScreen = () => <PlaceholderScreen title="Forgot Password" />
 const VerifyEmailScreen = () => <PlaceholderScreen title="Verify Email" />;
 const MagicLinkSentScreen = () => <PlaceholderScreen title="Magic Link Sent" />;
 const UpdatePasswordScreen = () => <PlaceholderScreen title="Update Password" />;
-const AuthCallbackScreen = () => <PlaceholderScreen title="Auth Callback" />;
 const AcademicEmailRequiredScreen = () => <PlaceholderScreen title="Academic Email Required" />;
 const VerifyPersonalEmailScreen = () => <PlaceholderScreen title="Verify Personal Email" />;
 const ClubAuthScreen = () => <PlaceholderScreen title="Club Auth" />;

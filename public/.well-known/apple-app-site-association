@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["<TEAM_ID>.network.clstr.mobile"],
+        "components": [
+          { "/": "/auth/callback*", "comment": "Magic link & OAuth" },
+          { "/": "/post/*",         "comment": "Post deep links" },
+          { "/": "/profile/*",      "comment": "Profile deep links" },
+          { "/": "/events/*",       "comment": "Events deep links" },
+          { "/": "/messaging",      "comment": "Messaging" }
+        ]
+      }
+    ]
+  }
+}

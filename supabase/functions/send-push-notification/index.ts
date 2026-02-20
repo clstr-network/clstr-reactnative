@@ -1,8 +1,12 @@
 /**
  * Send Push Notification Edge Function
  * 
- * Sends Web Push notifications to users via the Web Push API.
- * Requires VAPID keys to be configured in Supabase secrets:
+ * Sends notifications via BOTH channels:
+ * 1. Web Push (VAPID) — to push_subscriptions (desktop/mobile browsers)
+ * 2. Expo Push — to device_tokens (iOS/Android native apps)
+ * 
+ * Requires VAPID keys for Web Push and reads Expo tokens from device_tokens.
+ * VAPID keys in Supabase secrets:
  * - VAPID_PUBLIC_KEY: Public key (also used in frontend)
  * - VAPID_PRIVATE_KEY: Private key (server-side only)
  * - VAPID_SUBJECT: Contact email (e.g., mailto:admin@example.com)
@@ -35,6 +39,79 @@ interface PushSubscription {
   endpoint: string;
   p256dh_key: string;
   auth_key: string;
+}
+
+interface DeviceToken {
+  id: string;
+  expo_push_token: string;
+  device_type: string;
+}
+
+// ── Expo Push API ────────────────────────────────────────────────────────
+const EXPO_PUSH_API = "https://exp.host/--/api/v2/push/send";
+
+interface ExpoPushMessage {
+  to: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  sound?: "default" | null;
+  badge?: number;
+  channelId?: string;
+  priority?: "default" | "normal" | "high";
+}
+
+async function sendExpoPushNotifications(
+  tokens: DeviceToken[],
+  payload: { title: string; body: string; data: Record<string, unknown> },
+): Promise<{ sent: number; failed: number; invalidTokenIds: string[] }> {
+  if (tokens.length === 0) return { sent: 0, failed: 0, invalidTokenIds: [] };
+
+  const messages: ExpoPushMessage[] = tokens.map((t) => ({
+    to: t.expo_push_token,
+    title: payload.title,
+    body: payload.body,
+    data: payload.data,
+    sound: "default",
+    channelId: "default",
+    priority: "high",
+  }));
+
+  try {
+    const response = await fetch(EXPO_PUSH_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(messages),
+    });
+
+    if (!response.ok) {
+      console.error(`[expo-push] API error: ${response.status}`);
+      return { sent: 0, failed: tokens.length, invalidTokenIds: [] };
+    }
+
+    const result = await response.json() as { data: Array<{ status: string; message?: string; details?: { error?: string } }> };
+    let sent = 0;
+    let failed = 0;
+    const invalidTokenIds: string[] = [];
+
+    for (let i = 0; i < result.data.length; i++) {
+      const ticket = result.data[i];
+      if (ticket.status === "ok") {
+        sent++;
+      } else {
+        failed++;
+        // Mark DeviceNotRegistered tokens for deactivation
+        if (ticket.details?.error === "DeviceNotRegistered") {
+          invalidTokenIds.push(tokens[i].id);
+        }
+      }
+    }
+
+    return { sent, failed, invalidTokenIds };
+  } catch (error) {
+    console.error("[expo-push] Send error:", error);
+    return { sent: 0, failed: tokens.length, invalidTokenIds: [] };
+  }
 }
 
 // Web Push signing utilities
@@ -246,26 +323,30 @@ serve(async (req: Request) => {
       );
     }
 
-    // Get user's active push subscriptions
+    // Get user's active push subscriptions (Web Push)
     const { data: subscriptions, error: subError } = await supabaseAdmin
       .rpc("get_user_push_subscriptions", { p_user_id: body.user_id });
 
     if (subError) {
-      console.error("Failed to get subscriptions:", subError);
-      return new Response(
-        JSON.stringify({ error: "Failed to get push subscriptions" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      console.error("Failed to get web push subscriptions:", subError);
     }
 
-    if (!subscriptions || subscriptions.length === 0) {
+    // Get user's active device tokens (Expo Push)
+    const { data: deviceTokens, error: dtError } = await supabaseAdmin
+      .rpc("get_user_device_tokens", { p_user_id: body.user_id });
+
+    if (dtError) {
+      console.error("Failed to get device tokens:", dtError);
+    }
+
+    const hasWebSubs = subscriptions && subscriptions.length > 0;
+    const hasDeviceTokens = deviceTokens && deviceTokens.length > 0;
+
+    if (!hasWebSubs && !hasDeviceTokens) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: "No active push subscriptions found",
+          message: "No active push subscriptions or device tokens found",
           sent: 0,
           failed: 0,
         }),
@@ -288,37 +369,72 @@ serve(async (req: Request) => {
       timestamp: new Date().toISOString(),
     };
 
-    // Send to all subscriptions
-    const results = await Promise.all(
-      subscriptions.map((sub: PushSubscription) =>
-        sendPushToSubscription(
-          sub,
-          notificationPayload,
-          vapidSubject,
-          vapidPublicKey,
-          vapidPrivateKey
-        )
-      )
-    );
+    let totalSent = 0;
+    let totalFailed = 0;
 
-    // Deactivate any subscriptions that returned 410 Gone
-    const staleSubscriptions = results.filter((r) => r.statusCode === 410);
-    for (const stale of staleSubscriptions) {
-      const sub = subscriptions.find((s: PushSubscription) => s.id === stale.subscriptionId);
-      if (sub) {
-        await supabaseAdmin.rpc("deactivate_push_subscription", { p_endpoint: sub.endpoint });
+    // ── Web Push (VAPID) ──────────────────────────────────────────────────
+    if (hasWebSubs && vapidPublicKey && vapidPrivateKey) {
+      const results = await Promise.all(
+        subscriptions.map((sub: PushSubscription) =>
+          sendPushToSubscription(
+            sub,
+            notificationPayload,
+            vapidSubject,
+            vapidPublicKey,
+            vapidPrivateKey
+          )
+        )
+      );
+
+      // Deactivate any subscriptions that returned 410 Gone
+      const staleSubscriptions = results.filter((r) => r.statusCode === 410);
+      for (const stale of staleSubscriptions) {
+        const sub = subscriptions.find((s: PushSubscription) => s.id === stale.subscriptionId);
+        if (sub) {
+          await supabaseAdmin.rpc("deactivate_push_subscription", { p_endpoint: sub.endpoint });
+        }
       }
+
+      totalSent += results.filter((r) => r.success).length;
+      totalFailed += results.filter((r) => !r.success).length;
     }
 
-    const sent = results.filter((r) => r.success).length;
-    const failed = results.filter((r) => !r.success).length;
+    // ── Expo Push (native mobile) ─────────────────────────────────────────
+    if (hasDeviceTokens) {
+      const expoResult = await sendExpoPushNotifications(
+        deviceTokens as DeviceToken[],
+        {
+          title: body.title,
+          body: body.body,
+          data: {
+            type: body.type,
+            url: body.url || "/",
+            related_id: body.related_id,
+          },
+        },
+      );
+
+      // Deactivate invalid tokens (DeviceNotRegistered)
+      for (const tokenId of expoResult.invalidTokenIds) {
+        const token = (deviceTokens as DeviceToken[]).find((t) => t.id === tokenId);
+        if (token) {
+          await supabaseAdmin
+            .from("device_tokens")
+            .update({ is_active: false })
+            .eq("id", tokenId);
+        }
+      }
+
+      totalSent += expoResult.sent;
+      totalFailed += expoResult.failed;
+    }
 
     return new Response(
       JSON.stringify({
-        success: sent > 0,
-        message: `Sent ${sent} notification(s), ${failed} failed`,
-        sent,
-        failed,
+        success: totalSent > 0,
+        message: `Sent ${totalSent} notification(s), ${totalFailed} failed`,
+        sent: totalSent,
+        failed: totalFailed,
       }),
       {
         status: 200,
