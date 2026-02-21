@@ -1,5 +1,6 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
+const fs = require('fs');
 
 // Find the project and workspace directories
 const projectRoot = __dirname;
@@ -14,12 +15,16 @@ config.projectRoot = projectRoot;
 config.watchFolders = [monorepoRoot];
 
 // 2. Let Metro know where to resolve packages and in what order
+const mobileNodeModules = path.resolve(projectRoot, 'node_modules');
+const rootNodeModules = path.resolve(monorepoRoot, 'node_modules');
+
 config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(monorepoRoot, 'node_modules'),
+  mobileNodeModules,
+  rootNodeModules,
 ];
 
-// 3. Force single copies of critical packages from apps/mobile/node_modules
+// 3. Force single copies of critical packages.
+//    Resolve each package to wherever it actually exists (local or hoisted).
 //    This prevents the root node_modules react@19.2.4 from being picked up
 //    when bundling shared packages, which causes "Invalid hook call" errors.
 const singletonPackages = [
@@ -28,15 +33,29 @@ const singletonPackages = [
   'react/jsx-runtime',
   'react/jsx-dev-runtime',
 ];
+
+// Helper: find the actual installed location of a package (local first, then root)
+function findPackageDir(pkg) {
+  const localPath = path.resolve(mobileNodeModules, pkg);
+  if (fs.existsSync(localPath)) return localPath;
+  const rootPath = path.resolve(rootNodeModules, pkg);
+  if (fs.existsSync(rootPath)) return rootPath;
+  return localPath; // fallback to local (will error clearly if missing)
+}
+
+// Resolve the canonical directory for each singleton
+const singletonDirs = {};
 config.resolver.extraNodeModules = {};
 for (const pkg of singletonPackages) {
-  config.resolver.extraNodeModules[pkg] = path.resolve(projectRoot, 'node_modules', pkg);
+  const resolved = findPackageDir(pkg);
+  config.resolver.extraNodeModules[pkg] = resolved;
+  singletonDirs[pkg] = resolved;
 }
 
 // 3b. Custom resolveRequest to guarantee singleton React even when Metro
 //     finds the root node_modules copy via hierarchical lookup from shared packages.
-const mobileNodeModules = path.resolve(projectRoot, 'node_modules');
-const rootNodeModules = path.resolve(monorepoRoot, 'node_modules');
+const canonicalReactDir = singletonDirs['react'] + path.sep;
+const canonicalRNDir = singletonDirs['react-native'] + path.sep;
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Let the default resolver do its work first
@@ -45,20 +64,30 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 
   const result = defaultResolve(context, moduleName, platform);
 
-  // If the result points to the root node_modules copy of react or react-native,
-  // redirect to the mobile copy so only one instance is bundled.
+  // If the result points to a NON-canonical copy of react or react-native,
+  // redirect to the canonical copy so only one instance is bundled.
   if (result && result.type === 'sourceFile' && result.filePath) {
     const fp = result.filePath;
-    const rootReactDir = path.join(rootNodeModules, 'react') + path.sep;
-    const rootRNDir = path.join(rootNodeModules, 'react-native') + path.sep;
 
-    if (fp.startsWith(rootReactDir)) {
-      const relative = fp.slice(rootReactDir.length);
-      return { type: 'sourceFile', filePath: path.join(mobileNodeModules, 'react', relative) };
+    // Check all node_modules locations for react
+    if (fp.includes(path.sep + 'react' + path.sep) && !fp.startsWith(canonicalReactDir)) {
+      // Extract the relative path within the react package
+      const reactIdx = fp.indexOf(path.sep + 'react' + path.sep);
+      const relative = fp.slice(reactIdx + path.sep.length + 'react'.length + path.sep.length);
+      const redirected = path.join(singletonDirs['react'], relative);
+      if (fs.existsSync(redirected)) {
+        return { type: 'sourceFile', filePath: redirected };
+      }
     }
-    if (fp.startsWith(rootRNDir)) {
-      const relative = fp.slice(rootRNDir.length);
-      return { type: 'sourceFile', filePath: path.join(mobileNodeModules, 'react-native', relative) };
+
+    // Check all node_modules locations for react-native
+    if (fp.includes(path.sep + 'react-native' + path.sep) && !fp.startsWith(canonicalRNDir)) {
+      const rnIdx = fp.indexOf(path.sep + 'react-native' + path.sep);
+      const relative = fp.slice(rnIdx + path.sep.length + 'react-native'.length + path.sep.length);
+      const redirected = path.join(singletonDirs['react-native'], relative);
+      if (fs.existsSync(redirected)) {
+        return { type: 'sourceFile', filePath: redirected };
+      }
     }
   }
   return result;
