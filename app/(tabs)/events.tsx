@@ -1,96 +1,246 @@
-import React from 'react';
-import { FlatList, StyleSheet, View, Text, Platform, Pressable } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import Colors from '@/constants/colors';
-import { Avatar } from '@/components/Avatar';
-import { EventCard } from '@/components/EventCard';
-import { EVENTS, CURRENT_USER } from '@/lib/mock-data';
-import type { Event } from '@/lib/mock-data';
+import React, { useCallback, useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  Pressable,
+  Platform,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
+import { useData, type Event } from "@/lib/data-context";
+import Colors from "@/constants/colors";
+import { format, parseISO } from "date-fns";
 
-export default function EventsScreen() {
-  const c = Colors.colors;
-  const insets = useSafeAreaInsets();
-  const webTopInset = Platform.OS === 'web' ? 67 : 0;
+const CATEGORY_COLORS: Record<string, string> = {
+  Career: "#6C5CE7",
+  Tech: "#00CEC9",
+  Startup: "#FF6B6B",
+  Workshop: "#FDCB6E",
+  Networking: "#00B894",
+};
 
-  const renderItem = ({ item }: { item: Event }) => <EventCard event={item} />;
+const EventCard = React.memo(function EventCard({ event, onRSVP }: { event: Event; onRSVP: () => void }) {
+  const categoryColor = CATEGORY_COLORS[event.category] || Colors.dark.primary;
+  const eventDate = parseISO(event.date);
+  const monthStr = format(eventDate, "MMM").toUpperCase();
+  const dayStr = format(eventDate, "dd");
 
   return (
-    <View style={[styles.root, { backgroundColor: c.background }]}>
-      <View style={[styles.topBar, { paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 4 }]}>
-        <Pressable style={styles.menuBtn}>
-          <Ionicons name="menu" size={24} color={c.text} />
-        </Pressable>
-        <View style={[styles.searchBar, { backgroundColor: c.backgroundTertiary, borderColor: c.border }]}>
-          <Ionicons name="search-outline" size={16} color={c.textTertiary} />
-          <Text style={[styles.searchPlaceholder, { color: c.textTertiary }]}>Search...</Text>
-        </View>
-        <Avatar name={CURRENT_USER.name} size={32} />
+    <Pressable
+      style={({ pressed }) => [styles.eventCard, pressed && { opacity: 0.8 }]}
+      onPress={() => router.push({ pathname: "/event/[id]", params: { id: event.id } })}
+    >
+      <View style={styles.eventDateBox}>
+        <Text style={styles.eventMonth}>{monthStr}</Text>
+        <Text style={styles.eventDay}>{dayStr}</Text>
       </View>
+      <View style={styles.eventInfo}>
+        <View style={[styles.categoryBadge, { backgroundColor: `${categoryColor}20` }]}>
+          <Text style={[styles.categoryText, { color: categoryColor }]}>{event.category}</Text>
+        </View>
+        <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+        <View style={styles.eventMeta}>
+          <View style={styles.eventMetaItem}>
+            <Ionicons name="location-outline" size={13} color={Colors.dark.textTertiary} />
+            <Text style={styles.eventMetaText}>{event.location}</Text>
+          </View>
+          <View style={styles.eventMetaItem}>
+            <Ionicons name="people-outline" size={13} color={Colors.dark.textTertiary} />
+            <Text style={styles.eventMetaText}>{event.attendees}</Text>
+          </View>
+        </View>
+      </View>
+      <Pressable
+        style={[styles.rsvpBtn, event.rsvpd && styles.rsvpBtnActive]}
+        onPress={() => {
+          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onRSVP();
+        }}
+        hitSlop={4}
+      >
+        <Ionicons
+          name={event.rsvpd ? "checkmark" : "add"}
+          size={18}
+          color={event.rsvpd ? "#fff" : Colors.dark.primary}
+        />
+      </Pressable>
+    </Pressable>
+  );
+}, (prev, next) =>
+  prev.event.id === next.event.id &&
+  prev.event.rsvpd === next.event.rsvpd &&
+  prev.event.attendees === next.event.attendees
+);
 
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: c.text }]}>Events</Text>
-        <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-          {EVENTS.length} upcoming events
-        </Text>
+export default function EventsScreen() {
+  const insets = useSafeAreaInsets();
+  const { events, toggleRSVP, isLoading } = useData();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
+  }, []);
+
+  const handleRSVP = useCallback((id: string) => {
+    toggleRSVP(id);
+  }, [toggleRSVP]);
+
+  const keyExtractor = useCallback((item: Event) => item.id, []);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+        <ActivityIndicator size="large" color={Colors.dark.primary} style={{ marginTop: 40 }} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+        <Text style={styles.headerTitle}>Events</Text>
       </View>
       <FlatList
-        data={EVENTS}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.list, { paddingBottom: 100 }]}
+        data={events}
+        renderItem={({ item }) => (
+          <EventCard event={item} onRSVP={() => handleRSVP(item.id)} />
+        )}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!!events.length}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.primary} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={48} color={Colors.dark.textTertiary} />
+            <Text style={styles.emptyTitle}>No events</Text>
+            <Text style={styles.emptySubtitle}>Check back later for upcoming events</Text>
+          </View>
+        }
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 10,
-    gap: 10,
-  },
-  menuBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    gap: 6,
-  },
-  searchPlaceholder: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
+    backgroundColor: Colors.dark.background,
   },
   header: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 12,
   },
-  title: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 24,
-    letterSpacing: -0.3,
+  headerTitle: {
+    fontSize: 28,
+    fontFamily: "Inter_700Bold",
+    color: Colors.dark.text,
   },
-  subtitle: {
-    fontFamily: 'Inter_400Regular',
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+    gap: 12,
+  },
+  eventCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.dark.surface,
+    borderRadius: 16,
+    padding: 16,
+  },
+  eventDateBox: {
+    width: 52,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: Colors.dark.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  eventMonth: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.dark.primary,
+    letterSpacing: 0.5,
+  },
+  eventDay: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    color: Colors.dark.text,
+    marginTop: -2,
+  },
+  eventInfo: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  categoryBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  categoryText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+  eventTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.dark.text,
+    marginBottom: 6,
+  },
+  eventMeta: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  eventMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  eventMetaText: {
     fontSize: 12,
-    marginTop: 3,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.textTertiary,
   },
-  list: {
-    paddingTop: 4,
+  rsvpBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: Colors.dark.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+  rsvpBtnActive: {
+    backgroundColor: Colors.dark.primary,
+    borderColor: Colors.dark.primary,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 80,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.dark.text,
+    marginTop: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.textSecondary,
   },
 });

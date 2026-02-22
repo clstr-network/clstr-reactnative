@@ -1,256 +1,244 @@
-import React, { useState, useMemo } from 'react';
-import { FlatList, StyleSheet, View, Text, TextInput, Platform, Pressable } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import Colors from '@/constants/colors';
-import { Avatar } from '@/components/Avatar';
-import { ConversationItem } from '@/components/ConversationItem';
-import { CONVERSATIONS, USERS, CURRENT_USER } from '@/lib/mock-data';
-import type { Conversation, User } from '@/lib/mock-data';
+import React, { useState, useCallback, useMemo } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  Pressable,
+  TextInput,
+  Platform,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useData, type Conversation } from "@/lib/data-context";
+import Colors from "@/constants/colors";
+import { formatDistanceToNow } from "date-fns";
 
-type Tab = 'chats' | 'contacts';
-
-export default function MessagesScreen() {
-  const c = Colors.colors;
-  const insets = useSafeAreaInsets();
-  const webTopInset = Platform.OS === 'web' ? 67 : 0;
-  const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<Tab>('chats');
-
-  const contacts = useMemo(() => USERS.filter(u => u.connectionStatus === 'connected'), []);
-
-  const filteredConvos = search.trim()
-    ? CONVERSATIONS.filter(conv => conv.partner.name.toLowerCase().includes(search.toLowerCase()))
-    : CONVERSATIONS;
-
-  const filteredContacts = search.trim()
-    ? contacts.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
-    : contacts;
-
-  const renderConvo = ({ item }: { item: Conversation }) => (
-    <ConversationItem
-      conversation={item}
-      onPress={() => router.push({ pathname: '/chat/[id]', params: { id: item.id } })}
-    />
+function Avatar({ name, size = 48 }: { name: string; size?: number }) {
+  const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2);
+  const colors = ["#6C5CE7", "#00CEC9", "#FF6B6B", "#FDCB6E", "#00B894", "#A29BFE"];
+  const colorIndex = name.length % colors.length;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors[colorIndex], alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: size * 0.38 }}>{initials}</Text>
+    </View>
   );
+}
 
-  const renderContact = ({ item }: { item: User }) => (
-    <Pressable style={[styles.contactItem, { borderBottomColor: c.border }]}>
-      <Avatar name={item.name} size={46} />
-      <View style={styles.contactInfo}>
-        <Text style={[styles.contactName, { color: c.text }]} numberOfLines={1}>{item.name}</Text>
-        <Text style={[styles.contactRole, { color: c.textTertiary }]} numberOfLines={1}>{item.role}</Text>
+const ConversationItem = React.memo(function ConversationItem({ item }: { item: Conversation }) {
+  const timeAgo = formatDistanceToNow(new Date(item.timestamp), { addSuffix: false });
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.convItem, pressed && { opacity: 0.7 }]}
+      onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id } })}
+    >
+      <Avatar name={item.partnerName} />
+      <View style={styles.convInfo}>
+        <View style={styles.convHeader}>
+          <Text style={styles.convName}>{item.partnerName}</Text>
+          <Text style={styles.convTime}>{timeAgo}</Text>
+        </View>
+        <View style={styles.convPreview}>
+          <Text style={[styles.convMessage, item.unread > 0 && styles.convMessageUnread]} numberOfLines={1}>
+            {item.lastMessage}
+          </Text>
+          {item.unread > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadText}>{item.unread}</Text>
+            </View>
+          )}
+        </View>
       </View>
     </Pressable>
   );
+}, (prev, next) =>
+  prev.item.id === next.item.id &&
+  prev.item.lastMessage === next.item.lastMessage &&
+  prev.item.unread === next.item.unread
+);
+
+export default function MessagesScreen() {
+  const insets = useSafeAreaInsets();
+  const { conversations, isLoading } = useData();
+  const [search, setSearch] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return conversations;
+    const q = search.toLowerCase();
+    return conversations.filter(c => c.partnerName.toLowerCase().includes(q));
+  }, [conversations, search]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
+  }, []);
+
+  const keyExtractor = useCallback((item: Conversation) => item.id, []);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+        <ActivityIndicator size="large" color={Colors.dark.primary} style={{ marginTop: 40 }} />
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.root, { backgroundColor: c.background }]}>
-      <View style={[styles.topBar, { paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 4 }]}>
-        <Pressable style={styles.menuBtn}>
-          <Ionicons name="menu" size={24} color={c.text} />
-        </Pressable>
-        <View style={[styles.searchBarTop, { backgroundColor: c.backgroundTertiary, borderColor: c.border }]}>
-          <Ionicons name="search-outline" size={16} color={c.textTertiary} />
-          <Text style={[styles.searchPlaceholder, { color: c.textTertiary }]}>Search...</Text>
-        </View>
-        <Avatar name={CURRENT_USER.name} size={32} />
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+        <Text style={styles.headerTitle}>Messages</Text>
       </View>
 
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: c.text }]}>Messages</Text>
-      </View>
-
-      <View style={[styles.searchContainer, { backgroundColor: c.inputBg, borderColor: c.inputBorder }]}>
-        <Ionicons name="search-outline" size={16} color={c.textTertiary} />
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={18} color={Colors.dark.textTertiary} />
         <TextInput
-          style={[styles.searchInput, { color: c.text }]}
+          style={styles.searchInput}
           placeholder="Search conversations..."
-          placeholderTextColor={c.textTertiary}
+          placeholderTextColor={Colors.dark.textTertiary}
           value={search}
           onChangeText={setSearch}
           autoCorrect={false}
+          returnKeyType="search"
         />
       </View>
 
-      <View style={[styles.tabRow, { borderBottomColor: c.border }]}>
-        <Pressable
-          style={[styles.tab, activeTab === 'chats' && { borderBottomColor: c.primary, borderBottomWidth: 2 }]}
-          onPress={() => setActiveTab('chats')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'chats' ? c.text : c.textTertiary }]}>
-            Chats
-          </Text>
-          <View style={[styles.tabCount, { backgroundColor: activeTab === 'chats' ? c.primary + '30' : c.backgroundTertiary }]}>
-            <Text style={[styles.tabCountText, { color: activeTab === 'chats' ? c.primary : c.textTertiary }]}>
-              {CONVERSATIONS.length}
-            </Text>
+      <FlatList
+        data={filtered}
+        renderItem={({ item }) => <ConversationItem item={item} />}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!!filtered.length}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.primary} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="chatbubbles-outline" size={48} color={Colors.dark.textTertiary} />
+            <Text style={styles.emptyTitle}>No conversations</Text>
+            <Text style={styles.emptySubtitle}>Start a conversation by connecting with someone</Text>
           </View>
-        </Pressable>
-        <Pressable
-          style={[styles.tab, activeTab === 'contacts' && { borderBottomColor: c.primary, borderBottomWidth: 2 }]}
-          onPress={() => setActiveTab('contacts')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'contacts' ? c.text : c.textTertiary }]}>
-            Contacts
-          </Text>
-          <View style={[styles.tabCount, { backgroundColor: activeTab === 'contacts' ? c.primary + '30' : c.backgroundTertiary }]}>
-            <Text style={[styles.tabCountText, { color: activeTab === 'contacts' ? c.primary : c.textTertiary }]}>
-              {contacts.length}
-            </Text>
-          </View>
-        </Pressable>
-      </View>
-
-      {activeTab === 'chats' ? (
-        <FlatList
-          data={filteredConvos}
-          renderItem={renderConvo}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.list, { paddingBottom: 100 }]}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="chatbubbles-outline" size={40} color={c.textTertiary} />
-              <Text style={[styles.emptyTitle, { color: c.textSecondary }]}>No conversations yet</Text>
-            </View>
-          }
-        />
-      ) : (
-        <FlatList
-          data={filteredContacts}
-          renderItem={renderContact}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.list, { paddingBottom: 100 }]}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="people-outline" size={40} color={c.textTertiary} />
-              <Text style={[styles.emptyTitle, { color: c.textSecondary }]}>No contacts found</Text>
-            </View>
-          }
-        />
-      )}
+        }
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 10,
-    gap: 10,
-  },
-  menuBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchBarTop: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    gap: 6,
-  },
-  searchPlaceholder: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
+    backgroundColor: Colors.dark.background,
   },
   header: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 12,
   },
-  title: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 24,
-    letterSpacing: -0.3,
+  headerTitle: {
+    fontSize: 28,
+    fontFamily: "Inter_700Bold",
+    color: Colors.dark.text,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    height: 44,
+    backgroundColor: Colors.dark.inputBackground,
+    borderRadius: 12,
     gap: 8,
-    marginBottom: 12,
   },
   searchInput: {
     flex: 1,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    height: '100%',
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.text,
   },
-  tabRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    borderBottomWidth: 1,
-    marginBottom: 4,
+  listContent: {
+    paddingBottom: 100,
   },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    marginRight: 8,
-    gap: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+  convItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    minHeight: 72,
   },
-  tabText: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-  },
-  tabCount: {
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-  },
-  tabCountText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
-  },
-  list: {},
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  contactInfo: {
+  convInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 14,
   },
-  contactName: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
+  convHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  contactRole: {
-    fontFamily: 'Inter_400Regular',
+  convName: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.dark.text,
+  },
+  convTime: {
     fontSize: 12,
-    marginTop: 2,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.textTertiary,
   },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
+  convPreview: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  convMessage: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.textSecondary,
+  },
+  convMessageUnread: {
+    color: Colors.dark.text,
+    fontFamily: "Inter_500Medium",
+  },
+  unreadBadge: {
+    backgroundColor: Colors.dark.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    marginLeft: 8,
+  },
+  unreadText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 80,
     gap: 8,
   },
   emptyTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 16,
+    fontSize: 18,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.dark.text,
+    marginTop: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.textSecondary,
+    textAlign: "center",
+    paddingHorizontal: 40,
   },
 });

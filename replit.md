@@ -1,10 +1,10 @@
-# Clstr - Replit Agent Guide
+# CLSTR - Campus Social Network
 
 ## Overview
 
-Clstr is a college/university networking mobile application built with Expo (React Native) and an Express.js backend. It provides a social platform where students, alumni, and faculty can connect, share posts, message each other, discover networking opportunities, and find events. The app follows a dark-themed design language with a gold/amber primary accent color.
+CLSTR is a campus/alumni social networking mobile application built with Expo (React Native) and an Express.js backend. The app provides a social feed, networking/connections, messaging, events, and user profiles — similar to a university-focused LinkedIn. The project targets iOS, Android, and web platforms through Expo's cross-platform framework.
 
-The project uses a monorepo-style structure with the mobile app (Expo/React Native), a Node.js/Express API server, and shared schema definitions all in one codebase. Currently, the app uses mock data for the UI while the backend infrastructure (Express + Drizzle ORM + PostgreSQL) is set up and ready for real data integration.
+Currently, the app uses **local mock data** managed through a React Context (`DataProvider`) with AsyncStorage persistence. The Express backend exists but has minimal routes — the server is scaffolded and ready for real API endpoints but most data logic lives client-side. A PostgreSQL database schema is defined via Drizzle ORM but is not yet wired into the application's data flow.
 
 ## User Preferences
 
@@ -12,76 +12,57 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend (Mobile App)
-- **Framework:** Expo SDK 54 with React Native 0.81, using the new architecture (`newArchEnabled: true`)
-- **Routing:** Expo Router v6 with file-based routing. Tab navigation lives in `app/(tabs)/` with five tabs: Home (feed), Network, Messages, Events, and More
-- **State Management:** TanStack React Query for server state; local React state for UI state
-- **Fonts:** Inter font family loaded via `@expo-google-fonts/inter` (400, 500, 600, 700 weights)
-- **Styling:** React Native StyleSheet API with a centralized color/design token system in `constants/colors.ts`. Dark theme only (black surfaces with tiered elevation). No Tailwind on the native side.
-- **Key UI Libraries:** 
-  - `react-native-gesture-handler` for gestures
-  - `react-native-reanimated` for animations
-  - `react-native-keyboard-controller` for keyboard handling
-  - `expo-haptics` for haptic feedback
-  - `expo-blur` and `expo-glass-effect` for visual effects
-  - `@expo/vector-icons` (Ionicons) for icons
+### Frontend (Expo / React Native)
 
-### Design System
-- **Color Architecture:** Tiered surface system (base #000000 → tier3 → tier2 → tier1 → elevated → overlay) with semantic colors for borders and text
-- **Primary Accent:** Gold/amber (#E5A100) 
-- **Badge Variants:** Color-coded by user type (Student, Alumni, Faculty)
-- **Category Colors:** Used for event categories
-- All design tokens are centralized in `constants/colors.ts`
+- **Framework**: Expo SDK 54 with React Native 0.81, using the new architecture (`newArchEnabled: true`)
+- **Routing**: Expo Router v6 with file-based routing. The app uses a tab layout (`app/(tabs)/`) with 5 tabs: Feed, Network, Messages, Events, Profile. Detail screens live at `app/chat/[id].tsx`, `app/post/[id].tsx`, `app/event/[id].tsx`. Modal screens include `app/new-post.tsx` and `app/settings.tsx`.
+- **State Management**: React Context (`lib/data-context.tsx`) serves as the primary data layer, providing mock users, posts, connections, conversations, messages, and events. Data persists locally via `@react-native-async-storage/async-storage`.
+- **Styling**: Dark theme by default (`userInterfaceStyle: "dark"`). Colors are centralized in `constants/colors.ts` with a comprehensive dark palette. All styling uses React Native `StyleSheet`.
+- **Fonts**: Inter font family (400, 500, 600, 700 weights) loaded via `@expo-google-fonts/inter`.
+- **Animations/Haptics**: `expo-haptics` for tactile feedback, `react-native-reanimated` available for animations.
+- **Key UI Libraries**: `expo-blur`, `expo-linear-gradient`, `expo-glass-effect`, `react-native-gesture-handler`, `react-native-keyboard-controller`, `react-native-safe-area-context`, `react-native-screens`.
+- **Data Fetching**: `@tanstack/react-query` is configured with a query client (`lib/query-client.ts`) that can make authenticated API requests to the Express backend, but currently the app runs on local mock data instead.
 
-### Backend (API Server)
-- **Framework:** Express.js v5 running on Node.js
-- **Entry Point:** `server/index.ts` — sets up CORS, JSON parsing, and serves static files in production
-- **Routes:** Defined in `server/routes.ts` — currently minimal, prefixed with `/api`
-- **Storage Layer:** `server/storage.ts` implements an `IStorage` interface with `MemStorage` (in-memory) as the current implementation. This is designed to be swapped with a database-backed implementation.
-- **Build:** Server is bundled with esbuild for production (`server:build` script)
+### Backend (Express.js)
 
-### Database
-- **ORM:** Drizzle ORM with PostgreSQL dialect
-- **Schema:** Defined in `shared/schema.ts` — currently has a `users` table with id, username, and password fields
-- **Validation:** Zod schemas generated from Drizzle schemas via `drizzle-zod`
-- **Migrations:** Output to `./migrations/` directory
-- **Config:** `drizzle.config.ts` reads `DATABASE_URL` environment variable
-- **Current State:** Schema is minimal. The app currently uses mock data (`lib/mock-data.ts`) for posts, users, conversations, messages, and events. The database schema needs to be expanded to support these entities.
+- **Runtime**: Node.js with Express v5, TypeScript compiled via `tsx` (dev) or `esbuild` (prod).
+- **Server Entry**: `server/index.ts` sets up CORS (supporting Replit domains and localhost), JSON parsing, and serves static web builds in production.
+- **Routes**: `server/routes.ts` is mostly empty — just creates an HTTP server. API routes should be prefixed with `/api`.
+- **Storage**: `server/storage.ts` defines an `IStorage` interface with user CRUD methods. Currently uses `MemStorage` (in-memory Map). This is designed to be swapped for a database-backed implementation.
+- **Build Scripts**: `scripts/build.js` handles Expo static web builds for production deployment.
+
+### Database (PostgreSQL + Drizzle ORM)
+
+- **Schema**: Defined in `shared/schema.ts` using Drizzle ORM's `pgTable`. Currently only has a `users` table with `id` (UUID), `username`, and `password` fields.
+- **Validation**: Uses `drizzle-zod` to generate Zod schemas from the Drizzle table definitions (`insertUserSchema`).
+- **Migrations**: Drizzle Kit configured in `drizzle.config.ts`, migrations output to `./migrations`. Push schema with `npm run db:push`.
+- **Connection**: Requires `DATABASE_URL` environment variable for PostgreSQL connection.
+- **Current State**: The schema is minimal and doesn't yet reflect the app's data model (posts, events, connections, conversations, messages). The `data-context.tsx` has rich TypeScript interfaces that should eventually be mirrored in the database schema.
 
 ### Shared Code
-- `shared/schema.ts` contains Drizzle table definitions and Zod schemas shared between frontend and backend
-- Path aliases: `@/*` maps to root, `@shared/*` maps to `./shared/*`
 
-### API Communication
-- `lib/query-client.ts` provides `apiRequest()` helper and query client configuration
-- Uses `EXPO_PUBLIC_DOMAIN` environment variable to construct API URLs
-- Supports credentials (cookies) for authentication
+- **Path Aliases**: `@/*` maps to project root, `@shared/*` maps to `./shared/` — enables importing shared types/schema from both frontend and backend.
+- **Schema as Single Source of Truth**: `shared/schema.ts` is meant to be the canonical definition for data types used by both server and client.
 
-### Development Setup
-- **Dev workflow:** Run `expo:dev` for the mobile app and `server:dev` for the backend simultaneously
-- **Production:** Static export build via custom `scripts/build.js`, server built with esbuild
-- **Proxy:** Uses `http-proxy-middleware` to proxy API requests during development
-- The Replit dev domain is used for both the Expo dev server and API server communication
+### Development Workflow
+
+- **Dev Mode**: Run `npm run expo:dev` for the Expo dev server and `npm run server:dev` for the Express backend simultaneously.
+- **Production**: `npm run expo:static:build` builds the web app, `npm run server:build` bundles the server, `npm run server:prod` runs the production server which serves the static web build.
+- **Database**: `npm run db:push` pushes schema changes to PostgreSQL.
+
+### Key Architectural Gaps (Known)
+
+1. The frontend data model (posts, events, connections, conversations, messages) exists only in the React Context with mock data — no API endpoints or database tables exist for these yet.
+2. Authentication is not implemented — `currentUser` is hardcoded mock data in the data context.
+3. The server has no real API routes beyond the scaffold.
+4. The database schema only has a `users` table — needs expansion to match the app's feature set.
 
 ## External Dependencies
 
-### Database
-- **PostgreSQL** via `DATABASE_URL` environment variable — required for Drizzle ORM
-- Currently using in-memory storage (`MemStorage`), but Postgres is configured and ready
-
-### Key NPM Packages
-- **expo** (~54.0.27) — Core mobile framework
-- **express** (^5.0.1) — Backend API server
-- **drizzle-orm** (^0.39.3) + **drizzle-kit** — Database ORM and migration tooling
-- **@tanstack/react-query** (^5.83.0) — Data fetching and caching
-- **zod** + **drizzle-zod** — Schema validation
-- **pg** (^8.16.3) — PostgreSQL client
-- **date-fns** — Date formatting utilities
-- **patch-package** — Used for patching dependencies (runs on postinstall)
-
-### Environment Variables
-- `DATABASE_URL` — PostgreSQL connection string (required for database operations)
-- `EXPO_PUBLIC_DOMAIN` — Domain for API communication from the mobile app
-- `REPLIT_DEV_DOMAIN` — Replit development domain (auto-set by Replit)
-- `REPLIT_DOMAINS` — Comma-separated list of Replit domains for CORS
-- `REPLIT_INTERNAL_APP_DOMAIN` — Used for production deployment domain detection
+- **PostgreSQL**: Database (connected via `DATABASE_URL` env var), managed through Drizzle ORM
+- **Expo Services**: Build and development toolchain (Expo SDK 54)
+- **AsyncStorage**: Local device storage for persisting mock data client-side
+- **Replit Environment**: The app is configured for Replit deployment, using `REPLIT_DEV_DOMAIN`, `REPLIT_DOMAINS`, and `REPLIT_INTERNAL_APP_DOMAIN` environment variables for CORS and URL configuration
+- **No external auth provider yet**: The audit document mentions Supabase was used in a prior web version, but the current mobile codebase has no auth integration
+- **No push notifications**: Not yet integrated
+- **No file/image upload service**: Image picker is installed (`expo-image-picker`) but no upload backend exists

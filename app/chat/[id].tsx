@@ -1,67 +1,85 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from "react";
 import {
-  FlatList, StyleSheet, View, Text, TextInput, Pressable, Platform,
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  TextInput,
+  Pressable,
+  Platform,
   KeyboardAvoidingView,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import * as Crypto from 'expo-crypto';
-import Colors from '@/constants/colors';
-import { Avatar } from '@/components/Avatar';
-import { CONVERSATIONS, MESSAGES, type Message } from '@/lib/mock-data';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, router } from "expo-router";
+import * as Haptics from "expo-haptics";
+import { useData, type Message } from "@/lib/data-context";
+import Colors from "@/constants/colors";
+import { format } from "date-fns";
+
+function Avatar({ name, size = 32 }: { name: string; size?: number }) {
+  const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2);
+  const colors = ["#6C5CE7", "#00CEC9", "#FF6B6B", "#FDCB6E", "#00B894", "#A29BFE"];
+  const colorIndex = name.length % colors.length;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors[colorIndex], alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: size * 0.38 }}>{initials}</Text>
+    </View>
+  );
+}
+
+const MessageBubble = React.memo(function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean }) {
+  const time = format(new Date(message.timestamp), "h:mm a");
+
+  return (
+    <View style={[styles.messageBubbleRow, isOwn && styles.messageBubbleRowOwn]}>
+      <View style={[styles.messageBubble, isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther]}>
+        <Text style={[styles.messageText, isOwn && styles.messageTextOwn]}>{message.text}</Text>
+        <Text style={[styles.messageTime, isOwn && styles.messageTimeOwn]}>{time}</Text>
+      </View>
+    </View>
+  );
+}, (prev, next) => prev.message.id === next.message.id && prev.isOwn === next.isOwn);
 
 export default function ChatScreen() {
-  const c = Colors.colors;
   const insets = useSafeAreaInsets();
-  const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [input, setInput] = useState('');
-  const listRef = useRef<FlatList>(null);
+  const { conversations, getMessages, sendMessage, currentUser } = useData();
+  const [inputText, setInputText] = useState("");
 
-  const conversation = CONVERSATIONS.find(conv => conv.id === id);
-  const [messages, setMessages] = useState<Message[]>(
-    [...(MESSAGES[id || ''] || [])].reverse()
-  );
+  const conversation = conversations.find(c => c.id === id);
+  const messages = getMessages(id || "");
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newMsg: Message = {
-      id: Crypto.randomUUID(),
-      senderId: 'me',
-      text: input.trim(),
-      timestamp: new Date(),
-    };
-    setMessages(prev => [newMsg, ...prev]);
-    setInput('');
-  };
+  const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
-  const renderItem = ({ item }: { item: Message }) => {
-    const isMe = item.senderId === 'me';
-    return (
-      <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
-        <View style={[styles.bubble, {
-          backgroundColor: isMe ? c.primary : c.card,
-          borderColor: isMe ? c.primary : c.border,
-        }]}>
-          <Text style={[styles.msgText, { color: isMe ? c.background : c.text }]}>
-            {item.text}
-          </Text>
-        </View>
-      </View>
-    );
-  };
+  const handleSend = useCallback(() => {
+    if (!inputText.trim() || !id) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    sendMessage(id, inputText.trim());
+    setInputText("");
+  }, [inputText, id, sendMessage]);
+
+  const renderMessage = useCallback(({ item }: { item: Message }) => (
+    <MessageBubble
+      message={item}
+      isOwn={item.senderId === currentUser.id}
+    />
+  ), [currentUser.id]);
+
+  const keyExtractor = useCallback((item: Message) => item.id, []);
 
   if (!conversation) {
     return (
-      <View style={[styles.root, { backgroundColor: c.background }]}>
-        <View style={[styles.chatHeader, { paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 4 }]}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={c.primary} />
+      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+        <View style={styles.header}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="arrow-back" size={24} color={Colors.dark.text} />
           </Pressable>
-          <Text style={[styles.chatName, { color: c.text }]}>Not found</Text>
+          <Text style={styles.headerTitle}>Chat</Text>
+          <View style={styles.backBtn} />
+        </View>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>Conversation not found</Text>
         </View>
       </View>
     );
@@ -69,51 +87,59 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.root, { backgroundColor: c.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={0}
     >
-      <View style={[styles.chatHeader, { paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 4, borderBottomColor: c.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={c.primary} />
+      <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={8}>
+          <Ionicons name="arrow-back" size={24} color={Colors.dark.text} />
         </Pressable>
-        <Avatar name={conversation.partner.name} size={34} />
-        <View style={styles.chatHeaderText}>
-          <Text style={[styles.chatName, { color: c.text }]}>{conversation.partner.name}</Text>
-          <Text style={[styles.chatRole, { color: c.textTertiary }]}>{conversation.partner.role}</Text>
+        <View style={styles.headerCenter}>
+          <Avatar name={conversation.partnerName} size={32} />
+          <Text style={styles.headerTitle}>{conversation.partnerName}</Text>
         </View>
+        <View style={styles.backBtn} />
       </View>
 
       <FlatList
-        ref={listRef}
-        data={messages}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        data={invertedMessages}
+        renderItem={renderMessage}
+        keyExtractor={keyExtractor}
         inverted
-        contentContainerStyle={styles.msgList}
+        contentContainerStyle={styles.messagesList}
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        ListEmptyComponent={
+          <View style={styles.emptyStateInverted}>
+            <Ionicons name="chatbubble-ellipses-outline" size={48} color={Colors.dark.textTertiary} />
+            <Text style={styles.emptyTitle}>Start a conversation</Text>
+            <Text style={styles.emptySubtitle}>Say hello to {conversation.partnerName}</Text>
+          </View>
+        }
       />
 
-      <View style={[styles.inputBar, {
-        backgroundColor: c.backgroundSecondary,
-        borderTopColor: c.border,
-        paddingBottom: Platform.OS === 'web' ? 34 : Math.max(insets.bottom, 8),
-      }]}>
+      <View style={[styles.inputContainer, { paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 8) }]}>
         <TextInput
-          style={[styles.input, { backgroundColor: c.inputBg, borderColor: c.inputBorder, color: c.text }]}
+          style={styles.input}
           placeholder="Type a message..."
-          placeholderTextColor={c.textTertiary}
-          value={input}
-          onChangeText={setInput}
+          placeholderTextColor={Colors.dark.textTertiary}
+          value={inputText}
+          onChangeText={setInputText}
           multiline
           maxLength={1000}
+          returnKeyType="send"
+          onSubmitEditing={handleSend}
+          blurOnSubmit={false}
         />
         <Pressable
-          style={[styles.sendBtn, { backgroundColor: input.trim() ? c.primary : c.tier1 }]}
+          style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
           onPress={handleSend}
-          disabled={!input.trim()}
+          disabled={!inputText.trim()}
+          hitSlop={8}
         >
-          <Ionicons name="arrow-up" size={20} color={input.trim() ? c.background : c.textTertiary} />
+          <Ionicons name="send" size={18} color={inputText.trim() ? "#fff" : Colors.dark.textTertiary} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -121,81 +147,134 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
+    backgroundColor: Colors.dark.background,
   },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    gap: 8,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.dark.border,
+  },
+  headerCenter: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.dark.text,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  chatHeaderText: {
-    flex: 1,
+  messagesList: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  chatName: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 15,
-  },
-  chatRole: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-  },
-  msgList: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  msgRow: {
-    flexDirection: 'row',
+  messageBubbleRow: {
+    flexDirection: "row",
     marginBottom: 8,
-    maxWidth: '80%',
+    justifyContent: "flex-start",
   },
-  msgRowMe: {
-    alignSelf: 'flex-end',
+  messageBubbleRowOwn: {
+    justifyContent: "flex-end",
   },
-  bubble: {
-    borderRadius: 18,
-    borderWidth: 1,
+  messageBubble: {
+    maxWidth: "78%",
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 10,
+    borderRadius: 18,
   },
-  msgText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    lineHeight: 20,
+  messageBubbleOwn: {
+    backgroundColor: Colors.dark.primary,
+    borderBottomRightRadius: 4,
   },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 12,
+  messageBubbleOther: {
+    backgroundColor: Colors.dark.surfaceElevated,
+    borderBottomLeftRadius: 4,
+  },
+  messageText: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.text,
+    lineHeight: 21,
+  },
+  messageTextOwn: {
+    color: "#fff",
+  },
+  messageTime: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.textTertiary,
+    marginTop: 4,
+    alignSelf: "flex-end",
+  },
+  messageTimeOwn: {
+    color: "rgba(255,255,255,0.6)",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: 16,
     paddingTop: 8,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.dark.border,
     gap: 8,
   },
   input: {
     flex: 1,
+    backgroundColor: Colors.dark.inputBackground,
     borderRadius: 20,
-    borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.text,
     maxHeight: 100,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 1,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.dark.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sendBtnDisabled: {
+    backgroundColor: Colors.dark.surfaceElevated,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  emptyStateInverted: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 40,
+    transform: [{ scaleY: -1 }],
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.dark.text,
+    marginTop: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.dark.textSecondary,
   },
 });

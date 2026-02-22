@@ -1,0 +1,940 @@
+clstr.network — Full React Native Architectural & UI Audit
+Date: 2026-02-22 Scope: Web app (src/) → React Native mobile app Verdict: ⛔ The web codebase has deep DOM dependencies at every layer. Building the mobile app by "converting" web components would produce a web-wrapper, not a native app. A native-first rewrite using shared domain logic is the only path.
+
+Executive Summary — Critical Findings
+CAUTION
+
+Stop building mobile screens until these are resolved.
+
+#	Finding	Severity	Impact
+1	All 65 UI components are shadcn/Radix DOM primitives — zero are portable to RN	🔴 Critical	Every component must be re-implemented natively
+2	Theme system is 100% DOM-dependent — 
+applyThemeToDOM
+ adds/removes CSS classes on document.documentElement	🔴 Critical	Entire theme pipeline must be rebuilt for RN Appearance API
+3	Navigation is React Router (BrowserRouter) — 60+ routes using <Route>, useNavigate, useLocation, useSearchParams	🔴 Critical	Must be fully replaced with React Navigation stacks/tabs
+4	Monolithic page components — Events.tsx (2117 lines), Onboarding.tsx (1368 lines), Settings.tsx (753 lines), Network.tsx (815 lines)	🔴 Critical	Cannot be consumed in RN; must be decomposed into screen + hook + components
+5	Messaging uses DOM scroll, <input>, keyboard events — no inverted FlatList, no KeyboardAvoidingView	🟠 High	Chat will feel broken on mobile without native input handling
+6	social-api.ts is 2796 lines / 91 exports — tightly coupled to web layer	🟠 High	Must be extracted to shared package with platform adapters
+7	Realtime subscriptions have no lifecycle management — no foreground/background awareness	🟠 High	Memory leaks and stale connections on mobile
+8	Notifications are a DOM dropdown (728 lines) — no push notification integration for mobile	🟠 High	Must become a full native screen with push wiring
+9	Hard-coded hex colors throughout — bg-[#000000], bg-[#0a0a0a], bg-[#1a1a1a] in 100+ locations	🟡 Medium	Bypasses design tokens; impossible to adapt for RN StyleSheet
+10	Animations are Framer Motion — AnimatePresence, motion.div throughout	🟡 Medium	Must be replaced with react-native-reanimated
+TASK 1 — Full Working Flow Audit
+1.1 Authentication Flow
+Login → Signup → Verify → Onboarding → Main
+
+Current Web Behavior
+Google OAuth via Supabase (supabase.auth.signInWithOAuth) with redirectTo to /auth/callback
+AuthCallback.tsx
+ (27KB) handles post-auth routing: checks onboarding status, role, email verification
+Multi-step onboarding in 
+Onboarding.tsx
+ (1368 lines, 60KB) — single monolithic component with 8+ steps
+Magic link sent via email with redirect
+Club auth path (
+ClubAuth.tsx
+ — 27KB) with role selection
+Academic email verification via 
+VerifyEmail.tsx
+Web-Only Assumptions
+Browser redirects for OAuth (window.location, redirectTo URLs)
+URL-based callback handling (/auth/callback)
+useSearchParams for passing state across auth pages
+localStorage implicit in Supabase client for token persistence
+document.documentElement class toggling during auth for theme
+Mobile Friction Points
+OAuth redirect model is broken — RN needs expo-auth-session or expo-web-browser for OAuth
+Onboarding.tsx is a 1368-line monolith — cannot render in RN; needs decomposition into individual screen components
+KeyboardEvent handling — 
+handleEnterToNext
+ uses DOM keyboard events; RN needs onSubmitEditing
+File upload — 
+handleFileChange
+ uses <input type="file"> and FileReader; needs expo-image-picker
+Ref-based focus management — 
+focusInvalidField
+ uses HTMLInputElement.focus(); RN needs TextInput.focus() ref forwarding
+Navigation Differences
+Web: flat URL routing (/login → /signup → /verify-email → /onboarding → /home)
+Mobile: should be a stack navigator (AuthStack) with navigation.replace for one-way transitions
+State Handling Differences
+Web: auth state persists in Supabase client (browser storage); no explicit session management
+Mobile: must use SecureStore for token persistence; explicit session restore on cold start
+Background/Foreground Edge Cases
+OAuth redirect may lose context if app is killed during browser flow
+Session token expiry during background period — no current handling
+Deactivation gate (
+DeactivationGate
+) checks auth sync — no equivalent for AppState changes
+Lifecycle Risk
+🔴 Critical: supabase.auth.onAuthStateChange listener in 
+ThemeProvider
+, 
+Layout
+, 
+NotificationDropdown
+ — all create separate subscriptions with no coordination. On RN, each re-mount on foreground creates duplicate listeners.
+Gesture Conflicts
+None significant in auth flow
+Native Corrections Required
+Replace OAuth redirect with expo-auth-session / expo-web-browser
+Decompose Onboarding into 4-6 individual screen components in an auth stack
+Replace <input type="file"> with expo-image-picker
+Use SecureStore for token persistence
+Add AppState listener to restore/refresh session on foreground
+Centralize auth state change listeners into a single AuthProvider
+1.2 Feed Flow
+Load → Scroll → Open Post → Back
+
+Current Web Behavior
+Feed.tsx
+ (209 lines) and 
+Home.tsx
+ (13KB) serve as the main feed
+Feed uses TanStack Query with useQuery for posts
+PostCard.tsx
+ — 40KB monolithic component
+Post detail via React Router (/post/:id)
+Inline comment drawer (
+CommentDrawer.tsx
+ — 16KB)
+Reaction picker with hover (
+ReactionPicker.tsx
+ — 7KB)
+Framer Motion for feed entry animation
+Web-Only Assumptions
+CSS overflow scrolling — no virtualization
+Hover states for reaction picker
+DOM div layout with CSS flexbox/grid
+window.scrollTo for scroll position management
+Dropdown menus (Radix) for post actions
+Mobile Friction Points
+No FlatList — feed renders all posts in a scrollable div; catastrophic on mobile for 100+ posts
+PostCard.tsx at 40KB — enormous, not memoized; every re-render is expensive
+Reaction picker hover — impossible on touch; needs long-press → tooltip/modal
+Comment drawer — Radix Sheet; needs native bottom sheet (@gorhom/bottom-sheet)
+Image loading — no lazy loading strategy for feed images
+Navigation Differences
+Web: /post/:id opens inline or navigates
+Mobile: should push onto a stack with native back gesture
+State Handling Differences
+Web: scroll position lost on navigate back (no scroll restoration)
+Mobile: FlatList with maintainVisibleContentPosition or scroll index preservation needed
+Background/Foreground
+Feed data becomes stale during background; no refetch-on-focus configured
+Should add refetchOnWindowFocus equivalent via AppState listener + queryClient.invalidateQueries
+Lifecycle Risk
+🟠 High: No pagination/infinite scroll — loads all posts in one query; will OOM on mid-range Android with large feeds
+Gesture Conflicts
+Swipe-to-go-back may conflict with horizontal carousels in posts
+Pull-to-refresh is missing
+Native Corrections Required
+Replace scroll div with FlatList with keyExtractor, getItemLayout, pagination
+Decompose PostCard into smaller memoized sub-components
+Replace hover reaction picker with long-press modal
+Add pull-to-refresh
+Replace Comment drawer with @gorhom/bottom-sheet
+Add infinite scroll pagination to TanStack Query
+Add React.memo to PostCard with comparison function
+1.3 Profile Flow
+Own Profile vs Other Profile
+
+Current Web Behavior
+Profile.tsx
+ — 518 lines, handles both own and other profiles
+useParams for profile ID, complex 
+loadProfile
+ logic
+Edit modal (
+EditProfileModal.tsx
+)
+Avatar upload with crop (uses DOM FileReader, canvas for cropping)
+Connection actions (connect, message) with optimistic mutations
+Profile view tracking
+Web-Only Assumptions
+Avatar crop uses HTML Canvas — no RN equivalent
+Modal is Radix Dialog
+32 profile sub-components all use DOM/Tailwind
+useNavigate for message → messaging page navigation
+Mobile Friction Points
+Avatar crop needs expo-image-manipulator
+Profile edit should be a pushed screen, not a modal overlay
+Connection status badges need native tap target sizing (currently CSS-sized)
+Lifecycle Risk
+Profile view tracking fires on mount — may double-fire on RN screen focus
+Should use useFocusEffect instead of useEffect for view tracking
+Native Corrections Required
+Split into OwnProfileScreen and OtherProfileScreen
+Use expo-image-manipulator for avatar crop
+Convert edit modal to a stack-pushed screen
+Use useFocusEffect for view tracking
+Ensure 44px minimum tap targets on all action buttons
+1.4 Messaging Flow
+List → Chat → Reconnect
+
+Current Web Behavior
+Messaging.tsx
+ — 435 lines, manages both conversation list and chat view
+Mobile detection via 
+useIsMobile()
+ (media query at 768px)
+Conversation selection via useSearchParams (?partner=<id>)
+Realtime subscription via 
+subscribeToMessages
+ (Supabase channel)
+Messages rendered in <div className="space-y-3"> — no virtualization
+Input is <input type="text"> with onKeyDown for Enter-to-send
+Quick reply suggestions hidden on mobile (hidden md:block)
+Web-Only Assumptions
+useSearchParams for partner selection — URL-based state
+DOM keyboard events (onKeyDown)
+CSS overflow scrolling for messages
+scrollIntoView({ behavior: "smooth" }) for auto-scroll
+Quick replies use CSS hidden md:block — web-responsive pattern
+Mobile Friction Points
+No inverted FlatList — messages scroll down from top; native chat apps scroll up from bottom
+No KeyboardAvoidingView — input will be hidden behind keyboard
+No keyboard dismiss on scroll — standard mobile UX missing
+Auto-scroll uses DOM method — scrollIntoView doesn't exist in RN
+Quick reply suggestions hidden — should be visible on mobile, tappable
+Message input uses <input> — needs TextInput with returnKeyType="send"
+Navigation Differences
+Web: sidebar + main panel split; URL params select conversation
+Mobile: should be ConversationListScreen → ChatScreen (stack push)
+State Handling Differences
+Web: search params hold partner ID; back button navigates away
+Mobile: navigation state holds partner; back gesture returns to list
+Background/Foreground
+🔴 Critical: Realtime subscription in 
+subscribeToMessages
+ does not handle app backgrounding. Supabase channel will disconnect after ~30s in background. Must resubscribe on foreground.
+Unread count polling has no lifecycle awareness
+Lifecycle Risk
+🔴 Critical: 
+subscribeToMessages
+ creates a Supabase realtime channel that is only cleaned up on component unmount. If the screen stays mounted (tab navigator), the subscription runs indefinitely — including background.
+Memory: messages array grows unbounded — no cleanup or pagination after initial load
+Gesture Conflicts
+Swipe-to-go-back may conflict with swipe-to-delete messages (if implemented)
+Native Corrections Required
+Use inverted FlatList for messages with onEndReached for pagination
+Add KeyboardAvoidingView wrapping chat screen
+Replace <input> with TextInput + returnKeyType="send" + onSubmitEditing
+Split into ConversationListScreen and ChatScreen (stack navigation)
+Add AppState listener to disconnect/reconnect realtime channel
+Implement useFocusEffect for resubscription on focus
+Add message pagination and memory cap
+1.5 Events Flow
+List → Detail → RSVP
+
+Current Web Behavior
+Events.tsx
+ — 2117 lines — the single largest component in the codebase
+Contains: event list, event creation form, event editing, club list, club following, event registration, event sharing, event deletion — all in one file
+Tab-based UI (Events / Clubs)
+Event detail via navigation to /events/:id
+Registration with external link tracking
+Web-Only Assumptions
+All event creation/editing uses Radix Dialog/Sheet
+Date pickers are <input type="date">
+Image upload uses DOM FileReader
+Tab state via useSearchParams
+Mobile Friction Points
+2117-line monolith is unshippable — must be decomposed into 6+ screens
+Date picker needs @react-native-community/datetimepicker
+Image upload needs expo-image-picker
+Event creation should be a dedicated screen, not a dialog
+Lifecycle Risk
+Event list query has no stale-time management
+Tab state would be lost on background/foreground cycle
+Native Corrections Required
+Decompose into: EventListScreen, EventDetailScreen, CreateEventScreen, EditEventScreen, ClubListScreen
+Replace date pickers with native platform pickers
+Replace image upload with expo-image-picker
+Add pull-to-refresh on event list
+Use FlatList for event list virtualization
+1.6 Network Flow
+Browse → Request → Accept
+
+Current Web Behavior
+Network.tsx
+ — 815 lines
+Three tabs: Browse, Requests, Connections
+Search with debounced input
+Optimistic mutations for connect/accept/reject
+Advanced filters via Radix Popover
+Web-Only Assumptions
+CSS Grid layout for user cards
+Radix Popover for filter panel
+Hover states on user cards
+Tab state via component state (not URL)
+Mobile Friction Points
+User cards need reduced density for touch
+Filter popover should become a bottom sheet
+Search input needs proper keyboard handling
+Native Corrections Required
+Use FlatList for user list with numColumns={1} on mobile
+Replace Popover filters with bottom sheet
+Ensure 44px tap targets on connect/accept/reject buttons
+Add pull-to-refresh
+1.7 Notifications Flow
+Badge → List → Navigate
+
+Current Web Behavior
+NotificationDropdown.tsx
+ — 728 lines
+Uses Radix DropdownMenu — appears as a dropdown from navbar
+Realtime subscription for new notifications
+Accept/reject connection requests inline
+Deep-link resolution for comment/message notifications
+Notification count badge in navbar
+Web-Only Assumptions
+DropdownMenu (Radix) — no equivalent in RN
+Dropdown positioning relative to navbar trigger
+CSS scrollable notification list
+DOM-based notification icons
+Mobile Friction Points
+Must be a full screen, not a dropdown — mobile UX pattern
+Notification badge should be on tab bar icon
+Push notification integration needed (currently only in-app)
+Deep linking from push notification to specific screen
+Background/Foreground
+🟠 High: Realtime notification subscription runs inside the dropdown component — if dropdown is never opened, subscription may not be active. On mobile, notifications must run app-wide.
+Lifecycle Risk
+Notification subscription should be centralized and lifecycle-aware
+Must handle push notification received while app is in background
+Native Corrections Required
+Create dedicated NotificationsScreen
+Move subscription to a top-level provider
+Add push notification handling via expo-notifications
+Add badge count on tab bar icon
+Implement deep linking from notification tap to target screen
+1.8 Settings Flow
+Theme → Logout → Delete
+
+Current Web Behavior
+Settings.tsx
+ — 753 lines
+Tab-based (Account, Privacy, Notifications, Appearance)
+Theme switching via 
+useTheme
+ → 
+applyThemeToDOM
+Password reset via email
+Account deletion with confirmation dialog
+Push notification toggle
+Web-Only Assumptions
+Theme applies via document.documentElement.classList.add/remove("dark")
+Tab state persisted to localStorage (TAB_STORAGE_KEY)
+Radix AlertDialog for deletion confirmation
+DOM-based toggle switches
+Mobile Friction Points
+Theme must use RN Appearance API + AsyncStorage
+localStorage → AsyncStorage/SecureStore
+Confirmation dialog should use native Alert.alert
+Native Corrections Required
+Replace DOM theme with Appearance API + context
+Use AsyncStorage for tab state persistence
+Use native Alert.alert for destructive confirmations
+Section-based FlatList for settings rows
+Native toggle switches (Switch from RN)
+TASK 2 — UI & Design System Audit
+2.1 Color Tokens
+Current State: Design tokens defined in 
+design-tokens.ts
+ with good structure (surface tiers, text opacity scale, signal colors, border scale, overlay scale). However:
+
+Problem	Evidence	Impact
+Tokens defined as CSS-ready values (rgba strings)	'rgba(255, 255, 255, 0.90)'	Cannot be used in RN StyleSheet.create without parsing
+Parallel token system in Tailwind config	hsl(var(--primary)) CSS variables	No CSS variables in RN
+Massive hard-coded color bypass	bg-[#000000], bg-[#0a0a0a], bg-[#1a1a1a] everywhere	Bypasses tokens entirely
+Three theme scopes	home-theme, landing-theme, admin	Only home-theme relevant for mobile
+Native Adjustment: Export tokens as platform-agnostic objects. For RN, colors should be plain hex/rgba strings consumed by StyleSheet.create. The shared package must define a theme.ts that both web and mobile consume.
+
+2.2 Spacing Scale
+Current State: Spacing in 
+design-tokens.ts
+ is minimal:
+
+cardPadding: sm/md/lg (12/16/24px)
+feedGap: 20px
+sectionGap: 24px
+Problem: Most spacing is done via Tailwind utilities (p-4, gap-3, mx-2) — no systematic scale shared with RN.
+
+Native Adjustment: Define a complete 4px-base spacing scale (4, 8, 12, 16, 20, 24, 32, 40, 48) in the shared theme. All RN components must use this scale exclusively.
+
+2.3 Typography Scale
+Current State: Good scale in tokens (xs through 3xl). Font family: Space Grotesk.
+
+Problem:
+
+Web uses 
+rem
+ units — invalid in RN (RN uses dp / raw numbers)
+Font weight tokens use numeric values (400, 500, 600, 700) — correct for RN
+No platform-specific font registration
+Native Adjustment:
+
+Convert rem to numeric values: 0.75rem → 12, 0.875rem → 14, 1rem → 16, etc.
+Register Space Grotesk via expo-font or use system fallback
+Create typography.ts in shared package with platform-agnostic values
+2.4 Avatar Sizing
+Current State: Avatars use Radix 
+Avatar
+ with Tailwind sizing:
+
+h-10 w-10 (40px) in chat headers
+h-8 w-8 (32px) in timestamps
+Various sizes across components
+Problem: Inconsistent — at least 5 different avatar size classes used. Some are below 44px touch target.
+
+Native Adjustment: Define avatarSize token: { xs: 24, sm: 32, md: 40, lg: 56, xl: 80 } and enforce consistency.
+
+2.5 Card Density
+Current State: Surface card tiers (tier1, tier2, tier3) with tiered border opacity. PostCard is very dense with reaction bar, comment preview, share actions.
+
+Problem: Desktop card density is too high for mobile touch. PostCard has 8+ interactive elements in tight proximity.
+
+Native Adjustment:
+
+Increase card padding from 16px to 20px on mobile
+Increase spacing between interactive elements to 12px minimum
+Simplify reaction bar to 2-3 visible actions + overflow menu
+2.6 Shadow Usage
+Current State: Shadows defined in tokens (sm, 
+md
+, lg, lifted). Uses rgba(0, 0, 0, ...) values.
+
+Problem: RN shadow properties differ per platform:
+
+iOS: shadowColor, shadowOffset, shadowOpacity, shadowRadius
+Android: elevation
+Native Adjustment: Create shadow utility that outputs per-platform shadow props. Consider using react-native-shadow-2 for cross-platform consistency.
+
+2.7 Border Radius Consistency
+Current State: Radius tokens: sm/md/lg/xl/full (8/12/16/20/9999px).
+
+Problem: 
+rem
+-based values need conversion. borderRadius: var(--radius) CSS variable pattern not available in RN.
+
+Native Adjustment: Convert to numeric: { sm: 8, md: 12, lg: 16, xl: 20, full: 9999 }.
+
+2.8 Iconography Usage
+Current State: Lucide React icons throughout (100+ icon imports).
+
+Problem: lucide-react is web-only. Must use lucide-react-native or an alternative icon library for RN.
+
+Native Adjustment: Use lucide-react-native (exists as a package) or map to a native icon set.
+
+2.9 Touch Target Sizes
+Current State: Tailwind config defines min-h-touch: 44px and min-h-touch-lg: 48px. Some usage exists but not enforced.
+
+Problem: Many interactive elements are below 44px:
+
+Chat action buttons: h-9 w-9 (36px) — below minimum
+Reaction buttons: no explicit size
+Tab items in bottom nav: adequate at h-16 parent, but icon-only at h-6 w-6
+Native Adjustment: Enforce 44×44pt minimum hitSlop on all touchable elements. Audit every Button and Pressable instance.
+
+2.10 Safe Area Usage
+Current State: Tailwind config has safe-bottom and safe-top spacing utilities using env(safe-area-inset-*).
+
+Problem: env() is a CSS function — not available in RN.
+
+Native Adjustment: Use react-native-safe-area-context with SafeAreaView and useSafeAreaInsets() hook.
+
+2.11 Dark Mode Behavior
+Current State: Theme persisted in Supabase (user_settings.theme_mode). Applied via DOM class toggling. Supports light/dark/system.
+
+Problem: Entire pipeline is DOM-dependent:
+
+applyThemeToDOM
+ adds dark class to document.documentElement
+window.matchMedia checks system preference
+ThemeProvider
+ uses createElement context — works, but theme application is DOM
+Native Adjustment:
+
+Use RN Appearance API for system theme detection
+Store preference in AsyncStorage (or Supabase for sync)
+Apply theme via React context + StyleSheet variant selection
+No CSS class toggling
+TASK 3 — Component Parity Audit
+3.1 ConversationItem
+Aspect	Detail
+Web equivalent	Inline JSX in 
+ConversationList.tsx
+ — not a standalone component
+Web-only patterns	Tailwind classes, <div> layout, className conditional styling, <Link> navigation
+Minimal native version	Pressable + Avatar + name/message preview + timestamp + unread badge
+Performance risks	Must be memoized — renders in a FlatList with frequent updates
+Memoization needs	React.memo with areEqual comparing partner.id, lastMessage.id, 
+unreadCount
+FlatList constraints	Must have stable keyExtractor (partner.id), fixed getItemLayout if possible
+V1 exclusions	No swipe-to-delete, no typing indicator animation, no avatar long-press
+3.2 PostCard
+Aspect	Detail
+Web equivalent	
+PostCard.tsx
+ — 40KB, single file
+Web-only patterns	Framer Motion, Radix DropdownMenu, hover tooltip on reactions, CSS line-clamp, <img> tags, dangerouslySetInnerHTML possibility
+Minimal native version	Header (avatar + name + time) → Content (text) → Image (if any) → Action bar (like/comment/share counters)
+Performance risks	🔴 Highest risk component — renders in feed FlatList. At 40KB, the web version is unportable. Must be < 200 lines for RN.
+Memoization needs	React.memo with comparison on post.id, post.likes_count, post.comments_count, post.userReaction
+FlatList constraints	Variable height — cannot use getItemLayout. Must ensure no inline functions in render.
+V1 exclusions	No inline comment expansion, no share modal, no repost, no poll rendering, no attachment carousel
+3.3 UserCard
+Aspect	Detail
+Web equivalent	Inline JSX in 
+Network.tsx
+ — not a standalone component
+Web-only patterns	CSS Grid layout, hover effects, Tailwind conditional classes
+Minimal native version	Pressable + Avatar + name + role/context line + connect button
+Performance risks	Moderate — renders in network FlatList
+Memoization needs	React.memo comparing user.id, user.connection_status
+FlatList constraints	Should be fixed height for getItemLayout optimization
+V1 exclusions	No hover card, no inline messaging, no advanced filter badges
+3.4 EventCard
+Aspect	Detail
+Web equivalent	Inline JSX in 
+Events.tsx
+ — embedded in 2117-line component
+Web-only patterns	Tailwind grid, Radix Sheet for details, CSS date formatting
+Minimal native version	Cover image + title + date/time + location + RSVP button
+Performance risks	Cover image loading needs FastImage or expo-image
+Memoization needs	React.memo comparing event.id, event.is_registered
+V1 exclusions	No event creation, no inline editing, no share modal
+3.5 NotificationItem
+Aspect	Detail
+Web equivalent	Inline JSX in 
+NotificationDropdown.tsx
+Web-only patterns	Radix DropdownMenu items, CSS-based unread styling
+Minimal native version	Icon + content text + timestamp + unread indicator + accept/reject for connection requests
+Performance risks	Low — notification list is typically short
+Memoization needs	React.memo comparing notification.id, notification.read
+V1 exclusions	No inline accept/reject (navigate to profile first), no bulk actions
+3.6 SettingsRow
+Aspect	Detail
+Web equivalent	Inline JSX in 
+Settings.tsx
+Web-only patterns	Radix Switch, Tailwind card styling
+Minimal native version	Label + description + RN Switch or chevron
+V1 exclusions	No inline edit modals
+3.7 ChatInput
+Aspect	Detail
+Web equivalent	<input type="text"> in 
+ChatView.tsx
+Web-only patterns	onKeyDown for Enter, DOM input, CSS styling
+Minimal native version	TextInput + Send Pressable, wrapped in KeyboardAvoidingView
+Performance risks	Must avoid re-rendering FlatList on every keystroke
+V1 exclusions	No attachments, no voice messages
+3.8 MessageBubble
+Aspect	Detail
+Web equivalent	Inline JSX in ChatView — <div className="max-w-[70%] px-4 py-2.5 rounded-2xl">
+Web-only patterns	CSS max-w-[70%], rounded-2xl, text-[10px]
+Minimal native version	
+View
+ with maxWidth: '70%', borderRadius: 16, aligned left/right based on sender
+V1 exclusions	No read receipts, no reactions, no reply-to
+3.9 TabBar
+Aspect	Detail
+Web equivalent	
+BottomNavigation.tsx
+ — 183 lines, DOM with CSS fixed positioning
+Web-only patterns	position: fixed, z-50, CSS flex, <Link> from React Router, Radix Sheet for "More" menu
+Minimal native version	React Navigation createBottomTabNavigator with custom tab bar component
+Performance risks	Tab bar re-renders on every route change — must memoize icons
+V1 exclusions	No "More" sheet — cap tabs to 5 maximum
+3.10 RootNavigator + Stack Layouts
+Aspect	Detail
+Web equivalent	
+App.tsx
+ 
+AnimatedRoutes
+ — flat route list with BrowserRouter
+Web-only patterns	BrowserRouter, 
+Routes
+, 
+Route
+, Navigate, AnimatePresence, URL-based routing
+Minimal native version	NavigationContainer → conditional AuthStack / MainTabs → per-tab stacks
+V1 exclusions	No animated route transitions, no deep link handling (defer to V2)
+TASK 4 — Layout Architecture Audit
+4.1 Root Layout
+Current: 
+App.tsx
+ wraps everything in ErrorBoundary > QueryClientProvider > ThemeProvider > ProfileProvider > IdentityProvider > BrowserRouter. Inside the router: ScrollToTop, 
+GlobalAuthListener
+, 
+DeactivationGate
+, 
+AnimatedRoutes
+, 
+FloatingChatWidgetGate
+.
+
+Problem:
+
+Provider ordering is correct but BrowserRouter must be replaced
+ScrollToTop is DOM-only (window.scrollTo)
+GlobalAuthListener
+ uses useNavigate which is React Router
+FloatingChatWidgetGate
+ is web-only (floating AI chat widget)
+Recommendation: RN root should be: ErrorBoundary > QueryClientProvider > ThemeProvider > AuthProvider > NavigationContainer > (AuthStack | MainTabs). Remove ScrollToTop, 
+FloatingChatWidgetGate
+.
+
+4.2 Tab Layout
+Current: 
+BottomNavigation.tsx
+ renders 4 primary tabs (Home, Network, Messages, Events) + "More" sheet with 3 secondary items. Permission-gated.
+
+Problem: Uses React Router <Link>, useLocation for active state, Radix Sheet for overflow menu.
+
+Recommendation: createBottomTabNavigator with 5 tabs max. Permission gating via screen options.
+
+4.3 Stack Nesting
+Current: No nesting — all routes are flat at the router level.
+
+Recommendation: Each tab should have its own stack:
+
+MainTabs
+  ├─ HomeStack (Feed, PostDetail, CreatePost)
+  ├─ NetworkStack (Network, OtherProfile)
+  ├─ MessagingStack (ConversationList, Chat)
+  ├─ EventsStack (EventList, EventDetail, CreateEvent)
+  └─ ProfileStack (OwnProfile, Settings)
+4.4 Modal Usage
+Current: Radix Dialog/Sheet used for: edit profile, create post, comment drawer, share, repost, event creation. ~15 modal usages across the app.
+
+Problem: All use DOM-based Radix overlay. None work in RN.
+
+Recommendation: Use RN Modal or react-navigation modal screens. Limit to 3 modal patterns: confirmation alert, bottom sheet, full-screen modal.
+
+4.5 Header Usage
+Current: 
+Navbar.tsx
+ — 28KB, handles: logo, search, navigation links, notification dropdown, profile menu, add button. Responsive: collapses on mobile.
+
+Problem: Massively complex for a web navbar. On RN, headers should be screen-level, not app-level.
+
+Recommendation: Use React Navigation's built-in header with headerRight, headerLeft props. No app-level navbar.
+
+4.6 Back Navigation
+Current: Browser back button. Some components use useNavigate(-1).
+
+Problem: navigate(-1) is web-only. RN uses navigation.goBack().
+
+Recommendation: Use navigation.goBack(). Ensure all stacks have proper back behavior. Test edge case: deep link → screen with no back history.
+
+4.7 Gesture Handling
+Current: No gesture handling — relies on browser defaults.
+
+Recommendation: Use react-native-gesture-handler for:
+
+Swipe-to-go-back (iOS native, needs careful stack configuration)
+Pull-to-refresh on lists
+Long-press for context menus
+4.8 Deep Linking
+Current: URL-based via React Router. Post detail: /post/:id. Profile: /profile/:id. Event: /events/:id.
+
+Recommendation: Configure React Navigation deep linking with URL scheme (clstr://) and universal links. Map existing URL structure to navigation state.
+
+4.9 Screen Registry Pattern
+Current: No screen registry — routes are inline in 
+App.tsx
+.
+
+Recommendation: Create a screens/ directory with one file per screen. Register all screens in a central navigation/ config. This prevents circular imports and ensures type-safe navigation.
+
+Answers
+Question	Answer
+Is navigation tree minimal?	❌ Current web has 60+ routes; mobile should have ~20 screens for V1
+Are stacks too deep?	N/A — no stacks exist yet; design for max 3 levels
+Circular screen imports?	⚠️ Risk: Profile → Messaging → Profile navigation patterns must use IDs not component imports
+Inconsistent header config?	❌ Web has one global navbar; RN needs per-screen headers
+Screen state leaks?	⚠️ Tab screens stay mounted — TanStack Query caches are shared, which is fine, but effect-based subscriptions will run in background tabs
+TASK 5 — Theme & Appearance Audit
+5.1 Dark Mode Consistency
+Problem: Web app has three visual systems (home-theme, landing-theme, admin) with heavy hard-coded hex bypassing tokens. Only home-theme is relevant for mobile.
+
+Recommendation: Create a single mobile theme object:
+
+typescript
+export const mobileTheme = {
+  dark: {
+    background: '#000000',
+    surface1: 'rgb(23, 22, 22)',
+    surface2: 'rgb(23, 22, 22)',
+    textPrimary: 'rgba(255, 255, 255, 1)',
+    textSecondary: 'rgba(255, 255, 255, 0.90)',
+    textTertiary: 'rgba(255, 255, 255, 0.60)',
+    border: 'rgba(255, 255, 255, 0.10)',
+    // ...
+  },
+  light: { /* ... */ }
+};
+5.2 Theme Persistence
+Current: Supabase user_settings.theme_mode. Applied via 
+applyThemeToDOM
+.
+
+RN Approach:
+
+Read from Supabase on auth
+Cache in AsyncStorage for instant cold start
+Apply via 
+ThemeContext
+ wrapping NavigationContainer (for DarkTheme/LightTheme)
+5.3 Appearance API Usage
+Current: window.matchMedia("(prefers-color-scheme: dark)") for system mode.
+
+RN Approach: import { Appearance } from 'react-native' + Appearance.addChangeListener.
+
+5.4 System Theme Handling
+Current: Supported via 
+getEffectiveTheme("system")
+ which checks window.matchMedia.
+
+RN Approach: Appearance.getColorScheme() returns 'light' | 'dark' | null.
+
+5.5 Token Centralization
+Problem: Tokens live in 
+src/lib/design-tokens.ts
+ (web-only path) and 
+tailwind.config.ts
+ (Tailwind-specific). Duplicated and divergent.
+
+Recommendation: Move to packages/shared/src/theme/ with:
+
+colors.ts — platform-agnostic color values
+spacing.ts — numeric spacing scale
+typography.ts — font sizes as numbers
+index.ts
+ — barrel export
+5.6 No DOM Theme Leakage
+Current DOM-dependent code that must NOT exist in mobile:
+
+document.documentElement.classList.add("dark") → ❌
+window.matchMedia(...) → ❌
+env(safe-area-inset-bottom) → ❌
+hsl(var(--primary)) → ❌
+className on any element → ❌
+Recommendations for Future Theming
+Animation discipline: Define animation preset constants: DURATIONS = { fast: 150, default: 250, slow: 400 } and use react-native-reanimated withTiming with these.
+Cross-platform consistency: All tokens in shared package, consumed by both web (via CSS custom properties) and mobile (via StyleSheet).
+TASK 6 — Performance Risk Audit
+6.1 Unnecessary Re-renders
+Location	Risk	Fix
+PostCard (40KB)	🔴 Re-renders on every feed update	React.memo with specific props comparison
+ConversationList	🟠 Re-renders on every message receive	React.memo per ConversationItem
+NotificationDropdown	🟠 All notifications re-render on any mutation	Extract NotificationItem with React.memo
+Network.tsx tab switching	🟡 Entire 815-line component re-renders	Split into per-tab components
+Events.tsx	🔴 2117-line component re-renders on any state change	Decompose into 6+ screens
+6.2 FlatList Misuse
+Current: No FlatList used anywhere — all lists use CSS overflow scroll. This means:
+
+No virtualization
+All items rendered simultaneously
+Memory grows linearly with data size
+Critical lists that MUST use FlatList:
+
+Feed posts
+Conversation list
+Messages in chat
+Network user cards
+Event list
+Notification list
+6.3 Inverted List Risks
+Chat messages must use inverted={true} FlatList. Risks:
+
+Data must be in reverse chronological order
+onEndReached fires at the top (older messages)
+Must set maintainVisibleContentPosition to prevent scroll jumps during pagination
+6.4 Large Object Props
+Component	Problem	Fix
+PostCard receives entire 
+Post
+ object	Post has 30+ fields, many unnecessary for display	Create PostCardProps with only needed fields
+ChatView receives full messages[] array	Array reference changes on every new message	Use FlatList data prop directly; use extraData for comparisons
+Network user cards receive full 
+NetworkUser
+Includes connection status, domain, all fields	Create UserCardProps minimal interface
+6.5 Inline Functions in Render
+Widespread pattern across all pages:
+
+tsx
+// Found in Network.tsx, Events.tsx, Messaging.tsx, etc.
+onClick={() => handleAction(item.id)}
+In FlatList renderItem, this creates new function references every render, defeating React.memo.
+
+Fix: Extract handler functions via useCallback, or use stable references via item IDs.
+
+6.6 Missing React.memo
+No component in the codebase uses React.memo. Zero occurrences:
+
+PostCard: ❌
+ConversationList: ❌
+ChatView: ❌
+NotificationDropdown: ❌
+Network user rendering: ❌
+This is critical for FlatList performance on RN. Every render of the parent causes every visible list item to re-render.
+
+6.7 Query Invalidation Overuse
+Found aggressive invalidation patterns:
+
+typescript
+// In Network.tsx mutations:
+queryClient.invalidateQueries({ queryKey: NETWORK_QUERY_KEYS.users(...) });
+queryClient.invalidateQueries({ queryKey: NETWORK_QUERY_KEYS.requests });
+queryClient.invalidateQueries({ queryKey: NETWORK_QUERY_KEYS.connections });
+Three invalidations for a single action — causes 3 refetches. Should use targeted cache updates instead.
+
+6.8 Memory Leak Risk
+Source	Risk	Mitigation
+Supabase realtime channels	🔴 Multiple listeners across providers, no coordination	Single subscription manager
+auth.onAuthStateChange	🟠 Duplicated in ThemeProvider, Layout, NotificationDropdown	Centralize to one AuthProvider
+Message subscription	🔴 No background/foreground management	AppState-aware subscription lifecycle
+Notification subscription	🟠 Lives inside dropdown component	Move to top-level provider
+TanStack Query cache	🟡 No gcTime or staleTime optimization	Set appropriate gcTime per query
+6.9 Realtime Subscription Lifecycle Risks
+subscribeToMessages
+ in 
+messages-api.ts
+:
+
+Creates a Supabase realtime channel
+No reconnection logic on network change
+No disconnect on background
+No exponential backoff on failure
+setupRealtimeSubscription
+ in NotificationDropdown:
+
+Lives inside a component that may never mount on mobile
+No cleanup on tab change
+Recommendation: Create a RealtimeManager singleton:
+
+Manages all Supabase channels
+Subscribes on foreground, pauses on background
+Reconnects on network recovery
+Single point of cleanup
+TASK 7 — Mobile-Native Corrections
+7.1 Feed Screen
+Action	Items
+Simplify	PostCard from 40KB to <200 lines. Remove hover states, inline comments, repost flow.
+Remove	Framer Motion animations, CSS grid layout, quick navigation sidebar, trending sidebar.
+Redesign	Feed as inverted FlatList with pull-to-refresh. Reaction bar as long-press → modal.
+Keep identical	Post content rendering, like/comment counts, avatar display.
+Must feel native	Pull-to-refresh, native scroll behavior, scroll-to-top on tab re-tap.
+Layout differs	Single column, no sidebar. Full-width cards. No desktop-style 3-column layout.
+Reduce density	Remove side panels. Increase card padding. Fewer visible actions per post.
+7.2 Chat Screen
+Action	Items
+Simplify	Remove quick reply suggestions (or make tappable chips). Remove web-only keyboard handling.
+Remove	onKeyDown for Enter, DOM scroll, scrollIntoView, hidden md:block logic.
+Redesign	Inverted FlatList + KeyboardAvoidingView. TextInput with returnKeyType="send".
+Keep identical	Message bubble appearance (left/right alignment, rounded corners, timestamp).
+Must feel native	Keyboard avoidance, auto-scroll on new message, dismiss keyboard on scroll.
+Layout differs	Full-screen chat (not split panel). Stack navigation (list → chat).
+Reduce density	Increase message bubble padding. Increase timestamp font size from 10px to 12px.
+7.3 Profile Screen
+Action	Items
+Simplify	Remove side panels, reduce profile sections to core (info, posts, connections).
+Remove	Canvas-based avatar crop. Hover effects on action buttons.
+Redesign	Avatar upload via expo-image-picker. Edit as push screen not modal.
+Keep identical	Profile header layout, connection count, bio display.
+Must feel native	Scroll-based header collapse. Native share sheet for profile sharing.
+Layout differs	Single column, scrollable. No fixed sidebar.
+7.4 Events Screen
+Action	Items
+Simplify	Decompose 2117-line monolith into 5+ screens. V1: list + detail only.
+Remove	Event creation/editing (defer to V2). Club management. Advanced filters.
+Redesign	FlatList for event list. Detail as stack-pushed screen.
+Keep identical	Event card visual (title, date, location, cover image).
+Must feel native	Pull-to-refresh. Native date/time display.
+Reduce density	One column of event cards. Larger cover images.
+7.5 Network Screen
+Action	Items
+Simplify	Remove advanced filters. Reduce tabs to 2 (Browse + Requests).
+Remove	CSS Grid layout. Hover effects. Popover filter panel.
+Redesign	Single-column FlatList of user cards. Search bar at top.
+Keep identical	Connect/accept/reject actions. User card info (name, role, context).
+Must feel native	Pull-to-refresh. Optimistic UI on connect.
+Reduce density	Larger user cards. More spacing between items.
+7.6 Notifications Screen
+Action	Items
+Simplify	Convert dropdown to full screen. Remove bulk actions for V1.
+Remove	Radix DropdownMenu. DOM-based positioning.
+Redesign	FlatList with notification items. Section headers for "Today" / "Earlier".
+Keep identical	Notification content, timestamps, unread indicator.
+Must feel native	Swipe-to-mark-as-read. Tab badge with unread count. Push notification integration.
+7.7 Settings Screen
+Action	Items
+Simplify	Remove tab-based layout → use SectionList with grouped sections.
+Remove	Radix AlertDialog. localStorage usage. DOM theme toggling.
+Redesign	SectionList with native-feeling sections. Theme via Appearance API. Deletion via Alert.alert.
+Keep identical	Setting labels, descriptions, toggle values.
+Must feel native	Native Switch components. Section headers. iOS/Android platform styling.
+Priority-Ranked Fix List
+🔴 Critical (Must fix before any screen development)
+#	Fix	Effort	Blocks
+C1	Create shared design token package (packages/shared/src/theme/) with platform-agnostic colors, spacing, typography	1 day	All screens
+C2	Build RN ThemeProvider using Appearance API + context (not DOM)	0.5 day	All screens
+C3	Set up React Navigation with AuthStack / MainTabs / per-tab stacks	1 day	All screens
+C4	Create RealtimeManager for lifecycle-safe Supabase channel management	1 day	Messaging, Notifications
+C5	Create AuthProvider with centralized onAuthStateChange + SecureStore token management	1 day	Auth flow
+C6	Establish React.memo discipline — all list item components must be memoized	0.5 day	All lists
+🟠 High (Must fix before shipping V1)
+#	Fix	Effort
+H1	Decompose PostCard from 40KB to <200 lines with memoized sub-components	1 day
+H2	Decompose Events.tsx from 2117 lines to 5+ screens	2 days
+H3	Decompose Onboarding.tsx from 1368 lines to 4-6 step screens	1 day
+H4	Build inverted FlatList for chat with KeyboardAvoidingView	1 day
+H5	Replace all Radix primitives with RN equivalents (Dialog→Modal, Sheet→BottomSheet, etc.)	2 days
+H6	Implement OAuth flow with expo-auth-session	1 day
+H7	Add AppState lifecycle management for subscriptions, sessions, reconnection	1 day
+🟡 Medium (Should fix for quality V1)
+#	Fix	Effort
+M1	Configure staleTime/gcTime on all TanStack Query hooks	0.5 day
+M2	Eliminate inline render functions in FlatList renderItem	0.5 day
+M3	Add pull-to-refresh to all list screens	0.5 day
+M4	Implement safe area handling with react-native-safe-area-context	0.5 day
+M5	Add proper image loading with expo-image or FastImage	0.5 day
+M6	Build proper notification screen with push integration	1 day
+M7	Replace 
+useIsMobile
+ media query with Platform API	0.5 day
+🟢 Low (Can defer to V2)
+#	Fix	Effort
+L1	Deep linking configuration	1 day
+L2	Event creation/editing on mobile	2 days
+L3	Portfolio features on mobile	2 days
+L4	Admin panel on mobile	Defer indefinitely
+L5	Animated route transitions	0.5 day
+L6	Gesture-based interactions (swipe-to-dismiss, etc.)	1 day
+Appendix: File Size Red Flags
+Files that are too large for their purpose and indicate architectural debt:
+
+File	Lines	Size	Problem
+Events.tsx
+2117	92KB	God component — list + create + edit + delete + clubs
+social-api.ts
+2796	85KB	Monolithic API — posts, comments, connections, reactions all in one
+Onboarding.tsx
+1368	61KB	8-step wizard in a single component
+PostCard.tsx
+~1000	40KB	Single card component with all interactions
+Settings.tsx
+753	43KB	4 tab panels in one component
+Network.tsx
+815	34KB	3 tabs with mutations in one component
+jobs-api.ts
+~900	33KB	API layer with mixed concerns
+Navbar.tsx
+~800	28KB	App-level navbar with embedded notifications, search, menus
+ClubAuth.tsx
+~700	27KB	Auth flow for clubs — separate from main auth
+NotificationDropdown.tsx
+728	26KB	Dropdown with subscriptions, mutations, navigation

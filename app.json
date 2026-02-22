@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Clstr",
+    "name": "clstr",
     "slug": "clstr",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#0A0A0F"
     },
     "ios": {
       "supportsTablet": false,
@@ -20,7 +20,7 @@
     "android": {
       "package": "com.clstr.network",
       "adaptiveIcon": {
-        "backgroundColor": "#000000",
+        "backgroundColor": "#0A0A0F",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
