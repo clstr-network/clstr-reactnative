@@ -10,9 +10,12 @@ import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollV
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
 import { useAuth } from '@/lib/auth-context';
-import { addPost, type Post } from '@/lib/storage';
+import { createPost } from '@/lib/api/social';
+import { QUERY_KEYS } from '@/lib/query-keys';
 
-const CATEGORIES: { value: Post['category']; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+type CategoryValue = 'general' | 'academic' | 'career' | 'events' | 'social';
+
+const CATEGORIES: { value: CategoryValue; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { value: 'general', label: 'General', icon: 'chatbubble-outline' },
   { value: 'academic', label: 'Academic', icon: 'school-outline' },
   { value: 'career', label: 'Career', icon: 'briefcase-outline' },
@@ -28,7 +31,7 @@ export default function CreatePostScreen() {
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState<Post['category']>('general');
+  const [category, setCategory] = useState<CategoryValue>('general');
   const [posting, setPosting] = useState(false);
 
   const handlePost = async () => {
@@ -36,16 +39,8 @@ export default function CreatePostScreen() {
     setPosting(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try {
-      const updated = await addPost({
-        authorId: user.id,
-        authorName: user.name,
-        authorUsername: user.username,
-        authorRole: user.role,
-        authorAvatar: user.avatarUrl,
-        content: content.trim(),
-        category,
-      });
-      queryClient.setQueryData(['posts'], updated);
+      await createPost({ content: content.trim() });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
       router.back();
     } catch (e) {
       Alert.alert('Error', 'Failed to create post. Please try again.');

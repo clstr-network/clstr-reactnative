@@ -1,36 +1,83 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, useColorScheme, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useColorScheme, Alert, Share, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import { useThemeColors } from '@/constants/colors';
-import { toggleSavePost } from '@/lib/storage';
+import { useAuth } from '@/lib/auth-context';
+import { toggleSavePost, reportPost } from '@/lib/api/social';
+import { QUERY_KEYS } from '@/lib/query-keys';
 
 export default function PostActionsSheet() {
   const { id, isSaved } = useLocalSearchParams<{ id: string; isSaved: string }>();
   const colors = useThemeColors(useColorScheme());
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const saved = isSaved === 'true';
 
   const handleSave = async () => {
     if (!id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const updated = await toggleSavePost(id);
-    queryClient.setQueryData(['posts'], updated);
+    try {
+      await toggleSavePost(id);
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
+      if (user?.id) {
+        await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.savedItems(user.id) });
+      }
+    } catch {
+      Alert.alert('Error', 'Could not update save status.');
+    }
+    router.back();
+  };
+
+  const handleShare = async () => {
+    if (!id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Share.share({ message: `Check out this post on Clstr: https://clstr.network/post/${id}` });
+    } catch { /* user cancelled */ }
+    router.back();
+  };
+
+  const handleCopyLink = async () => {
+    if (!id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Clipboard.setStringAsync(`https://clstr.network/post/${id}`);
+    Alert.alert('Copied', 'Link copied to clipboard.');
     router.back();
   };
 
   const handleReport = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert('Report', 'Post has been reported. Thank you for helping keep the community safe.');
-    router.back();
+
+    const submitReport = async (reason: string) => {
+      if (!reason?.trim() || !id) return;
+      try {
+        await reportPost(id, reason.trim());
+        Alert.alert('Reported', 'Thank you for helping keep the community safe.');
+      } catch {
+        Alert.alert('Error', 'Could not submit report.');
+      }
+      router.back();
+    };
+
+    if (Platform.OS === 'ios') {
+      Alert.prompt('Report Post', 'Why are you reporting this post?', submitReport, 'plain-text', '', 'Reason');
+    } else {
+      // Android: Alert.prompt not supported — use preset reason for now
+      Alert.alert('Report Post', 'Do you want to report this post as inappropriate?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Report', style: 'destructive', onPress: () => submitReport('Inappropriate content') },
+      ]);
+    }
   };
 
   const actions = [
     { icon: saved ? 'bookmark' : 'bookmark-outline', label: saved ? 'Unsave Post' : 'Save Post', color: colors.warning, onPress: handleSave },
-    { icon: 'share-outline', label: 'Share Post', color: colors.accent, onPress: () => router.back() },
-    { icon: 'copy-outline', label: 'Copy Link', color: colors.textSecondary, onPress: () => router.back() },
+    { icon: 'share-outline', label: 'Share Post', color: colors.accent, onPress: handleShare },
+    { icon: 'copy-outline', label: 'Copy Link', color: colors.textSecondary, onPress: handleCopyLink },
     { icon: 'flag-outline', label: 'Report Post', color: colors.danger, onPress: handleReport },
   ] as const;
 
