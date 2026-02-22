@@ -1,19 +1,35 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import Colors, { surfaceTiers, badgeVariants } from '@/constants/colors';
+import { useThemeColors, useSurfaceTiers, getRoleBadgeColor, radius } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { Avatar } from './Avatar';
-import type { User } from '@/lib/mock-data';
+
+interface UserCardUser {
+  id?: number | string;
+  full_name?: string;
+  name?: string;
+  avatar_url?: string | null;
+  role?: string;
+  userType?: string;
+  department?: string | null;
+  headline?: string | null;
+  bio?: string | null;
+  connectionStatus?: 'pending' | 'connected' | 'none' | string;
+}
 
 interface UserCardProps {
-  user: User;
+  user: UserCardUser;
   onPress?: () => void;
   onConnect?: () => void;
 }
 
-export function UserCard({ user, onPress, onConnect }: UserCardProps) {
-  const c = Colors.colors;
-  const badge = badgeVariants[user.userType.toLowerCase() as keyof typeof badgeVariants] || badgeVariants.student;
+function UserCard({ user, onPress, onConnect }: UserCardProps) {
+  const colors = useThemeColors();
+  const tiers = useSurfaceTiers();
+  const role = user.role ?? user.userType ?? '';
+  const badge = getRoleBadgeColor(role);
+  const displayName = user.full_name ?? user.name ?? 'Unknown';
 
   const handleAction = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -22,33 +38,37 @@ export function UserCard({ user, onPress, onConnect }: UserCardProps) {
 
   const getButtonConfig = () => {
     switch (user.connectionStatus) {
-      case 'pending': return { label: 'Cancel Request', color: c.primary };
-      case 'connected': return { label: 'Connected', color: c.success };
-      default: return { label: 'Connect', color: c.primary };
+      case 'pending': return { label: 'Cancel Request', color: colors.primary };
+      case 'connected': return { label: 'Connected', color: colors.success };
+      default: return { label: 'Connect', color: colors.primary };
     }
   };
 
   const btn = getButtonConfig();
 
   return (
-    <Pressable style={[styles.card, surfaceTiers.tier2]} onPress={onPress}>
+    <Pressable style={[styles.card, tiers.tier2]} onPress={onPress}>
       <View style={styles.top}>
-        <Avatar name={user.name} size={48} />
+        <Avatar name={displayName} uri={user.avatar_url} size="lg" />
         <View style={styles.info}>
-          <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>{user.name}</Text>
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{displayName}</Text>
           <View style={styles.badgeRow}>
-            <View style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
-              <Text style={[styles.badgeText, { color: badge.text }]}>{user.userType}</Text>
-            </View>
-            <Text style={[styles.dept, { color: c.textTertiary }]} numberOfLines={1}>
-              {user.department}
-            </Text>
+            {role ? (
+              <View style={[styles.badge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
+                <Text style={[styles.badgeText, { color: badge.text }]}>{role}</Text>
+              </View>
+            ) : null}
+            {user.department ? (
+              <Text style={[styles.dept, { color: colors.textTertiary }]} numberOfLines={1}>
+                {user.department}
+              </Text>
+            ) : null}
           </View>
         </View>
       </View>
-      {user.bio ? (
-        <Text style={[styles.bio, { color: c.textSecondary }]} numberOfLines={2}>
-          {user.bio}
+      {(user.bio || user.headline) ? (
+        <Text style={[styles.bio, { color: colors.textSecondary }]} numberOfLines={2}>
+          {user.bio ?? user.headline}
         </Text>
       ) : null}
       <Pressable style={[styles.actionBtn, { borderColor: btn.color }]} onPress={handleAction}>
@@ -58,11 +78,14 @@ export function UserCard({ user, onPress, onConnect }: UserCardProps) {
   );
 }
 
+export { UserCard };
+export default React.memo(UserCard);
+
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 10,
-    borderRadius: 14,
+    borderRadius: radius.lg,
     borderWidth: 1,
     padding: 14,
   },
@@ -75,8 +98,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.base,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -91,30 +114,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 9,
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize['2xs'],
   },
   dept: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
     flex: 1,
   },
   bio: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 12,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
     lineHeight: 17,
     marginTop: 10,
   },
   actionBtn: {
     borderWidth: 1.5,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     paddingVertical: 9,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
   },
   actionText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.md,
   },
 });

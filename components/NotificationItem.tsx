@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import Avatar from './Avatar';
 import { formatRelativeTime } from '@/lib/time';
 import type { Notification } from '@/lib/api/notifications';
@@ -35,7 +36,7 @@ export const NotificationItem = React.memo(function NotificationItem({ notificat
       ]}
     >
       <View style={styles.avatarWrap}>
-        <Avatar uri={actorAvatar} name={actorName || notification.title} size={44} />
+        <Avatar uri={actorAvatar} name={actorName || notification.title} size="md" />
         <View style={[styles.iconBadge, { backgroundColor: icon.color }]}>
           <Ionicons name={icon.name} size={10} color="#fff" />
         </View>
@@ -57,8 +58,8 @@ const styles = StyleSheet.create({
   avatarWrap: { position: 'relative' },
   iconBadge: { position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
   info: { flex: 1, gap: 4 },
-  message: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  actorName: { fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  time: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  message: { fontSize: fontSize.base, lineHeight: 20, fontFamily: fontFamily.regular },
+  actorName: { fontWeight: '700', fontFamily: fontFamily.bold },
+  time: { fontSize: fontSize.sm, fontFamily: fontFamily.regular },
   unreadDot: { width: 8, height: 8, borderRadius: 4 },
 });

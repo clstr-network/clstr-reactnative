@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 
 interface Message {
   content?: string;
@@ -19,7 +20,7 @@ function formatTime(dateStr?: string): string {
   return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
-export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
+function MessageBubble({ message, isOwn }: MessageBubbleProps) {
   const colors = useThemeColors();
 
   return (
@@ -48,6 +49,8 @@ export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
   );
 }
 
+export default React.memo(MessageBubble);
+
 const styles = StyleSheet.create({
   row: {
     paddingHorizontal: 12,
@@ -72,12 +75,14 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   content: {
-    fontSize: 15,
+    fontSize: fontSize.body,
     lineHeight: 20,
+    fontFamily: fontFamily.regular,
   },
   time: {
-    fontSize: 11,
+    fontSize: fontSize.xs,
     marginTop: 4,
     alignSelf: 'flex-end',
+    fontFamily: fontFamily.regular,
   },
 });

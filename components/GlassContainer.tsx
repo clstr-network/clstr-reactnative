@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import Colors from '@/constants/colors';
+import { useSurfaceTiers, radius } from '@/constants/colors';
 
 interface GlassContainerProps {
   children: React.ReactNode;
@@ -9,24 +9,32 @@ interface GlassContainerProps {
   tier?: 1 | 2 | 3;
 }
 
-export function GlassContainer({ children, style, noPadding, tier = 2 }: GlassContainerProps) {
-  const borderColor = tier === 1
-    ? Colors.dark.surfaceBorderStrong
-    : tier === 3
-      ? Colors.dark.divider
-      : Colors.dark.surfaceBorder;
+function GlassContainer({ children, style, noPadding, tier = 2 }: GlassContainerProps) {
+  const tiers = useSurfaceTiers();
+  const tierKey = `tier${tier}` as keyof typeof tiers;
+  const tierStyle = tiers[tierKey];
 
   return (
-    <View style={[styles.container, { borderColor }, noPadding && { padding: 0 }, style]}>
+    <View style={[
+      styles.container,
+      {
+        backgroundColor: tierStyle.backgroundColor,
+        borderColor: tierStyle.borderColor,
+      },
+      noPadding && { padding: 0 },
+      style,
+    ]}>
       {children}
     </View>
   );
 }
 
+export { GlassContainer };
+export default React.memo(GlassContainer);
+
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.dark.surface,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     borderWidth: 1,
     padding: 16,
     overflow: 'hidden',

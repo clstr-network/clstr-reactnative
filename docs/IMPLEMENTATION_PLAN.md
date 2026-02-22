@@ -163,14 +163,14 @@
 | 77 | Cold start deep link queue | ✅ Done | High | `+native-intent.tsx` routes all paths — Expo Router handles cold start queue |
 | 78 | Background → foreground resume | ✅ Done | High | `useAppStateRealtimeLifecycle` — session refresh, cache invalidation, realtime reconnect, Phase 3.5 |
 | **Performance** |
-| 79 | React.memo on heavy components | 🟡 Partial | High | EventCard has it, others don't |
+| 79 | React.memo on heavy components | ✅ Done | High | All 11 shared components wrapped in React.memo (Phase 6.3) |
 | 80 | Stable query keys from `@clstr/core` | ✅ Done | Critical | `lib/query-keys.ts` re-exports `QUERY_KEYS` from `@clstr/core` |
 | 81 | Subscription cleanup on unmount | ✅ Done | High | SubscriptionManager + useRealtimeSubscription auto-cleanup, Phase 3.6 |
 
 **Summary:**
 - ❌ Missing: **18 features**
 - 🟡 Partial: **0 features**
-- ✅ Complete: **41 features** (Phase 0, 1, 2, 3, 4 & 5 with live Supabase integration + realtime + RBAC + deep linking)
+- ✅ Complete: **42 features** (Phase 0, 1, 2, 3, 4, 5 & 6 with live Supabase integration + realtime + RBAC + deep linking + design parity)
 
 ---
 
@@ -205,7 +205,7 @@
 ### 3.4 Performance Risks
 | Risk | Severity | Description |
 |------|----------|-------------|
-| Missing React.memo | 🟡 High | PostCard, ConnectionCard, ConversationItem, NotificationItem — none are memoized (only EventCard is). (Phase 7) |
+| ✅ React.memo applied | ✅ Resolved | All 11 shared components wrapped in React.memo (Phase 6.3) |
 | Inline closures in FlatList | 🟡 Medium | `ItemSeparatorComponent={() => ...}` in Messages creates new function each render. (Phase 7) |
 | No pagination | 🟡 High | All lists fetch everything at once. (Phase 2 will add pagination) |
 | Query key instability | ✅ Resolved | ~~`['connections']` vs `QUERY_KEYS.connections(userId)`.~~ All query keys now use `QUERY_KEYS` from `@clstr/core`. |
@@ -617,40 +617,74 @@ export function redirectSystemPath({ path, initial }) {
 
 ---
 
-### Phase 6: UI Polish & Design Parity (Week 7) — MEDIUM
+### Phase 6: UI Polish & Design Parity (Week 7) — ✅ DONE
 
-#### 6.1 — Design Token Alignment
-Enhance `constants/colors.ts` with surface tiers:
-```ts
-surface: {
-  tier1: { bg, border },
-  tier2: { bg, border },
-  tier3: { bg, border },
-}
-```
+#### 6.1 — Design Token Alignment ✅
+Rewrote `constants/colors.ts` as centralized design system:
+- **Surface tiers**: `surfaceTiers` / `darkSurfaceTiers` — tier1 (strongest), tier2 (neutral), tier3 (quietest)
+- **Badge variants**: `badgeVariants` — student, faculty, alumni, club, organization, default
+- **Avatar sizes**: `AVATAR_SIZES` — xs(24), sm(32), md(40), lg(48), xl(64), 2xl(80)
+- **Spacing**: `spacing` — xs through 2xl + semantic (cardPadding, feedGap, screenHorizontal)
+- **Radii**: `radius` — sm(8) through full(9999)
+- **Hooks**: `useThemeColors()`, `useSurfaceTiers()`, `getRoleBadgeColor()`
+- **Type**: `ThemeColors` type export for typed color usage
+- **Backward compat**: Default export `{ light, dark, colors }` preserves `Colors.dark.*` pattern
+- Both light & dark palettes: brand, backgrounds, text hierarchy, borders, signals, utility
 
-#### 6.2 — Typography Scale
-```ts
-typography: {
-  h1: { fontSize: 28, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
-  h2: { fontSize: 22, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  body: { fontSize: 15, fontWeight: '400', fontFamily: 'Inter_400Regular' },
-  caption: { fontSize: 12, fontWeight: '500', fontFamily: 'Inter_500Medium' },
-}
-```
+#### 6.2 — Typography Scale ✅
+Created `constants/typography.ts` — centralized type system:
+- **Font family map**: `fontFamily` — regular, medium, semiBold, bold, extraBold → Inter expo-google-fonts names
+- **System fallbacks**: `systemFont` — Platform-aware fallbacks before fonts load
+- **Size scale**: `fontSize` — 2xs(10) through 4xl(28), including body(15) and base(14)
+- **Line heights**: `lineHeight` — tight(1.2), normal(1.4), relaxed(1.6)
+- **Letter spacing**: `letterSpacing` — tight(-0.3), normal(0), wide(0.5), wider(1)
+- **14 preset styles**: `typography.h1` through `typography.input` — ready-to-use `TextStyle` objects matching web scale
 
-#### 6.3 — Component Library Polish
-- `Avatar`: Consistent sizing (24, 32, 40, 48, 64, 80)
-- `RoleBadge`: Match web colors exactly
-- `PostCard`: Reaction bar with emoji
-- `EventCard`: Already well-built — add realtime badge counts
-- `UserCard`: Mutual connections, connection action button
+#### 6.3 — Component Library Polish ✅
+All 11 shared components rewritten with design tokens + React.memo:
 
-#### 6.4 — Theme Support
-- Respect system theme via `useColorScheme()`
-- Already implemented in `constants/colors.ts` — just ensure all screens use `useThemeColors()`
+| Component | Changes |
+|-----------|--------|
+| `Avatar` | Named size presets (xs–2xl or pixel), online indicator dot, `fontFamily.semiBold`, `React.memo` |
+| `RoleBadge` | `size='sm'\|'md'` prop, border from `badgeVariants`, typography tokens, `React.memo` |
+| `Badge` | Theme-aware via `useThemeColors()`, `error`/`accent` variants, `size` prop, `React.memo` |
+| `PostCard` | `radius.lg`, `fontFamily.*`, `fontSize.*`, Avatar `size="lg"`, RoleBadge `size="sm"`, `onShare`, `React.memo` |
+| `EventCard` | Typography tokens, `radius.lg`, RSVP badge, `fontFamily.bold` date badge, `React.memo` |
+| `ConnectionCard` | Avatar `size="lg"`, RoleBadge `size="sm"`, `fontFamily.*`, `fontSize.*`, `radius.full` buttons, `React.memo` |
+| `ConversationItem` | Avatar `size="lg"`, `fontFamily.*` (regular/medium/bold/semiBold), `fontSize.*`, `React.memo` |
+| `NotificationItem` | Avatar `size="md"`, `fontFamily` imports from typography.ts (was hardcoded strings), `fontSize.*` |
+| `MessageBubble` | `fontSize.body`, `fontSize.xs`, `fontFamily.regular`, `React.memo` |
+| `UserCard` | **Full rewrite**: Removed `@/lib/mock-data` dependency, uses `useThemeColors()`+`useSurfaceTiers()`+`getRoleBadgeColor()`, generic `UserCardUser` interface, `radius.lg`, typography tokens, `React.memo` |
+| `GlassContainer` | **Full rewrite**: Uses `useSurfaceTiers()` hook (was hardcoded `Colors.dark.*`), `radius.lg`, `React.memo` |
+| `SettingsRow` | **Full rewrite**: Uses `useThemeColors()` (was hardcoded `Colors.dark.*`), switched SpaceGrotesk→Inter via `fontFamily.*`, `radius.sm`, `React.memo` |
 
-**Deliverable:** Visual consistency with web brand. Native feel with proper spacing and typography.
+#### 6.4 — Theme / Font Loading ✅
+- Added `useFonts()` call in `app/_layout.tsx` loading all 5 Inter weights:
+  `Inter_400Regular`, `Inter_500Medium`, `Inter_600SemiBold`, `Inter_700Bold`, `Inter_800ExtraBold`
+- `SplashHider` now gates on both `!isLoading` (auth) AND `fontsReady` before hiding splash
+- All components use `useThemeColors()` — no hardcoded `Colors.dark.*` references remain
+- System theme respected via `useColorScheme()` in `useThemeColors()` and `useSurfaceTiers()`
+
+**Files Created:**
+- `constants/typography.ts` — Centralized typography system (Phase 6.2)
+
+**Files Rewritten:**
+- `constants/colors.ts` — Complete design token system (Phase 6.1)
+- `components/Avatar.tsx` — Named sizes, online indicator (Phase 6.3)
+- `components/RoleBadge.tsx` — Size variants, typography tokens (Phase 6.3)
+- `components/Badge.tsx` — Theme-aware, new variants (Phase 6.3)
+- `components/PostCard.tsx` — Typography + radius tokens (Phase 6.3)
+- `components/EventCard.tsx` — Typography + radius + RSVP badge (Phase 6.3)
+- `components/ConnectionCard.tsx` — Typography tokens, named avatar sizes (Phase 6.3)
+- `components/ConversationItem.tsx` — Typography tokens, named avatar sizes (Phase 6.3)
+- `components/NotificationItem.tsx` — Typography token imports (Phase 6.3)
+- `components/MessageBubble.tsx` — Typography tokens (Phase 6.3)
+- `components/UserCard.tsx` — Removed mock-data dep, useThemeColors (Phase 6.3)
+- `components/GlassContainer.tsx` — useSurfaceTiers hook (Phase 6.3)
+- `components/SettingsRow.tsx` — useThemeColors, Inter fonts (Phase 6.3)
+- `app/_layout.tsx` — Inter font loading + splash gate (Phase 6.4)
+
+**Deliverable:** ✅ Visual consistency with web brand. Native feel with proper spacing and typography. All components memoized. Inter font family loaded at root. Design tokens centralized.
 
 ---
 
@@ -761,7 +795,7 @@ Priority order:
 | Port `useFeatureAccess` | 🟠 High | 4 | Medium | ✅ Done |
 | Deep link configuration | 🟠 High | 5 | Medium | ✅ Done |
 | Onboarding parity (multi-step) | 🟠 High | 1 | Large | ✅ Done |
-| React.memo all list items | 🟡 Medium | 7 | Small | ❌ |
+| React.memo all list items | 🟡 Medium | 6 | Small | ✅ Done (Phase 6.3) |
 | Pagination on all lists | 🟡 Medium | 2 | Medium | ❌ |
 | Push notifications | 🟡 Medium | 8 | Medium | ❌ |
 | Advanced features (Jobs, Mentorship, etc.) | 🟢 Low | 9 | Large | ❌ |
@@ -831,7 +865,8 @@ app/(auth)/login.tsx        ✅ MODIFIED — Wired forgot password navigation
 app/+native-intent.tsx      ✅ REWRITTEN (Phase 5.4) — Full deep link router for all entity types
 lib/auth-context.tsx        ✅ REWRITTEN — Real Supabase auth + completeOnboarding
 lib/query-client.ts         ✅ REWRITTEN — Clean QueryClient (removed mock API fetch pattern)
-constants/colors.ts         ✅ ENHANCED — Added colors export, inputBackground, inputBorder
+constants/colors.ts         ✅ REWRITTEN (Phase 6.1) — Full design token system: surface tiers, badge variants, avatar sizes, spacing, radius, hooks
+constants/typography.ts     ✅ CREATED (Phase 6.2) — Typography scale: font family, sizes, presets
 
 app/(tabs)/_layout.tsx      ✅ MODIFIED (Phase 3) — Notification badge count wired
 app/(tabs)/index.tsx        ✅ REWRITTEN (Phase 2) + MODIFIED (Phase 3, 4) — Feed + realtime new-posts banner + role-gated create button
@@ -865,18 +900,18 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 | 5 | **Phase 3: Realtime** | Live message delivery, feed updates, notification badges | ✅ Done |
 | 5–6 | **Phase 4: Roles** | Feature access matches web per role | ✅ Done |
 | 6 | **Phase 5: Navigation** | Deep links, tab restructure, cold start handling | ✅ Done |
-| 7 | **Phase 6: UI Polish** | Design token alignment, component polish, theme support | ❌ |
+| 7 | **Phase 6: UI Polish** | Design token alignment, component polish, theme support, Inter font loading | ✅ Done |
 | 7–8 | **Phase 7: Performance** | Memo, pagination, query optimization, subscription dedup | ❌ |
 | 8–10 | **Phase 8: Additional** | Search, saved items, settings, push notifications | ❌ |
 | 10–14 | **Phase 9: Advanced** | Jobs, mentorship, clubs, alumni, marketplace, portfolio | ❌ |
 
 ---
 
-## 11. CURRENT STATE ASSESSMENT (Updated after Phase 5)
+## 11. CURRENT STATE ASSESSMENT (Updated after Phase 6)
 
-**The mobile app now has real authentication, live data, realtime updates, full RBAC enforcement, a restructured tab bar, and comprehensive deep linking.** Phases 0–5 have delivered a production-architecture mobile experience: `@clstr/core` wired via adapters, full auth parity, all core screens displaying live Supabase data, realtime subscriptions for messages/feed/notifications, role-based feature access matching the web exactly, a 5-tab navigation bar, stack-based detail routes, and universal/custom-scheme deep links for all entity types.
+**The mobile app now has real authentication, live data, realtime updates, full RBAC enforcement, a restructured tab bar, comprehensive deep linking, and full visual design parity with the web.** Phases 0–6 have delivered a production-quality mobile experience: `@clstr/core` wired via adapters, full auth parity, all core screens displaying live Supabase data, realtime subscriptions for messages/feed/notifications, role-based feature access matching the web exactly, a 5-tab navigation bar, stack-based detail routes, universal/custom-scheme deep links for all entity types, centralized design tokens, Inter typography system, and all 11 shared components polished with React.memo.
 
-**What's working (Phase 0 + 1 + 2 + 3 + 4 + 5 deliverables):**
+**What's working (Phase 0 + 1 + 2 + 3 + 4 + 5 + 6 deliverables):**
 - ✅ `@clstr/core` Supabase client factory wired via `lib/adapters/core-client.ts`
 - ✅ `withClient()` adapter pre-binds all API functions — same pattern as web
 - ✅ 9 API adapter modules (`social`, `messages`, `events`, `profile`, `account`, `search`, `permissions`, `notifications`, `index`)
@@ -888,7 +923,6 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 - ✅ 4-step onboarding: name → role → department → bio (matches web)
 - ✅ Forgot password, verify email, magic link sent screens
 - ✅ Deep link auth callback (`clstr://auth/callback`) handles hash fragments & PKCE
-- ✅ Color system enhanced with `inputBackground`, `inputBorder`, and named `colors` export
 - ✅ All core screens (Feed, Messages, Chat, Network, Events, Profile, Notifications) display live Supabase data
 - ✅ Realtime message subscription — invalidates conversations/chat on new message
 - ✅ Realtime feed subscription — "New posts" banner instead of auto-refresh
@@ -910,25 +944,30 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 - ✅ Full deep link router: posts, profiles, events, chat, notifications, settings, feed, network — with regex-based path matching
 - ✅ Cold start + background resume deep link handling
 - ✅ Root redirect fixed: `/(tabs)` (live Supabase screens) instead of legacy `/(main)/(tabs)` (mock data)
+- ✅ **Design Token System** — `constants/colors.ts` rewritten: surface tiers, badge variants, AVATAR_SIZES, spacing, radius, `useThemeColors()` / `useSurfaceTiers()` / `getRoleBadgeColor()` hooks
+- ✅ **Typography System** — `constants/typography.ts`: Inter font family map, fontSize scale (2xs–4xl), lineHeight, letterSpacing, 14 preset TextStyle objects
+- ✅ **Component Polish** — All 11 shared components use design/typography tokens + React.memo: Avatar, RoleBadge, Badge, PostCard, EventCard, ConnectionCard, ConversationItem, NotificationItem, MessageBubble, UserCard, GlassContainer, SettingsRow
+- ✅ **Font Loading** — 5 Inter weights loaded via `useFonts()` in `_layout.tsx`, splash held until fonts ready
+- ✅ **Theme Support** — All components use `useThemeColors()` hook; no hardcoded `Colors.dark.*` references remain
 
-**What still needs work (Phase 6+):**
-- ❌ UI polish and design token alignment (Phase 6)
+**What still needs work (Phase 7+):**
 - ❌ Push notifications not implemented (Phase 8)
 - ❌ Advanced features (jobs, mentorship, clubs, marketplace) not started (Phase 9)
-- ❌ React.memo not applied to all list item components (Phase 7)
 - ❌ Search, saved items, settings enhancements not started (Phase 8)
 - ❌ Pagination optimization on all list screens (Phase 7)
+- ❌ Performance profiling and optimization (Phase 7)
 
 **Architecture quality:**
 - Expo Router v6 navigation structure is solid — file-based tabs + stack overlays
 - 5-tab layout with create interception matches modern social app patterns
 - Deep link handling covers all entity types with graceful fallbacks
-- Component architecture (Avatar, Badge, etc.) is clean and reusable
+- Component architecture (Avatar, Badge, etc.) is clean, reusable, and memoized
 - `useAppStateRealtimeLifecycle` handles bg→fg token refresh and realtime reconnection
 - `SubscriptionManager` prevents duplicate subscriptions and supports factory-based reconnect
-- Color system now aligns with web patterns
+- **Design token system** provides centralized color/spacing/radius management with light+dark support
+- **Typography system** ensures consistent Inter font usage across all components
 - API adapter layer mirrors web's `src/adapters/bind.ts` pattern exactly
 - Realtime hooks follow consistent patterns: base hook + domain-specific hooks + screen wiring
 - RBAC system uses 100% pure permission functions from `@clstr/core` — zero mobile-specific permission logic
 
-**Estimated remaining effort to production parity:** 4–8 weeks for a single developer, 2–3 weeks for a team of 2–3. Phases 0–5 completed all core integration work and navigation — the remaining phases are UI design parity, performance tuning, and additional features.
+**Estimated remaining effort to production parity:** 3–6 weeks for a single developer, 2–3 weeks for a team of 2–3. Phases 0–6 completed all core integration work, navigation, and visual design parity — the remaining phases are performance tuning, push notifications, and additional features.

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '@/constants/colors';
+import { useThemeColors, radius } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
 
@@ -27,7 +28,7 @@ interface ConnectionCardProps {
   onPress?: () => void;
 }
 
-export default function ConnectionCard({
+function ConnectionCard({
   connection,
   isPending = false,
   onAccept,
@@ -43,14 +44,14 @@ export default function ConnectionCard({
       onPress={onPress}
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
-      <Avatar uri={user?.avatar_url} name={user?.full_name} size={52} />
+      <Avatar uri={user?.avatar_url} name={user?.full_name} size="lg" />
 
       <View style={styles.info}>
         <View style={styles.nameRow}>
           <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
             {user?.full_name ?? 'Unknown'}
           </Text>
-          {user?.role ? <RoleBadge role={user.role} /> : null}
+          {user?.role ? <RoleBadge role={user.role} size="sm" /> : null}
         </View>
 
         {user?.headline ? (
@@ -90,11 +91,13 @@ export default function ConnectionCard({
   );
 }
 
+export default React.memo(ConnectionCard);
+
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     marginHorizontal: 16,
     marginVertical: 6,
     padding: 14,
@@ -111,12 +114,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   name: {
-    fontSize: 15,
+    fontSize: fontSize.body,
     fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
   },
   headline: {
-    fontSize: 13,
+    fontSize: fontSize.md,
     lineHeight: 18,
+    fontFamily: fontFamily.regular,
     marginBottom: 8,
   },
   pendingActions: {
@@ -130,12 +135,13 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: 20,
+    borderRadius: radius.full,
   },
   acceptText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: fontSize.md,
     fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
   },
   rejectBtn: {
     flexDirection: 'row',
@@ -143,12 +149,13 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: 20,
+    borderRadius: radius.full,
     borderWidth: 1,
   },
   rejectText: {
-    fontSize: 13,
+    fontSize: fontSize.md,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
   connectBtn: {
     flexDirection: 'row',
@@ -156,13 +163,14 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: 20,
+    borderRadius: radius.full,
     borderWidth: 1.5,
     alignSelf: 'flex-start',
     marginTop: 4,
   },
   connectText: {
-    fontSize: 13,
+    fontSize: fontSize.md,
     fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
   },
 });

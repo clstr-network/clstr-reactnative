@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
+import { useThemeColors, radius } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 
 interface SettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -17,7 +18,7 @@ interface SettingsRowProps {
   isLast?: boolean;
 }
 
-export function SettingsRow({
+function SettingsRow({
   icon,
   iconColor,
   label,
@@ -29,27 +30,29 @@ export function SettingsRow({
   isDestructive,
   isLast,
 }: SettingsRowProps) {
+  const colors = useThemeColors();
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress?.();
   };
 
-  const color = isDestructive ? Colors.dark.danger : (iconColor || Colors.dark.textSecondary);
+  const color = isDestructive ? colors.danger : (iconColor || colors.textSecondary);
 
   return (
     <Pressable
       onPress={!isSwitch ? handlePress : undefined}
       style={({ pressed }) => [
         styles.container,
-        !isLast && styles.border,
-        pressed && !isSwitch && { backgroundColor: Colors.dark.surfaceHover },
+        !isLast && { borderBottomWidth: 1, borderBottomColor: colors.divider },
+        pressed && !isSwitch && { backgroundColor: colors.surfaceHover },
       ]}
       disabled={isSwitch}
     >
-      <View style={[styles.iconWrap, { backgroundColor: Colors.dark.secondary }]}>
+      <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
         <Ionicons name={icon} size={18} color={color} />
       </View>
-      <Text style={[styles.label, isDestructive && { color: Colors.dark.danger }]}>
+      <Text style={[styles.label, { color: isDestructive ? colors.danger : colors.text }]}>
         {label}
       </Text>
       {isSwitch ? (
@@ -59,18 +62,21 @@ export function SettingsRow({
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             onSwitchChange?.(val);
           }}
-          trackColor={{ false: Colors.dark.muted, true: 'rgba(255, 255, 255, 0.25)' }}
-          thumbColor={switchValue ? Colors.dark.text : Colors.dark.textMeta}
+          trackColor={{ false: colors.muted, true: 'rgba(255, 255, 255, 0.25)' }}
+          thumbColor={switchValue ? colors.text : colors.textMeta}
         />
       ) : (
         <View style={styles.right}>
-          {value && <Text style={styles.value}>{value}</Text>}
-          <Ionicons name="chevron-forward" size={16} color={Colors.dark.textMeta} />
+          {value && <Text style={[styles.value, { color: colors.textMeta }]}>{value}</Text>}
+          <Ionicons name="chevron-forward" size={16} color={colors.textMeta} />
         </View>
       )}
     </Pressable>
   );
 }
+
+export { SettingsRow };
+export default React.memo(SettingsRow);
 
 const styles = StyleSheet.create({
   container: {
@@ -79,22 +85,17 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  border: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.divider,
-  },
   iconWrap: {
     width: 34,
     height: 34,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   label: {
-    fontFamily: 'SpaceGrotesk_500Medium',
-    fontSize: 15,
-    color: Colors.dark.text,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.body,
     flex: 1,
   },
   right: {
@@ -103,8 +104,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   value: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 13,
-    color: Colors.dark.textMeta,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
   },
 });

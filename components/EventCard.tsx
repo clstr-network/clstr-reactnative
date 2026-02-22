@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '@/constants/colors';
+import { useThemeColors, radius } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 
 interface EventCreator {
   full_name?: string;
@@ -33,7 +34,7 @@ function formatDateBadge(dateStr?: string): { month: string; day: string } {
   return { month, day };
 }
 
-export default function EventCard({ event, onPress }: EventCardProps) {
+function EventCard({ event, onPress }: EventCardProps) {
   const colors = useThemeColors();
   const { month, day } = formatDateBadge(event.event_date);
 
@@ -48,9 +49,17 @@ export default function EventCard({ event, onPress }: EventCardProps) {
       </View>
 
       <View style={styles.info}>
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
-          {event.title ?? 'Untitled Event'}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
+            {event.title ?? 'Untitled Event'}
+          </Text>
+          {event.is_registered && (
+            <View style={[styles.rsvpBadge, { backgroundColor: colors.success + '18' }]}>
+              <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+              <Text style={[styles.rsvpText, { color: colors.success }]}>Going</Text>
+            </View>
+          )}
+        </View>
 
         <View style={styles.metaRow}>
           {event.is_virtual ? (
@@ -86,11 +95,13 @@ export default function EventCard({ event, onPress }: EventCardProps) {
   );
 }
 
+export default React.memo(EventCard);
+
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     marginHorizontal: 16,
     marginVertical: 6,
     padding: 14,
@@ -99,27 +110,50 @@ const styles = StyleSheet.create({
   dateBadge: {
     width: 52,
     height: 52,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dateMonth: {
-    fontSize: 11,
+    fontSize: fontSize.xs,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     letterSpacing: 0.5,
   },
   dateDay: {
-    fontSize: 22,
+    fontSize: fontSize['3xl'],
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     marginTop: -2,
   },
   info: {
     flex: 1,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
     marginBottom: 4,
+  },
+  title: {
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
+    flex: 1,
+  },
+  rsvpBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  rsvpText: {
+    fontSize: fontSize['2xs'],
+    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
   },
   metaRow: {
     flexDirection: 'row',
@@ -132,7 +166,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metaText: {
-    fontSize: 13,
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.regular,
   },
   footer: {
     flexDirection: 'row',
@@ -140,7 +175,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   creator: {
-    fontSize: 12,
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
     flex: 1,
     textAlign: 'right',
   },

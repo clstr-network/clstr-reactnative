@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { formatRelativeTime } from '@/lib/time';
 import Avatar from '@/components/Avatar';
 
@@ -27,7 +28,7 @@ interface ConversationItemProps {
   onPress?: () => void;
 }
 
-export default function ConversationItem({ conversation, onPress }: ConversationItemProps) {
+function ConversationItem({ conversation, onPress }: ConversationItemProps) {
   const colors = useThemeColors();
   const partner = conversation.partner;
   const lastMsg = conversation.last_message;
@@ -41,7 +42,7 @@ export default function ConversationItem({ conversation, onPress }: Conversation
         { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface },
       ]}
     >
-      <Avatar uri={partner?.avatar_url} name={partner?.full_name} size={50} />
+      <Avatar uri={partner?.avatar_url} name={partner?.full_name} size="lg" />
 
       <View style={styles.content}>
         <View style={styles.topRow}>
@@ -80,6 +81,8 @@ export default function ConversationItem({ conversation, onPress }: Conversation
   );
 }
 
+export default React.memo(ConversationItem);
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
@@ -98,16 +101,19 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   name: {
-    fontSize: 15,
+    fontSize: fontSize.body,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
     flex: 1,
     marginRight: 8,
   },
   nameBold: {
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
   },
   time: {
-    fontSize: 12,
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
   },
   bottomRow: {
     flexDirection: 'row',
@@ -115,12 +121,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   preview: {
-    fontSize: 14,
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
     flex: 1,
     marginRight: 8,
   },
   previewBold: {
     fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
   },
   badge: {
     minWidth: 20,
@@ -132,7 +140,8 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: fontSize.xs,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
   },
 });

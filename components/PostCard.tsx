@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors } from '@/constants/colors';
+import { useThemeColors, radius } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { formatRelativeTime } from '@/lib/time';
 import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
@@ -44,9 +45,10 @@ interface PostCardProps {
   onPress?: () => void;
   onReact?: () => void;
   onComment?: () => void;
+  onShare?: () => void;
 }
 
-export default function PostCard({ post, onPress, onReact, onComment }: PostCardProps) {
+function PostCard({ post, onPress, onReact, onComment, onShare }: PostCardProps) {
   const colors = useThemeColors();
   const user = post.user;
   const totalReactions = post.likes_count ?? 0;
@@ -59,13 +61,13 @@ export default function PostCard({ post, onPress, onReact, onComment }: PostCard
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <View style={styles.header}>
-        <Avatar uri={user?.avatar_url} name={user?.full_name} size={44} />
+        <Avatar uri={user?.avatar_url} name={user?.full_name} size="lg" />
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
             <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
               {user?.full_name ?? 'Unknown'}
             </Text>
-            {user?.role ? <RoleBadge role={user.role} /> : null}
+            {user?.role ? <RoleBadge role={user.role} size="sm" /> : null}
           </View>
           {post.created_at ? (
             <Text style={[styles.timestamp, { color: colors.textTertiary }]}>
@@ -123,7 +125,7 @@ export default function PostCard({ post, onPress, onReact, onComment }: PostCard
           <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Comment</Text>
         </Pressable>
 
-        <Pressable style={styles.actionButton}>
+        <Pressable style={styles.actionButton} onPress={onShare}>
           <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
           <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Share</Text>
         </Pressable>
@@ -132,10 +134,12 @@ export default function PostCard({ post, onPress, onReact, onComment }: PostCard
   );
 }
 
+export default React.memo(PostCard);
+
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     marginHorizontal: 16,
     marginVertical: 6,
     overflow: 'hidden',
@@ -157,15 +161,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   name: {
-    fontSize: 15,
+    fontSize: fontSize.body,
     fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
   },
   timestamp: {
-    fontSize: 12,
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
     marginTop: 2,
   },
   content: {
-    fontSize: 14,
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
     lineHeight: 20,
     paddingHorizontal: 14,
     paddingBottom: 12,
@@ -186,11 +193,13 @@ const styles = StyleSheet.create({
     marginRight: -2,
   },
   reactionCount: {
-    fontSize: 13,
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.regular,
     marginLeft: 6,
   },
   commentCount: {
-    fontSize: 13,
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.regular,
     marginLeft: 'auto',
   },
   actionBar: {
@@ -207,7 +216,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   actionLabel: {
-    fontSize: 13,
+    fontSize: fontSize.md,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
 });

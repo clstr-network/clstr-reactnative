@@ -9,6 +9,8 @@
  *   • Not authenticated → /(auth)/login
  *   • Authenticated + needsOnboarding → /(auth)/onboarding
  *   • Authenticated + onboarded + in (auth) group → /
+ *
+ * Phase 6.4: Inter font loading + splash hold
  */
 
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -17,6 +19,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from '@expo-google-fonts/inter';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { queryClient } from '@/lib/query-client';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
@@ -115,12 +125,24 @@ function RootLayoutNav() {
 export default function RootLayout() {
   const splashHidden = useRef(false);
 
+  // Phase 6.4 — Load Inter font family
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <IdentityProvider>
-            <SplashHider onReady={() => { splashHidden.current = true; }} />
+            <SplashHider
+              fontsReady={fontsLoaded || !!fontError}
+              onReady={() => { splashHidden.current = true; }}
+            />
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
                 <RootLayoutNav />
@@ -134,18 +156,18 @@ export default function RootLayout() {
 }
 
 /**
- * Hides the splash screen once auth state is known.
+ * Hides the splash screen once auth state is known AND fonts are loaded.
  * Rendered inside the provider tree so it can read auth context.
  */
-function SplashHider({ onReady }: { onReady: () => void }) {
+function SplashHider({ fontsReady, onReady }: { fontsReady: boolean; onReady: () => void }) {
   const { isLoading } = useAuth();
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && fontsReady) {
       SplashScreen.hideAsync();
       onReady();
     }
-  }, [isLoading, onReady]);
+  }, [isLoading, fontsReady, onReady]);
 
   return null;
 }
