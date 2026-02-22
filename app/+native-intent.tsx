@@ -13,6 +13,8 @@
  *   clstr://messaging?partner=:id  → /chat/:id
  *   clstr://notifications          → /notifications
  *   clstr://settings               → /settings
+ *   clstr://search                 → /search
+ *   clstr://saved                  → /saved
  *   clstr://feed                   → /
  *
  * Cold start:
@@ -90,6 +92,16 @@ export function redirectSystemPath({
   // Settings
   if (cleanPath.startsWith('/settings')) {
     return '/settings';
+  }
+
+  // Search (Phase 8)
+  if (cleanPath.startsWith('/search')) {
+    return '/search';
+  }
+
+  // Saved items (Phase 8)
+  if (cleanPath.startsWith('/saved') || cleanPath.startsWith('/bookmarks')) {
+    return '/saved';
   }
 
   // Feed / home

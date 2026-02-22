@@ -32,6 +32,7 @@ import { queryClient } from '@/lib/query-client';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { IdentityProvider, useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useAppStateRealtimeLifecycle } from '@/lib/app-state';
+import { usePushNotifications } from '@/lib/hooks/usePushNotifications';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -79,6 +80,9 @@ function RootLayoutNav() {
   // Phase 3.5 — AppState lifecycle: session refresh + realtime reconnect on foreground
   useAppStateRealtimeLifecycle();
 
+  // Phase 8.4 — Push notifications: auto-registers token if permission was previously granted
+  usePushNotifications();
+
   return (
     <Stack screenOptions={{ headerShown: false, headerBackTitle: 'Back' }}>
       <Stack.Screen name="(auth)" />
@@ -112,6 +116,15 @@ function RootLayoutNav() {
       />
       <Stack.Screen
         name="settings"
+        options={{ headerShown: false, animation: 'slide_from_right' }}
+      />
+      {/* Phase 8 — Search, Saved Items */}
+      <Stack.Screen
+        name="search"
+        options={{ headerShown: false, animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="saved"
         options={{ headerShown: false, animation: 'slide_from_right' }}
       />
     </Stack>

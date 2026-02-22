@@ -13,3 +13,5 @@ export * from './account';
 export * from './search';
 export * from './permissions';
 export * from './notifications';
+export * from './settings';
+export * from './saved';

@@ -138,14 +138,14 @@
 | 56 | Notifications list | ✅ Done | High | `getNotifications()` from `lib/api/notifications.ts`, `QUERY_KEYS.notifications` |
 | 57 | Mark read | ✅ Done | High | `markNotificationRead()` + `markAllNotificationsRead()` via `useMutation` |
 | 58 | Notification realtime | ✅ Done | High | `useNotificationSubscription()` — badge count on tab bar, Phase 3.3 |
-| 59 | Push notifications | ❌ Missing | High | Web has `usePushNotifications` |
+| 59 | Push notifications | ✅ Done | High | `usePushNotifications` hook — expo-notifications, token registration via RPC, Phase 8.4 |
 | **Search** |
-| 60 | Typeahead search | ❌ Missing | High | Web has `useTypeaheadSearch` |
-| 61 | Search results page | ❌ Missing | High | |
+| 60 | Typeahead search | ✅ Done | High | `app/search.tsx` — debounced typeahead via `typeaheadSearch()`, Phase 8.1 |
+| 61 | Search results page | ✅ Done | High | People + Events sections, deep link navigation, Phase 8.1 |
 | **Settings** |
-| 62 | Settings screen | 🟡 Partial | Medium | Screen exists, limited options |
-| 63 | Theme toggle | ❌ Missing | Medium | |
-| 64 | Delete account | ❌ Missing | High | |
+| 62 | Settings screen | ✅ Done | Medium | Full rewrite — theme, notifications, privacy, account deletion, Phase 8.3 |
+| 63 | Theme toggle | ✅ Done | Medium | Light/Dark/System selector via `updateUserSettings({ theme_mode })`, Phase 8.3 |
+| 64 | Delete account | ✅ Done | High | Double-confirmation Alert → `deactivateOwnAccount()` + sign out, Phase 8.3 |
 | 65 | Email transition | ❌ Missing | Low | |
 | **Advanced Features (Phase 2+)** |
 | 66 | Jobs / Job detail | ❌ Missing | Medium | |
@@ -156,7 +156,7 @@
 | 71 | Portfolio | ❌ Missing | Low | |
 | 72 | Skill Analysis | ❌ Missing | Low | |
 | 73 | AI Chat | ❌ Missing | Low | |
-| 74 | Saved Items | ❌ Missing | Medium | |
+| 74 | Saved Items | ✅ Done | Medium | `app/saved.tsx` — Posts/Projects/Clubs tabs, Phase 8.2 |
 | **Navigation & Deep Links** |
 | 75 | Deep linking (`post/:id`, `profile/:id`, etc.) | ✅ Done | Critical | All entity deep links configured in `+native-intent.tsx` + `app.json` |
 | 76 | Auth callback deep link | ✅ Done | Critical | `app/auth/callback.tsx` + `+native-intent.tsx` |
@@ -763,30 +763,68 @@ Additional query fix: `app/post/[id].tsx` — Updated hardcoded `['post', id]` a
 
 ---
 
-### Phase 8: Additional Screens (Weeks 8–10) — MEDIUM
+### Phase 8: Additional Screens (Weeks 8–10) — ✅ DONE
 
-#### 8.1 — Search
-- `(tabs)/search.tsx` or header search bar
-- Use `typeaheadSearch()` from `@clstr/core`
-- Results: People, Posts, Events
+#### 8.1 — Search ✅
+- Created `app/search.tsx` — full typeahead search screen
+- Uses `typeaheadSearch()` from `@clstr/core/api/typeahead-search`
+- 300ms debounced input with auto-focus and clear button
+- Section-based FlatList: People (Avatar + RoleBadge) and Events (date + location)
+- Navigation: profiles → `/user/:id`, events → `/event/:id`
+- React Query integration: `QUERY_KEYS.typeahead(query, domain)`, `staleTime: 30s`
+- FlatList perf: `maxToRenderPerBatch`, `windowSize`, `removeClippedSubviews`, `useCallback` on all handlers
 
-#### 8.2 — Saved Items
-- `settings/saved.tsx`
-- Use `getSavedPosts()` from API
+**Files Created:** `app/search.tsx`
 
-#### 8.3 — Settings Enhancement
-- Theme toggle
-- Notification preferences
-- Account deletion (`delete-account` edge function)
-- Privacy settings
-- About/Help
+#### 8.2 — Saved Items ✅
+- Created `app/saved.tsx` — saved/bookmarked items screen
+- 3-tab interface: Posts, Projects, Clubs (with item counts in tab labels)
+- Uses `getSavedItems(userId)` from `@clstr/core/api/saved-api` via `lib/api/saved.ts`
+- Pull-to-refresh, memoized item components, per-tab empty states
+- React Query: `QUERY_KEYS.savedItems(userId)`, `staleTime: 30s`
 
-#### 8.4 — Push Notifications
-- Use `expo-notifications`
-- Register token with `send-push-notification` edge function
-- Handle notification tap → deep link routing
+**Files Created:** `app/saved.tsx`, `lib/api/saved.ts`
 
-**Deliverable:** Feature-complete core experience.
+#### 8.3 — Settings Enhancement ✅
+- Rewrote `app/settings.tsx` — replaced all empty `onPress` handlers with real functionality
+- **Appearance**: Light/Dark/System theme selector via `updateUserSettings({ theme_mode })`
+- **Notifications**: 4 toggles (email, push, message, connection) with `Switch` components, optimistic updates
+- **Privacy**: Profile visibility selector (Public/Connections/Private) via `updateUserSettings({ profile_visibility })`
+- **Account**: Saved Items + Search navigation links
+- **Support**: Help Center, Feedback (mailto:), Terms, Privacy Policy — via `Linking.openURL()`
+- **Danger Zone**: Sign Out (with confirmation) + Delete Account (double-confirmation → `deactivateOwnAccount()`)
+- Uses `useQuery(QUERY_KEYS.userSettings(userId))` with `getUserSettings` + `useMutation` for updates
+- Optimistic update pattern: `onMutate` sets cache, `onError` rolls back, `onSettled` invalidates
+- Removed deprecated `resetAllData` import from `lib/storage`
+
+**Files Created:** `lib/api/settings.ts`  
+**Files Modified:** `app/settings.tsx` (full rewrite)
+
+#### 8.4 — Push Notifications ✅
+- Created `lib/hooks/usePushNotifications.ts` — adapted from `apps/mobile` version
+- Uses `expo-notifications` + `expo-device` (installed as dependencies)
+- Permission request: deferred (call `requestPermission()` explicitly — iOS shows dialog once)
+- Token registration: `supabase.rpc('upsert_device_token')` with device type detection
+- Token deactivation: `supabase.rpc('deactivate_device_token')` on sign-out
+- Foreground notifications: `setNotificationHandler` with alert + sound + badge
+- Notification listeners: received (foreground) + response (tap → deep link via expo-router)
+- Auto-re-register: on login if permission was previously granted (with `cancelled` flag for unmount safety)
+- Android channel: HIGH importance, custom vibration pattern, purple light color
+- Wired into `RootLayoutNav` in `app/_layout.tsx`
+- Added `expo-notifications` to `app.json` plugins array
+
+**Files Created:** `lib/hooks/usePushNotifications.ts`  
+**Files Modified:** `app/_layout.tsx` (import + `usePushNotifications()` call + Stack.Screen entries for search/saved), `app.json` (expo-notifications plugin), `package.json` (expo-notifications + expo-device deps)
+
+#### 8.5 — Navigation Wiring ✅
+- Added `<Stack.Screen name="search" />` and `<Stack.Screen name="saved" />` to `app/_layout.tsx`
+- Added `/search` and `/saved` (+ `/bookmarks` alias) deep link routes to `app/+native-intent.tsx`
+- Updated `+native-intent.tsx` docblock with new routes
+- Updated `lib/api/index.ts` barrel export to include `settings` and `saved` adapters
+
+**Files Modified:** `app/_layout.tsx`, `app/+native-intent.tsx`, `lib/api/index.ts`
+
+**Deliverable:** ✅ Feature-complete core experience — search, saved items, full settings, push notifications.
 
 ---
 
@@ -950,19 +988,19 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 | 6 | **Phase 5: Navigation** | Deep links, tab restructure, cold start handling | ✅ Done |
 | 7 | **Phase 6: UI Polish** | Design token alignment, component polish, theme support, Inter font loading | ✅ Done |
 | 7–8 | **Phase 7: Performance** | Memo, pagination, query optimization, subscription dedup | ✅ Done |
-| 8–10 | **Phase 8: Additional** | Search, saved items, settings, push notifications | ❌ |
+| 8–10 | **Phase 8: Additional** | Search, saved items, settings, push notifications | ✅ Done |
 | 10–14 | **Phase 9: Advanced** | Jobs, mentorship, clubs, alumni, marketplace, portfolio | ❌ |
 
 ---
 
-## 11. CURRENT STATE ASSESSMENT (Updated after Phase 7)
+## 11. CURRENT STATE ASSESSMENT (Updated after Phase 8)
 
-**The mobile app now has real authentication, live data, realtime updates, full RBAC enforcement, a restructured tab bar, comprehensive deep linking, full visual design parity with the web, and production-grade list performance.** Phases 0–7 have delivered a production-quality mobile experience: `@clstr/core` wired via adapters, full auth parity, all core screens displaying live Supabase data, realtime subscriptions for messages/feed/notifications, role-based feature access matching the web exactly, a 5-tab navigation bar, stack-based detail routes, universal/custom-scheme deep links for all entity types, centralized design tokens, Inter typography system, all 11 shared components polished with React.memo, optimized FlatList rendering across all screens, per-query staleTime/gcTime tuning, stable callback references via useCallback/useMemo, and verified realtime subscription deduplication.
+**The mobile app now has real authentication, live data, realtime updates, full RBAC enforcement, a restructured tab bar, comprehensive deep linking, full visual design parity with the web, production-grade list performance, typeahead search, saved items, enhanced settings, and push notifications.** Phases 0–8 have delivered a feature-complete core mobile experience: everything from Phases 0–7, plus a full typeahead search screen, saved items with Posts/Projects/Clubs tabbed interface, a completely rewritten settings screen with theme toggle/notification preferences/privacy controls/account deletion, and push notification support via `expo-notifications` with token lifecycle management.
 
 **What's working (Phase 0 + 1 + 2 + 3 + 4 + 5 + 6 + 7 deliverables):**
 - ✅ `@clstr/core` Supabase client factory wired via `lib/adapters/core-client.ts`
 - ✅ `withClient()` adapter pre-binds all API functions — same pattern as web
-- ✅ 9 API adapter modules (`social`, `messages`, `events`, `profile`, `account`, `search`, `permissions`, `notifications`, `index`)
+- ✅ 11 API adapter modules (`social`, `messages`, `events`, `profile`, `account`, `search`, `permissions`, `notifications`, `settings`, `saved`, `index`)
 - ✅ `QUERY_KEYS` and `CHANNELS` re-exported from `@clstr/core`
 - ✅ Full auth flow: signIn, signUp, signOut, signInWithOtp, completeOnboarding
 - ✅ `useIdentity` hook resolves identity via `get_identity_context()` RPC with caching
@@ -985,7 +1023,7 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 - ✅ Network permissions resolved for connection/messaging gating
 - ✅ 5-tab bar: Home, Network, Create+, Messages, Profile — with hidden Events, Notifications, More tabs
 - ✅ Create tab intercepted → pushes `/create-post` modal (slide from bottom)
-- ✅ Stack navigation: `post/[id]`, `chat/[id]`, `event/[id]`, `user/[id]`, `create-post`, `notifications`, `settings` — with per-route animations
+- ✅ Stack navigation: `post/[id]`, `chat/[id]`, `event/[id]`, `user/[id]`, `create-post`, `notifications`, `settings`, `search`, `saved` — with per-route animations
 - ✅ Events + Notifications accessible via header icons on Feed and Profile screens
 - ✅ iOS universal links (`applinks:clstr.network`) + Android intent filters (5 path patterns, `autoVerify: true`)
 - ✅ Custom scheme `clstr://` deep links supported
@@ -1001,11 +1039,14 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 - ✅ **Stable References** — All `renderItem`, `keyExtractor`, `ItemSeparator`, `ListHeader` wrapped in `useCallback`/`useMemo`/`React.memo` — zero inline closures in FlatList props (Phase 7.2)
 - ✅ **Per-Query Cache Tuning** — `staleTime`/`gcTime` set per query by update frequency: feed 30s, messages 30s, chat 10s, events 60s, notifications 15s, connections 30s, pending requests 10s, post 30s, comments 15s (Phase 7.4)
 - ✅ **Realtime Dedup Verified** — `SubscriptionManager` singleton confirmed: name-based registry prevents duplicate channels, factory-based reconnect, auto-cleanup on unmount (Phase 7.5)
+- ✅ **Typeahead Search** — `app/search.tsx` with debounced input, People + Events sections, FlatList perf props, deep link navigation (Phase 8.1)
+- ✅ **Saved Items** — `app/saved.tsx` with Posts/Projects/Clubs tabs, `getSavedItems()` from `@clstr/core`, pull-to-refresh (Phase 8.2)
+- ✅ **Enhanced Settings** — `app/settings.tsx` fully rewritten: theme toggle (Light/Dark/System), 4 notification preference switches, privacy visibility selector, account deletion with double-confirmation, support links, sign out (Phase 8.3)
+- ✅ **Push Notifications** — `lib/hooks/usePushNotifications.ts`: expo-notifications, permission request, token registration/deactivation via Supabase RPC, foreground handler, auto-re-register on login, wired into root layout (Phase 8.4)
+- ✅ **Search + Saved Deep Links** — `+native-intent.tsx` updated with `/search`, `/saved`, `/bookmarks` routes; Stack.Screen entries added in `_layout.tsx` (Phase 8.5)
 
-**What still needs work (Phase 8+):**
-- ❌ Push notifications not implemented (Phase 8)
+**What still needs work (Phase 9):**
 - ❌ Advanced features (jobs, mentorship, clubs, marketplace) not started (Phase 9)
-- ❌ Search, saved items, settings enhancements not started (Phase 8)
 
 **Architecture quality:**
 - Expo Router v6 navigation structure is solid — file-based tabs + stack overlays
@@ -1020,4 +1061,4 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 - Realtime hooks follow consistent patterns: base hook + domain-specific hooks + screen wiring
 - RBAC system uses 100% pure permission functions from `@clstr/core` — zero mobile-specific permission logic
 
-**Estimated remaining effort to production parity:** 2–5 weeks for a single developer, 1–2 weeks for a team of 2–3. Phases 0–7 completed all core integration, navigation, visual design parity, and performance enforcement — the remaining phases are push notifications (Phase 8) and additional feature screens (Phase 9).
+**Estimated remaining effort to production parity:** 1–3 weeks for a single developer, 1 week for a team of 2–3. Phases 0–8 completed all core integration, navigation, visual design parity, performance enforcement, search, saved items, settings, and push notifications — the remaining phase is advanced feature screens (Phase 9: jobs, mentorship, clubs, alumni, marketplace, portfolio, skill analysis, AI chat).
