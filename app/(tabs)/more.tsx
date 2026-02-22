@@ -1,50 +1,96 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View, Text, Platform, Pressable } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, Platform, Pressable, useColorScheme, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '@/constants/colors';
+import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
+import { useThemeColors } from '@/constants/colors';
 import { Avatar } from '@/components/Avatar';
-import { CURRENT_USER } from '@/lib/mock-data';
+import { useAuth } from '@/lib/auth-context';
+import { getProfileById } from '@/lib/api';
+import { QUERY_KEYS } from '@/lib/query-keys';
+
+import * as Haptics from 'expo-haptics';
+import { Alert } from 'react-native';
 
 interface MenuItem {
   icon: string;
   label: string;
   color?: string;
+  route?: string;
+  action?: () => void;
 }
 
-const menuSections: { title: string; items: MenuItem[] }[] = [
+const getMenuSections = (handleSignOut: () => void): { title: string; items: MenuItem[] }[] => [
   {
     title: 'Account',
     items: [
-      { icon: 'person-outline', label: 'My Profile' },
-      { icon: 'bookmark-outline', label: 'Saved Posts' },
-      { icon: 'notifications-outline', label: 'Notifications' },
+      { icon: 'person-outline', label: 'My Profile', route: '/(tabs)/profile' },
+      { icon: 'bookmark-outline', label: 'Saved Posts', route: '/saved' },
+      { icon: 'notifications-outline', label: 'Notifications', route: '/(tabs)/notifications' },
     ],
   },
   {
     title: 'Features',
     items: [
-      { icon: 'people-outline', label: 'Mentorship' },
-      { icon: 'briefcase-outline', label: 'CollabHub' },
-      { icon: 'leaf-outline', label: 'EcoCampus' },
-      { icon: 'chatbox-outline', label: 'AI Chatbot' },
-      { icon: 'grid-outline', label: 'Portfolio' },
+      { icon: 'people-outline', label: 'Mentorship', route: '/mentorship' },
+      { icon: 'briefcase-outline', label: 'CollabHub', route: '/projects' },
+      { icon: 'leaf-outline', label: 'EcoCampus', route: '/ecocampus' },
+      { icon: 'chatbox-outline', label: 'AI Chatbot', route: '/ai-chat' },
+      { icon: 'grid-outline', label: 'Portfolio', route: '/portfolio' },
     ],
   },
   {
     title: 'Settings',
     items: [
-      { icon: 'settings-outline', label: 'Settings' },
-      { icon: 'help-circle-outline', label: 'Help & Support' },
-      { icon: 'log-out-outline', label: 'Sign Out', color: '#EF4444' },
+      { icon: 'settings-outline', label: 'Settings', route: '/settings' },
+      { icon: 'help-circle-outline', label: 'Help & Support', route: '/settings' },
+      { icon: 'log-out-outline', label: 'Sign Out', color: '#EF4444', action: handleSignOut },
     ],
   },
 ];
 
 export default function MoreScreen() {
-  const c = Colors.colors;
+  const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+  const { user, signOut } = useAuth();
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: QUERY_KEYS.profile(user?.id ?? ''),
+    queryFn: () => getProfileById(user!.id),
+    enabled: !!user?.id,
+  });
+
+  const displayName = profile?.full_name ?? user?.email?.split('@')[0] ?? 'User';
+  const displayRole = profile?.headline ?? profile?.role ?? '';
+  const displayType = profile?.user_type ?? profile?.role ?? 'Student';
+  const c = colors;
+
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut();
+          router.replace('/(auth)');
+        },
+      },
+    ]);
+  };
+
+  const menuSections = getMenuSections(handleSignOut);
+
+  const handleMenuPress = (item: MenuItem) => {
+    Haptics.selectionAsync();
+    if (item.action) {
+      item.action();
+    } else if (item.route) {
+      router.push(item.route as any);
+    }
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: c.background }]}>
@@ -52,29 +98,32 @@ export default function MoreScreen() {
         <Pressable style={styles.menuBtn}>
           <Ionicons name="menu" size={24} color={c.text} />
         </Pressable>
-        <View style={[styles.searchBarTop, { backgroundColor: c.backgroundTertiary, borderColor: c.border }]}>
+        <View style={[styles.searchBarTop, { backgroundColor: c.surfaceSecondary, borderColor: c.border }]}>
           <Ionicons name="search-outline" size={16} color={c.textTertiary} />
           <Text style={[styles.searchPlaceholder, { color: c.textTertiary }]}>Search...</Text>
         </View>
-        <Avatar name={CURRENT_USER.name} size={32} />
+        <Avatar uri={profile?.avatar_url} name={displayName} size={32} />
       </View>
 
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
-        <View style={[styles.profileCard, { backgroundColor: c.card, borderColor: c.cardBorder }]}>
-          <Avatar name={CURRENT_USER.name} size={56} />
+        <Pressable
+          style={[styles.profileCard, { backgroundColor: c.surface, borderColor: c.surfaceBorder }]}
+          onPress={() => router.push('/(tabs)/profile')}
+        >
+          <Avatar uri={profile?.avatar_url} name={displayName} size={56} />
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: c.text }]}>{CURRENT_USER.name}</Text>
-            <Text style={[styles.profileRole, { color: c.textSecondary }]}>{CURRENT_USER.role}</Text>
-            <View style={[styles.badge, { backgroundColor: c.primary + '20', borderColor: c.primary + '40' }]}>
-              <Text style={[styles.badgeText, { color: c.primary }]}>{CURRENT_USER.userType}</Text>
+            <Text style={[styles.profileName, { color: c.text }]}>{displayName}</Text>
+            <Text style={[styles.profileRole, { color: c.textSecondary }]}>{displayRole}</Text>
+            <View style={[styles.badge, { backgroundColor: c.tint + '20', borderColor: c.tint + '40' }]}>
+              <Text style={[styles.badgeText, { color: c.tint }]}>{displayType}</Text>
             </View>
           </View>
-        </View>
+        </Pressable>
 
         {menuSections.map(section => (
           <View key={section.title} style={styles.section}>
             <Text style={[styles.sectionTitle, { color: c.textTertiary }]}>{section.title}</Text>
-            <View style={[styles.sectionCard, { backgroundColor: c.card, borderColor: c.cardBorder }]}>
+            <View style={[styles.sectionCard, { backgroundColor: c.surface, borderColor: c.surfaceBorder }]}>
               {section.items.map((item, i) => (
                 <Pressable
                   key={item.label}
@@ -83,6 +132,7 @@ export default function MoreScreen() {
                     i < section.items.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.border },
                     { opacity: pressed ? 0.7 : 1 },
                   ]}
+                  onPress={() => handleMenuPress(item)}
                 >
                   <View style={styles.menuItemLeft}>
                     <Ionicons name={item.icon as any} size={20} color={item.color || c.textSecondary} />

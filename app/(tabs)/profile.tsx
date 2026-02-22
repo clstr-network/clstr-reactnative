@@ -71,16 +71,16 @@ export default function ProfileScreen() {
     ]);
   };
 
-  // Phase 4 — Role-specific menu items
+  // Phase 4 — Role-specific menu items (F4: all wired with navigation)
   const MENU_ITEMS = [
-    { icon: 'person-outline' as const, label: 'Edit Profile', color: colors.tint, onPress: () => {}, visible: true },
-    { icon: 'bookmark-outline' as const, label: 'Saved Posts', color: colors.warning, onPress: () => {}, visible: canSaveBookmarks },
-    ...(canBrowseJobs ? [{ icon: 'briefcase-outline' as const, label: 'Jobs & Careers', color: colors.tint, onPress: () => {}, visible: true }] : []),
-    ...(canAccessSkillAnalysis ? [{ icon: 'analytics-outline' as const, label: 'Skill Analysis', color: colors.success, onPress: () => {}, visible: true }] : []),
-    ...(canOfferMentorship ? [{ icon: 'people-outline' as const, label: 'Mentorship', color: colors.warning, onPress: () => {}, visible: true }] : []),
-    ...(canBrowseEcoCampus ? [{ icon: 'storefront-outline' as const, label: 'EcoCampus', color: colors.tint, onPress: () => {}, visible: true }] : []),
+    { icon: 'person-outline' as const, label: 'Edit Profile', color: colors.tint, onPress: () => router.push('/edit-profile' as any), visible: true },
+    { icon: 'bookmark-outline' as const, label: 'Saved Posts', color: colors.warning, onPress: () => router.push('/saved'), visible: canSaveBookmarks },
+    ...(canBrowseJobs ? [{ icon: 'briefcase-outline' as const, label: 'Jobs & Careers', color: colors.tint, onPress: () => router.push('/jobs'), visible: true }] : []),
+    ...(canAccessSkillAnalysis ? [{ icon: 'analytics-outline' as const, label: 'Skill Analysis', color: colors.success, onPress: () => router.push('/skill-analysis'), visible: true }] : []),
+    ...(canOfferMentorship ? [{ icon: 'people-outline' as const, label: 'Mentorship', color: colors.warning, onPress: () => router.push('/mentorship'), visible: true }] : []),
+    ...(canBrowseEcoCampus ? [{ icon: 'storefront-outline' as const, label: 'EcoCampus', color: colors.tint, onPress: () => router.push('/ecocampus'), visible: true }] : []),
     { icon: 'settings-outline' as const, label: 'Settings', color: colors.textSecondary, onPress: () => router.push('/settings'), visible: true },
-    { icon: 'help-circle-outline' as const, label: 'Help & Support', color: colors.textSecondary, onPress: () => {}, visible: true },
+    { icon: 'help-circle-outline' as const, label: 'Help & Support', color: colors.textSecondary, onPress: () => router.push('/settings'), visible: true },
   ].filter(item => item.visible);
 
   return (
