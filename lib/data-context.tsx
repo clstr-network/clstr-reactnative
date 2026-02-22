@@ -1,3 +1,7 @@
+/**
+ * @deprecated — MOCK LAYER. Will be removed once all screens migrate to
+ * lib/api/* + React Query. Do NOT add new consumers.
+ */
 import React, { createContext, useContext, useState, useMemo, useCallback, ReactNode } from 'react';
 import { Post, Conversation, Message, Connection, Notification, UserProfile } from './types';
 import { currentUser, seedPosts, seedConversations, seedMessages, seedConnections, seedNotifications } from './seed-data';

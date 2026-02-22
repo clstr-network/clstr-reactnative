@@ -1,79 +1,168 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, useColorScheme } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
-import { Avatar } from './Avatar';
-import { RoleBadge } from './RoleBadge';
-import type { Connection } from '@/lib/storage';
+import { useThemeColors } from '@/constants/colors';
+import Avatar from '@/components/Avatar';
+import RoleBadge from '@/components/RoleBadge';
+
+interface ConnectionUser {
+  id?: number | string;
+  full_name?: string;
+  avatar_url?: string | null;
+  role?: string;
+  headline?: string | null;
+}
+
+interface Connection {
+  id: number | string;
+  user?: ConnectionUser;
+}
 
 interface ConnectionCardProps {
   connection: Connection;
-  onConnect: (id: string) => void;
-  onAccept?: (id: string) => void;
+  isPending?: boolean;
+  onAccept?: () => void;
+  onReject?: () => void;
+  onConnect?: () => void;
+  onPress?: () => void;
 }
 
-export const ConnectionCard = React.memo(function ConnectionCard({ connection, onConnect, onAccept }: ConnectionCardProps) {
-  const colors = useThemeColors(useColorScheme());
-  const badgeColor = getRoleBadgeColor(connection.role, colors);
-
-  const handlePress = () => {
-    router.push({ pathname: '/user/[id]', params: { id: connection.id } });
-  };
+export default function ConnectionCard({
+  connection,
+  isPending = false,
+  onAccept,
+  onReject,
+  onConnect,
+  onPress,
+}: ConnectionCardProps) {
+  const colors = useThemeColors();
+  const user = connection.user;
 
   return (
     <Pressable
-      onPress={handlePress}
-      style={({ pressed }) => [
-        styles.card, { backgroundColor: colors.surface, borderColor: colors.border },
-        pressed && { opacity: 0.95 },
-      ]}
+      onPress={onPress}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
-      <Avatar uri={connection.avatarUrl} name={connection.name} size={50} />
+      <Avatar uri={user?.avatar_url} name={user?.full_name} size={52} />
+
       <View style={styles.info}>
         <View style={styles.nameRow}>
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{connection.name}</Text>
-          <RoleBadge role={connection.role} />
-        </View>
-        <Text style={[styles.dept, { color: colors.textSecondary }]}>{connection.department}</Text>
-        {connection.mutualConnections > 0 && (
-          <Text style={[styles.mutual, { color: colors.textTertiary }]}>
-            {connection.mutualConnections} mutual connections
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+            {user?.full_name ?? 'Unknown'}
           </Text>
-        )}
-      </View>
-      {connection.status === 'connected' ? (
-        <View style={[styles.connectedBadge, { borderColor: colors.success + '40' }]}>
-          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          {user?.role ? <RoleBadge role={user.role} /> : null}
         </View>
-      ) : connection.status === 'pending' ? (
-        <Pressable
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onAccept?.(connection.id); }}
-          style={({ pressed }) => [styles.actionBtn, { backgroundColor: colors.tint }, pressed && { opacity: 0.85 }]}
-        >
-          <Text style={styles.actionBtnText}>Accept</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onConnect(connection.id); }}
-          style={({ pressed }) => [styles.actionBtn, { backgroundColor: colors.tint }, pressed && { opacity: 0.85 }]}
-        >
-          <Ionicons name="person-add" size={14} color="#fff" />
-        </Pressable>
-      )}
+
+        {user?.headline ? (
+          <Text style={[styles.headline, { color: colors.textSecondary }]} numberOfLines={2}>
+            {user.headline}
+          </Text>
+        ) : null}
+
+        {isPending ? (
+          <View style={styles.pendingActions}>
+            <Pressable
+              onPress={onAccept}
+              style={[styles.acceptBtn, { backgroundColor: colors.primary }]}
+            >
+              <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+              <Text style={styles.acceptText}>Accept</Text>
+            </Pressable>
+            <Pressable
+              onPress={onReject}
+              style={[styles.rejectBtn, { borderColor: colors.border }]}
+            >
+              <Ionicons name="close" size={16} color={colors.textSecondary} />
+              <Text style={[styles.rejectText, { color: colors.textSecondary }]}>Ignore</Text>
+            </Pressable>
+          </View>
+        ) : onConnect ? (
+          <Pressable
+            onPress={onConnect}
+            style={[styles.connectBtn, { borderColor: colors.primary }]}
+          >
+            <Ionicons name="person-add-outline" size={14} color={colors.primary} />
+            <Text style={[styles.connectText, { color: colors.primary }]}>Connect</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </Pressable>
   );
-});
+}
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 10, padding: 14, borderRadius: 14, borderWidth: 1, gap: 12 },
-  info: { flex: 1, gap: 2 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', flexShrink: 1 },
-  dept: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  mutual: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  connectedBadge: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  actionBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionBtnText: { color: '#fff', fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  card: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    padding: 14,
+    gap: 12,
+  },
+  info: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginBottom: 2,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  headline: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  pendingActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  acceptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  acceptText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  rejectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  rejectText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  connectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  connectText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });

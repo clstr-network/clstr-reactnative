@@ -1,3 +1,7 @@
+/**
+ * @deprecated — MOCK TYPES. Use types from @clstr/core/types instead.
+ * Will be removed once all screens are migrated.
+ */
 export interface UserProfile {
   id: string;
   name: string;

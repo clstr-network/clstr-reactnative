@@ -1,73 +1,73 @@
-const Colors = {
-  dark: {
-    background: '#0A0E17',
-    surface: '#131929',
-    surfaceElevated: '#1A2236',
-    border: '#1E2A42',
-    borderLight: '#263352',
-    text: '#FFFFFF',
-    textSecondary: '#8B95B0',
-    textTertiary: '#5A6380',
-    tint: '#00D1B2',
-    tintLight: '#00E5C4',
-    tintDark: '#00B89C',
-    accent: '#3B82F6',
-    accentLight: '#60A5FA',
-    danger: '#EF4444',
-    dangerLight: '#F87171',
-    warning: '#F59E0B',
-    success: '#10B981',
-    studentBadge: '#3B82F6',
-    facultyBadge: '#8B5CF6',
-    alumniBadge: '#F59E0B',
-    tabIconDefault: '#5A6380',
-    tabIconSelected: '#00D1B2',
-    cardShadow: 'rgba(0, 0, 0, 0.3)',
-    overlay: 'rgba(10, 14, 23, 0.8)',
-  },
-  light: {
-    background: '#F5F7FA',
-    surface: '#FFFFFF',
-    surfaceElevated: '#FFFFFF',
-    border: '#E2E8F0',
-    borderLight: '#EDF2F7',
-    text: '#0F172A',
-    textSecondary: '#64748B',
-    textTertiary: '#94A3B8',
-    tint: '#00B89C',
-    tintLight: '#00D1B2',
-    tintDark: '#009B83',
-    accent: '#3B82F6',
-    accentLight: '#60A5FA',
-    danger: '#EF4444',
-    dangerLight: '#F87171',
-    warning: '#F59E0B',
-    success: '#10B981',
-    studentBadge: '#3B82F6',
-    facultyBadge: '#8B5CF6',
-    alumniBadge: '#F59E0B',
-    tabIconDefault: '#94A3B8',
-    tabIconSelected: '#00B89C',
-    cardShadow: 'rgba(0, 0, 0, 0.08)',
-    overlay: 'rgba(245, 247, 250, 0.8)',
-  },
+import { useColorScheme } from 'react-native';
+
+const light = {
+  primary: '#2563EB',
+  primaryLight: '#DBEAFE',
+  background: '#F8FAFC',
+  surface: '#FFFFFF',
+  surfaceSecondary: '#F1F5F9',
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  textTertiary: '#94A3B8',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  tint: '#2563EB',
+  tabIconDefault: '#94A3B8',
+  tabIconSelected: '#2563EB',
+  success: '#10B981',
+  error: '#EF4444',
+  warning: '#F59E0B',
+  accent: '#8B5CF6',
+  cardShadow: 'rgba(0, 0, 0, 0.05)',
+  inputBackground: '#F1F5F9',
+  inputBorder: '#E2E8F0',
 };
 
-export default Colors;
+const dark = {
+  primary: '#3B82F6',
+  primaryLight: '#1E3A5F',
+  background: '#0F172A',
+  surface: '#1E293B',
+  surfaceSecondary: '#334155',
+  text: '#F1F5F9',
+  textSecondary: '#94A3B8',
+  textTertiary: '#64748B',
+  border: '#334155',
+  borderLight: '#1E293B',
+  tint: '#3B82F6',
+  tabIconDefault: '#64748B',
+  tabIconSelected: '#3B82F6',
+  success: '#34D399',
+  error: '#F87171',
+  warning: '#FBBF24',
+  accent: '#A78BFA',
+  cardShadow: 'rgba(0, 0, 0, 0.3)',
+  inputBackground: '#1E293B',
+  inputBorder: '#334155',
+};
 
-export function useThemeColors(colorScheme: 'light' | 'dark' | null | undefined) {
-  return colorScheme === 'dark' ? Colors.dark : Colors.light;
+export function useThemeColors() {
+  const scheme = useColorScheme();
+  return scheme === 'dark' ? dark : light;
 }
 
-export function getRoleBadgeColor(role: string, colors: typeof Colors.dark) {
-  switch (role) {
+/** Static light-theme palette for use in StyleSheet.create() and other module-level code. */
+export const colors = light;
+
+export function getRoleBadgeColor(role: string) {
+  switch (role?.toLowerCase()) {
     case 'student':
-      return colors.studentBadge;
+      return { bg: '#DBEAFE', text: '#1D4ED8' };
     case 'faculty':
-      return colors.facultyBadge;
+      return { bg: '#FEF3C7', text: '#92400E' };
     case 'alumni':
-      return colors.alumniBadge;
+      return { bg: '#D1FAE5', text: '#065F46' };
+    case 'club':
+    case 'organization':
+      return { bg: '#EDE9FE', text: '#5B21B6' };
     default:
-      return colors.textTertiary;
+      return { bg: '#F1F5F9', text: '#475569' };
   }
 }
+
+export default { light, dark };

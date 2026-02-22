@@ -1,21 +1,47 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Colors from '@/constants/colors';
-import { Message } from '@/lib/types';
+import { useThemeColors } from '@/constants/colors';
+
+interface Message {
+  content?: string;
+  created_at?: string;
+  sender_id?: number | string;
+}
 
 interface MessageBubbleProps {
   message: Message;
+  isOwn: boolean;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+function formatTime(dateStr?: string): string {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
+  const colors = useThemeColors();
+
   return (
-    <View style={[styles.row, message.isOwn && styles.ownRow]}>
-      <View style={[styles.bubble, message.isOwn ? styles.ownBubble : styles.otherBubble]}>
-        <Text style={[styles.text, message.isOwn ? styles.ownText : styles.otherText]}>
-          {message.text}
+    <View style={[styles.row, isOwn ? styles.rowOwn : styles.rowOther]}>
+      <View
+        style={[
+          styles.bubble,
+          isOwn
+            ? [styles.bubbleOwn, { backgroundColor: colors.primary }]
+            : [styles.bubbleOther, { backgroundColor: colors.surfaceSecondary }],
+        ]}
+      >
+        <Text style={[styles.content, { color: isOwn ? '#FFFFFF' : colors.text }]}>
+          {message.content ?? ''}
         </Text>
-        <Text style={[styles.time, message.isOwn && styles.ownTime]}>
-          {message.timestamp}
+        <Text
+          style={[
+            styles.time,
+            { color: isOwn ? 'rgba(255,255,255,0.7)' : colors.textTertiary },
+          ]}
+        >
+          {formatTime(message.created_at)}
         </Text>
       </View>
     </View>
@@ -24,48 +50,34 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    marginBottom: 6,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
+    marginVertical: 2,
   },
-  ownRow: {
-    justifyContent: 'flex-end',
+  rowOwn: {
+    alignItems: 'flex-end',
+  },
+  rowOther: {
+    alignItems: 'flex-start',
   },
   bubble: {
     maxWidth: '78%',
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 16,
+    paddingVertical: 9,
+    borderRadius: 18,
   },
-  ownBubble: {
-    backgroundColor: Colors.dark.primary,
+  bubbleOwn: {
     borderBottomRightRadius: 4,
   },
-  otherBubble: {
-    backgroundColor: Colors.dark.surface,
+  bubbleOther: {
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: Colors.dark.surfaceBorder,
   },
-  text: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 14,
+  content: {
+    fontSize: 15,
     lineHeight: 20,
   },
-  ownText: {
-    color: Colors.dark.primaryForeground,
-  },
-  otherText: {
-    color: Colors.dark.textBody,
-  },
   time: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 10,
-    color: Colors.dark.textMeta,
+    fontSize: 11,
     marginTop: 4,
     alignSelf: 'flex-end',
-  },
-  ownTime: {
-    color: 'rgba(0, 0, 0, 0.45)',
   },
 });

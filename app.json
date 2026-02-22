@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "clstr",
+    "name": "CLSTR",
     "slug": "clstr",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,19 +9,21 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A0E17"
+      "backgroundColor": "#2563EB"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.clstr.network"
+      "bundleIdentifier": "com.clstr.app"
     },
     "android": {
-      "package": "com.clstr.network",
+      "package": "com.clstr.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0A0E17",
-        "foregroundImage": "./assets/images/icon.png"
+        "backgroundColor": "#2563EB",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
       }
     },
     "web": {
@@ -35,7 +37,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

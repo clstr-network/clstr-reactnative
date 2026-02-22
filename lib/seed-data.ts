@@ -1,3 +1,7 @@
+/**
+ * @deprecated — MOCK SEED DATA. Will be removed once all screens migrate to
+ * lib/api/* + React Query. Do NOT add new consumers.
+ */
 import { Post, Conversation, Message, Connection, Notification, UserProfile } from './types';
 
 export const currentUser: UserProfile = {

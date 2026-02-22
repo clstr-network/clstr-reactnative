@@ -1,3 +1,7 @@
+/**
+ * @deprecated — MOCK LAYER. Will be removed once all screens migrate to
+ * lib/api/* + React Query. Do NOT add new consumers.
+ */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 

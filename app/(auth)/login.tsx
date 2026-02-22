@@ -111,7 +111,7 @@ export default function LoginScreen() {
             )}
           </Pressable>
 
-          <Pressable style={styles.forgotButton}>
+          <Pressable style={styles.forgotButton} onPress={() => router.push('/(auth)/forgot-password')}>
             <Text style={styles.forgotText}>Forgot password?</Text>
           </Pressable>
         </View>

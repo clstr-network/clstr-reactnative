@@ -1,3 +1,7 @@
+/**
+ * @deprecated — MOCK LAYER. Will be removed once all screens migrate to
+ * lib/api/* + React Query. Do NOT add new consumers.
+ */
 import type { UserRole } from './auth-context';
 
 export interface Post {
@@ -118,9 +122,9 @@ const facultyTitles = [
 ];
 
 function getRoleForIndex(i: number): UserRole {
-  if (i >= 12) return 'faculty';
-  if (i % 4 === 0) return 'alumni';
-  return 'student';
+  if (i >= 12) return 'Faculty';
+  if (i % 4 === 0) return 'Alumni';
+  return 'Student';
 }
 
 export function generateMockPosts(count: number = 15): Post[] {
@@ -207,13 +211,13 @@ export function generateMockPeople(count: number = 20): Person[] {
       id: `user_${i}`,
       fullName: names[nameIdx],
       department: departments[i % departments.length],
-      graduationYear: role === 'faculty' ? '' : `${2022 + (i % 5)}`,
+      graduationYear: role === 'Faculty' ? '' : `${2022 + (i % 5)}`,
       role,
       bio: bios[i % bios.length],
       avatarUrl: null,
       connectionStatus: statuses[i % 3],
       mutualConnections: Math.floor(Math.random() * 15),
-      title: role === 'faculty' ? facultyTitles[i % facultyTitles.length] : undefined,
+      title: role === 'Faculty' ? facultyTitles[i % facultyTitles.length] : undefined,
       postCount: Math.floor(Math.random() * 30),
       connectionCount: Math.floor(Math.random() * 100) + 5,
     });
@@ -398,8 +402,8 @@ export function getAvatarColor(name: string): string {
 
 export function getRoleBadge(role: UserRole): { text: string; variant: 'primary' | 'success' | 'warning' } {
   switch (role) {
-    case 'alumni': return { text: 'Alumni', variant: 'primary' };
-    case 'faculty': return { text: 'Faculty', variant: 'warning' };
+    case 'Alumni': return { text: 'Alumni', variant: 'primary' };
+    case 'Faculty': return { text: 'Faculty', variant: 'warning' };
     default: return { text: 'Student', variant: 'success' };
   }
 }

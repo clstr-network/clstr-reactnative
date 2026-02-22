@@ -1,62 +1,138 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, useColorScheme } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/constants/colors';
-import { Avatar } from './Avatar';
-import { formatMessageTime } from '@/lib/time';
-import type { Conversation } from '@/lib/storage';
+import { formatRelativeTime } from '@/lib/time';
+import Avatar from '@/components/Avatar';
+
+interface Partner {
+  full_name?: string;
+  avatar_url?: string | null;
+  role?: string;
+}
+
+interface LastMessage {
+  content?: string;
+  created_at?: string;
+}
+
+interface Conversation {
+  partner_id?: number | string;
+  partner?: Partner;
+  last_message?: LastMessage | null;
+  unread_count?: number;
+}
 
 interface ConversationItemProps {
   conversation: Conversation;
-  onPress: (id: string) => void;
+  onPress?: () => void;
 }
 
-export const ConversationItem = React.memo(function ConversationItem({ conversation, onPress }: ConversationItemProps) {
-  const colors = useThemeColors(useColorScheme());
-  const hasUnread = conversation.unreadCount > 0;
+export default function ConversationItem({ conversation, onPress }: ConversationItemProps) {
+  const colors = useThemeColors();
+  const partner = conversation.partner;
+  const lastMsg = conversation.last_message;
+  const unread = conversation.unread_count ?? 0;
 
   return (
     <Pressable
-      onPress={() => onPress(conversation.id)}
-      style={({ pressed }) => [styles.item, pressed && { backgroundColor: colors.surfaceElevated }]}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.container,
+        { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface },
+      ]}
     >
-      <Avatar uri={conversation.participantAvatar} name={conversation.participantName} size={52} />
-      <View style={styles.info}>
+      <Avatar uri={partner?.avatar_url} name={partner?.full_name} size={50} />
+
+      <View style={styles.content}>
         <View style={styles.topRow}>
-          <Text style={[styles.name, { color: colors.text }, hasUnread && styles.nameBold]} numberOfLines={1}>
-            {conversation.participantName}
-          </Text>
-          <Text style={[styles.time, { color: hasUnread ? colors.tint : colors.textTertiary }]}>
-            {formatMessageTime(conversation.lastMessageAt)}
-          </Text>
-        </View>
-        <View style={styles.bottomRow}>
           <Text
-            style={[styles.lastMsg, { color: hasUnread ? colors.text : colors.textSecondary }, hasUnread && styles.lastMsgBold]}
+            style={[styles.name, { color: colors.text }, unread > 0 && styles.nameBold]}
             numberOfLines={1}
           >
-            {conversation.lastMessage}
+            {partner?.full_name ?? 'Unknown'}
           </Text>
-          {hasUnread && (
-            <View style={[styles.unreadBadge, { backgroundColor: colors.tint }]}>
-              <Text style={styles.unreadText}>{conversation.unreadCount}</Text>
+          {lastMsg?.created_at ? (
+            <Text style={[styles.time, { color: colors.textTertiary }]}>
+              {formatRelativeTime(lastMsg.created_at)}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={styles.bottomRow}>
+          <Text
+            style={[
+              styles.preview,
+              { color: unread > 0 ? colors.text : colors.textSecondary },
+              unread > 0 && styles.previewBold,
+            ]}
+            numberOfLines={1}
+          >
+            {lastMsg?.content ?? 'No messages yet'}
+          </Text>
+          {unread > 0 ? (
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+              <Text style={styles.badgeText}>{unread > 99 ? '99+' : unread}</Text>
             </View>
-          )}
+          ) : null}
         </View>
       </View>
     </Pressable>
   );
-});
+}
 
 const styles = StyleSheet.create({
-  item: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 14 },
-  info: { flex: 1, gap: 4 },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  name: { fontSize: 16, fontWeight: '500', fontFamily: 'Inter_500Medium', flex: 1, marginRight: 8 },
-  nameBold: { fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  time: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  lastMsg: { fontSize: 14, flex: 1, fontFamily: 'Inter_400Regular' },
-  lastMsgBold: { fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  unreadBadge: { minWidth: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  unreadText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  content: {
+    flex: 1,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 8,
+  },
+  nameBold: {
+    fontWeight: '700',
+  },
+  time: {
+    fontSize: 12,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  preview: {
+    fontSize: 14,
+    flex: 1,
+    marginRight: 8,
+  },
+  previewBold: {
+    fontWeight: '600',
+  },
+  badge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });

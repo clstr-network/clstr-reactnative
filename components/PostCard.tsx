@@ -1,109 +1,213 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, useColorScheme } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
-import { Avatar } from './Avatar';
-import { RoleBadge } from './RoleBadge';
 import { formatRelativeTime } from '@/lib/time';
-import type { Post } from '@/lib/storage';
+import Avatar from '@/components/Avatar';
+import RoleBadge from '@/components/RoleBadge';
+
+const REACTION_EMOJIS: Record<string, string> = {
+  like: '\u{1F44D}',
+  celebrate: '\u{1F389}',
+  support: '\u{1F91D}',
+  love: '\u{2764}\u{FE0F}',
+  insightful: '\u{1F4A1}',
+  curious: '\u{1F914}',
+  laugh: '\u{1F602}',
+};
+
+interface PostUser {
+  full_name?: string;
+  avatar_url?: string | null;
+  role?: string;
+}
+
+interface TopReaction {
+  type: string;
+  count: number;
+}
+
+interface Post {
+  id: number | string;
+  content?: string;
+  user?: PostUser;
+  likes_count?: number;
+  comments_count?: number;
+  created_at?: string;
+  liked?: boolean;
+  userReaction?: string | null;
+  topReactions?: TopReaction[];
+}
 
 interface PostCardProps {
   post: Post;
-  onLike: (id: string) => void;
-  onPress?: (id: string) => void;
-  onLongPress?: (id: string) => void;
+  onPress?: () => void;
+  onReact?: () => void;
+  onComment?: () => void;
 }
 
-const CATEGORY_ICONS: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
-  academic: { name: 'school-outline', color: '#3B82F6' },
-  career: { name: 'briefcase-outline', color: '#F59E0B' },
-  events: { name: 'calendar-outline', color: '#8B5CF6' },
-  social: { name: 'people-outline', color: '#10B981' },
-  general: { name: 'chatbubble-outline', color: '#6B7280' },
-};
-
-export const PostCard = React.memo(function PostCard({ post, onLike, onPress, onLongPress }: PostCardProps) {
-  const colors = useThemeColors(useColorScheme());
-  const cat = CATEGORY_ICONS[post.category] || CATEGORY_ICONS.general;
-
-  const handleLike = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onLike(post.id);
-  };
-
-  const handleLongPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onLongPress?.(post.id);
-  };
+export default function PostCard({ post, onPress, onReact, onComment }: PostCardProps) {
+  const colors = useThemeColors();
+  const user = post.user;
+  const totalReactions = post.likes_count ?? 0;
+  const topReactions = post.topReactions ?? [];
+  const isLiked = !!post.liked || !!post.userReaction;
 
   return (
     <Pressable
-      onPress={() => onPress?.(post.id)}
-      onLongPress={handleLongPress}
-      delayLongPress={400}
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: colors.surface, borderColor: colors.border },
-        pressed && { opacity: 0.95 },
-      ]}
+      onPress={onPress}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <View style={styles.header}>
-        <Avatar uri={post.authorAvatar} name={post.authorName} size={42} />
-        <View style={styles.headerInfo}>
+        <Avatar uri={user?.avatar_url} name={user?.full_name} size={44} />
+        <View style={styles.headerText}>
           <View style={styles.nameRow}>
-            <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{post.authorName}</Text>
-            <RoleBadge role={post.authorRole} />
+            <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+              {user?.full_name ?? 'Unknown'}
+            </Text>
+            {user?.role ? <RoleBadge role={user.role} /> : null}
           </View>
-          <View style={styles.metaRow}>
-            <Text style={[styles.username, { color: colors.textTertiary }]}>@{post.authorUsername}</Text>
-            <Text style={[styles.dot, { color: colors.textTertiary }]}>{'\u00B7'}</Text>
-            <Text style={[styles.time, { color: colors.textTertiary }]}>{formatRelativeTime(post.createdAt)}</Text>
-          </View>
+          {post.created_at ? (
+            <Text style={[styles.timestamp, { color: colors.textTertiary }]}>
+              {formatRelativeTime(post.created_at)}
+            </Text>
+          ) : null}
         </View>
       </View>
 
-      <Text style={[styles.content, { color: colors.text }]}>{post.content}</Text>
+      {post.content ? (
+        <Text style={[styles.content, { color: colors.text }]} numberOfLines={5}>
+          {post.content}
+        </Text>
+      ) : null}
 
-      <View style={styles.footer}>
-        <View style={[styles.categoryTag, { backgroundColor: cat.color + '12' }]}>
-          <Ionicons name={cat.name} size={12} color={cat.color} />
-          <Text style={[styles.categoryText, { color: cat.color }]}>{post.category}</Text>
-        </View>
-
-        <View style={styles.actions}>
-          <Pressable onPress={handleLike} style={styles.actionBtn} hitSlop={8}>
-            <Ionicons name={post.isLiked ? 'heart' : 'heart-outline'} size={18} color={post.isLiked ? colors.danger : colors.textTertiary} />
-            <Text style={[styles.actionCount, { color: post.isLiked ? colors.danger : colors.textTertiary }]}>{post.likesCount}</Text>
-          </Pressable>
-          <View style={styles.actionBtn}>
-            <Ionicons name="chatbubble-outline" size={16} color={colors.textTertiary} />
-            <Text style={[styles.actionCount, { color: colors.textTertiary }]}>{post.commentsCount}</Text>
+      {totalReactions > 0 && topReactions.length > 0 ? (
+        <View style={[styles.reactionsRow, { borderTopColor: colors.borderLight }]}>
+          <View style={styles.reactionEmojis}>
+            {topReactions.slice(0, 3).map((r) => (
+              <Text key={r.type} style={styles.reactionEmoji}>
+                {REACTION_EMOJIS[r.type] ?? REACTION_EMOJIS.like}
+              </Text>
+            ))}
           </View>
-          {post.isSaved && (
-            <Ionicons name="bookmark" size={14} color={colors.warning} style={{ marginLeft: 4 }} />
-          )}
+          <Text style={[styles.reactionCount, { color: colors.textSecondary }]}>
+            {totalReactions}
+          </Text>
+          {(post.comments_count ?? 0) > 0 ? (
+            <Text style={[styles.commentCount, { color: colors.textSecondary }]}>
+              {post.comments_count} comment{post.comments_count !== 1 ? 's' : ''}
+            </Text>
+          ) : null}
         </View>
+      ) : null}
+
+      <View style={[styles.actionBar, { borderTopColor: colors.border }]}>
+        <Pressable style={styles.actionButton} onPress={onReact}>
+          <Ionicons
+            name={isLiked ? 'thumbs-up' : 'thumbs-up-outline'}
+            size={20}
+            color={isLiked ? colors.primary : colors.textSecondary}
+          />
+          <Text
+            style={[
+              styles.actionLabel,
+              { color: isLiked ? colors.primary : colors.textSecondary },
+            ]}
+          >
+            Like
+          </Text>
+        </Pressable>
+
+        <Pressable style={styles.actionButton} onPress={onComment}>
+          <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
+          <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Comment</Text>
+        </Pressable>
+
+        <Pressable style={styles.actionButton}>
+          <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
+          <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Share</Text>
+        </Pressable>
       </View>
     </Pressable>
   );
-});
+}
 
 const styles = StyleSheet.create({
-  card: { marginHorizontal: 16, marginBottom: 12, borderRadius: 16, borderWidth: 1, padding: 14 },
-  header: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  headerInfo: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', flexShrink: 1 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  username: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  dot: { fontSize: 13 },
-  time: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  content: { fontSize: 15, lineHeight: 22, fontFamily: 'Inter_400Regular', marginBottom: 12 },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  categoryTag: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4 },
-  categoryText: { fontSize: 11, fontWeight: '600', textTransform: 'capitalize', fontFamily: 'Inter_600SemiBold' },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  actionCount: { fontSize: 13, fontWeight: '500', fontFamily: 'Inter_500Medium' },
+  card: {
+    borderWidth: 1,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    padding: 14,
+    paddingBottom: 8,
+  },
+  headerText: {
+    flex: 1,
+    marginLeft: 10,
+    justifyContent: 'center',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  timestamp: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  content: {
+    fontSize: 14,
+    lineHeight: 20,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+  },
+  reactionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  reactionEmojis: {
+    flexDirection: 'row',
+    marginRight: 4,
+  },
+  reactionEmoji: {
+    fontSize: 14,
+    marginRight: -2,
+  },
+  reactionCount: {
+    fontSize: 13,
+    marginLeft: 6,
+  },
+  commentCount: {
+    fontSize: 13,
+    marginLeft: 'auto',
+  },
+  actionBar: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 6,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    gap: 4,
+  },
+  actionLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
 });

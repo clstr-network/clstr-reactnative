@@ -1,76 +1,171 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
-import { getUserProfile, isOnboardingComplete, saveUserProfile, createUserProfile, type UserProfile, type UserRole } from './storage';
+/**
+ * AuthProvider — Supabase-backed auth context for mobile.
+ *
+ * Exposes signIn / signUp / signOut / signInWithOtp / completeOnboarding.
+ * Also provides backwards-compatible `login` and `signup` aliases so
+ * existing (auth)/login.tsx and signup.tsx screens keep working.
+ */
 
-interface AuthContextValue {
-  user: UserProfile | null;
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import * as Linking from 'expo-linking';
+import { supabase } from './adapters/core-client';
+import { createProfileRecord, mapUserTypeToRole } from './api/profile';
+import type { Session, User } from '@supabase/supabase-js';
+import type { ProfileSignupPayload } from '@clstr/core/api/profile';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type UserRole = 'Student' | 'Alumni' | 'Faculty' | 'Club';
+
+interface OnboardingPayload {
+  fullName: string;
+  department: string;
+  graduationYear?: string;
+  bio?: string;
+  role: string;
+}
+
+interface AuthContextType {
+  session: Session | null;
+  user: User | null;
   isLoading: boolean;
-  isOnboarded: boolean;
-  signUp: (data: { name: string; role: UserRole; department: string; bio?: string; graduationYear?: string }) => Promise<void>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  isAuthenticated: boolean;
+
+  // Core methods
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
+  signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
+  completeOnboarding: (data: OnboardingPayload) => Promise<void>;
+
+  // Backwards-compatible aliases
+  login: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signup: (email: string, password: string) => Promise<{ error: Error | null }>;
+
+  // Legacy compat (settings.tsx uses `refresh`)
   refresh: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthContext = createContext<AuthContextType>({
+  session: null,
+  user: null,
+  isLoading: true,
+  isAuthenticated: false,
+  signIn: async () => ({ error: null }),
+  signUp: async () => ({ error: null }),
+  signOut: async () => {},
+  signInWithOtp: async () => ({ error: null }),
+  completeOnboarding: async () => {},
+  login: async () => ({ error: null }),
+  signup: async () => ({ error: null }),
+  refresh: async () => {},
+});
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isOnboarded, setIsOnboarded] = useState(false);
 
-  const loadUser = async () => {
-    try {
-      const [profile, onboarded] = await Promise.all([
-        getUserProfile(),
-        isOnboardingComplete(),
-      ]);
-      setUser(profile);
-      setIsOnboarded(onboarded);
-    } catch (e) {
-      console.error('Failed to load user:', e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Hydrate session on mount + subscribe to auth state changes
   useEffect(() => {
-    loadUser();
+    supabase.auth.getSession().then(({ data: { session: s } }: { data: { session: Session | null } }) => {
+      setSession(s);
+      setIsLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event: string, s: Session | null) => {
+      setSession(s);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (data: { name: string; role: UserRole; department: string; bio?: string; graduationYear?: string }) => {
-    const profile = await createUserProfile(data);
-    setUser(profile);
-    setIsOnboarded(true);
-  };
+  // --- Core auth methods ---
 
-  const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!user) return;
-    const updated = { ...user, ...updates };
-    await saveUserProfile(updated);
-    setUser(updated);
-  };
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    return { error: null };
+  }, []);
 
-  const refresh = async () => {
-    await loadUser();
-  };
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) throw new Error(error.message);
+    return { error: null };
+  }, []);
 
-  const value = useMemo(() => ({
-    user,
-    isLoading,
-    isOnboarded,
-    signUp,
-    updateProfile,
-    refresh,
-  }), [user, isLoading, isOnboarded]);
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  const signInWithOtp = useCallback(async (email: string) => {
+    const redirectTo = Linking.createURL('auth/callback');
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo },
+    });
+    if (error) throw new Error(error.message);
+    return { error: null };
+  }, []);
+
+  const completeOnboarding = useCallback(
+    async (data: OnboardingPayload) => {
+      const user = session?.user;
+      if (!user) throw new Error('Not authenticated');
+
+      const mappedRole = mapUserTypeToRole(data.role) ?? 'Student';
+      const domain = user.email?.split('@')[1] ?? null;
+
+      const payload: ProfileSignupPayload = {
+        id: user.id,
+        email: user.email ?? '',
+        full_name: data.fullName,
+        role: mappedRole,
+        college_domain: domain,
+        major: data.department || null,
+        graduation_year: data.graduationYear || null,
+        bio: data.bio || null,
+        onboarding_complete: true,
+      };
+
+      await createProfileRecord(payload);
+    },
+    [session],
+  );
+
+  const refresh = useCallback(async () => {
+    await supabase.auth.refreshSession();
+  }, []);
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user: session?.user ?? null,
+        isLoading,
+        isAuthenticated: !!session?.user,
+        signIn,
+        signUp,
+        signOut,
+        signInWithOtp,
+        completeOnboarding,
+        // Backwards-compatible aliases
+        login: signIn,
+        signup: signUp,
+        refresh,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
-}
+export const useAuth = () => useContext(AuthContext);
