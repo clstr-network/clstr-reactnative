@@ -106,14 +106,14 @@ export default function ChatScreen() {
           value={input}
           onChangeText={setInput}
           multiline
-          maxLength={500}
+          maxLength={1000}
         />
         <Pressable
-          style={[styles.sendBtn, { backgroundColor: input.trim() ? c.primary : c.backgroundTertiary }]}
+          style={[styles.sendBtn, { backgroundColor: input.trim() ? c.primary : c.tier1 }]}
           onPress={handleSend}
           disabled={!input.trim()}
         >
-          <Ionicons name="send" size={18} color={input.trim() ? c.background : c.textTertiary} />
+          <Ionicons name="arrow-up" size={20} color={input.trim() ? c.background : c.textTertiary} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   },
   chatName: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 16,
+    fontSize: 15,
   },
   chatRole: {
     fontFamily: 'Inter_400Regular',

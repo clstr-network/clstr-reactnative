@@ -1,0 +1,176 @@
+
+Clstr currently operates with **three parallel visual systems**:
+
+1. **Core tokenized system** (Tailwind + CSS variables, light/dark aware)
+2. **Home/authenticated black glass system** (`.home-theme`, explicit black surfaces)
+3. **Marketing Solana-inspired system** (`.landing-theme`, vivid accent palette)
+
+In practice, the app is visually recognizable and mostly coherent on core authenticated screens, but design governance is split between:
+- token-driven classes (`bg-background`, `text-foreground`, semantic tokens), and
+- extensive hard-coded colors (`bg-[#000000]`, `bg-[#1a1a1a]`, etc.).
+
+This creates maintainability and consistency risk as the product scales.
+
+---
+
+## 2) Theme Architecture (Current State)
+
+## 2.1 Foundations
+
+- `tailwind.config.ts` defines semantic tokens through CSS variables:
+  - `background`, `foreground`, `primary`, `secondary`, `accent`, `muted`, `card`, `border`, `ring`, sidebar tokens
+- `darkMode: ["class"]` with class-based switching
+- Additional custom token sets:
+  - `alumni.*`
+  - `admin.*` (light admin palette)
+
+**Assessment:** Good foundation. Token model exists and is extensible.
+
+## 2.2 Runtime Theme Logic
+
+- `src/components/ThemeProvider.tsx` loads persisted user theme from Supabase (`user_settings.theme_mode`)
+- Supports `light`, `dark`, and `system`
+- Applies theme via `applyThemeToDOM`
+
+**Assessment:** Runtime theming pipeline is sound and product-grade.
+
+## 2.3 Global CSS Theme Layers
+
+- `src/index.css` defines:
+  - `:root` default tokens
+  - `.dark` overrides
+  - `.landing-theme` full theme override (brand/marketing)
+  - `.home-theme` full black-first override with tiered surfaces and strict style rules
+
+**Assessment:** Functionally strong, but large CSS file mixes tokens, component overrides, utility helpers, route-specific behavior, and legacy classes in one place.
+
+---
+
+## 3) UI Systems by Product Surface
+
+## 3.1 Authenticated App (Home/Network/Messaging/Events/etc.)
+
+**Primary visual language:** dark monochrome, translucent surfaces, subtle borders
+
+- `home-theme` is widely applied across app pages
+- `Layout` + `layout/Navbar` + mobile `BottomNavigation` create a consistent shell
+- Visual hierarchy uses card tiers:
+  - `home-card-tier1` (strongest)
+  - `home-card-tier2` (baseline)
+  - `home-card-tier3` (quiet)
+
+### Strengths
+
+- Strong identity and clear contrast model
+- Good mobile-first nav strategy (top sticky + bottom mobile nav)
+- Reusable component primitives in place (`Button`, `Card`, `Input`)
+
+### Gaps
+
+- Repetition of hard-coded black surfaces (`bg-[#000000]`, `bg-[#0a0a0a]`) in many pages/components
+- Dialog/sheet styling frequently hard-coded instead of abstracted variants
+- Some text/icon opacity choices (`white/40`, `white/50`) may underperform on small mobile text sizes
+
+## 3.2 Landing + Marketing Pages
+
+**Primary visual language:** high-energy black + neon-like accents (Solana-inspired)
+
+- `landing-theme` scope present
+- strong decorative motifs, vivid accents, and card blocks (`bg-[#1a1a1a]`, hover `#222222`)
+- SEO pattern used with `SEO` component and JSON-LD on many pages
+
+### Strengths
+
+- Distinct top-of-funnel personality
+- Good semantic sectioning on several pages (`header`, `section`, `footer`) and metadata support
+
+### Gaps
+
+- Heavy hard-coded palette values across marketing pages; weak token reuse
+- Copy/encoding issue found (arrow rendered as `â†’` in `Features.tsx`)
+- Decorative color usage not centralized in a marketing token map
+
+## 3.3 Admin UI
+
+**Primary visual language:** light enterprise dashboard
+
+- `admin.*` tokens exist in Tailwind config
+- `AdminLayout` uses many direct gray/violet utility classes plus admin tokens
+
+### Strengths
+
+- Clear separation from student-facing app
+- Good information density patterns (cards, charts, badges)
+
+### Gaps
+
+- Hybrid token usage (some `admin-*` tokenized, some direct `gray-*`/`violet-*`), causing partial drift
+- Visual grammar differs from app primitives enough that shared components may behave inconsistently
+
+---
+
+## 4) Component-Level Audit
+
+## 4.1 Good Standardization
+
+- `src/components/ui/button.tsx`: controlled variants and sizes
+- `src/components/ui/card.tsx`: consistent dark card baseline
+- `src/components/ui/input.tsx`: unified dark input style
+- `src/components/ui/typography.tsx`: semantic type primitives for home-theme
+- `src/components/ui/surface-card.tsx`: explicit tier abstraction
+
+## 4.2 Missing/Partial Standardization
+
+- No central "surface/dialog/sheet variant system" adopted app-wide
+- Page-level wrappers frequently set background manually
+- Marketing cards/buttons appear hand-authored repeatedly
+
+---
+
+## 5) UX Consistency Audit
+
+## 5.1 Navigation
+
+- Authenticated nav shell is consistent and sticky
+- Mobile bottom bar logic is clear and permission-aware
+- Public routes and authenticated routes are split correctly via layout wrappers
+
+**Risk:** Multiple nav implementations (`components/Navbar` for marketing, `components/layout/Navbar` for app) are valid but need stricter visual governance docs to avoid divergence.
+
+## 5.2 Motion/Interaction
+
+- Framer Motion integrated for route/page transitions and feed entry animation
+- Reduced-motion handling exists globally
+
+**Risk:** Motion standards are not documented as tokens/presets (duration/easing scale), so teams may add arbitrary motion values.
+
+## 5.3 Accessibility Signals
+
+- Contrast generally strong on dark surfaces
+- Focus states present in primitives
+
+**Risks to review with QA:**
+- Low-opacity text on mobile (`text-white/40`) for body-level content
+- Tap target consistency is improved via utility classes, but not guaranteed everywhere
+- Some controls remove native outlines globally before replacing with consistent alternatives
+
+---
+
+## 6) SEO & Semantic Implementation Snapshot
+
+- SEO component (`SEO.tsx`) adds title, description, OG/Twitter tags, JSON-LD script
+- Landing and many marketing pages include JSON-LD
+
+**Important architectural note:** project is React + Vite with client-side `react-helmet-async`; metadata is not server-rendered by default, which may reduce crawler reliability compared with SSR/SSG.
+
+---
+
+## 7) Top Design Debt Items (Prioritized)
+
+1. **Token bypass at scale**: heavy hard-coded color classes in pages/components
+2. **Theme scope fragmentation**: core tokens + `home-theme` + marketing values + admin hybrids
+3. **Dialog/sheet styling duplication**: repeated one-off dark modal classes
+4. **Large monolithic global CSS**: mixed concerns reduce maintainability
+5. **Inconsistent semantic adoption** across page templates
+
+---

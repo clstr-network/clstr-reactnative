@@ -43,7 +43,7 @@ export default function NetworkScreen() {
         <Pressable style={styles.menuBtn}>
           <Ionicons name="menu" size={24} color={c.text} />
         </Pressable>
-        <View style={[styles.searchBar, { backgroundColor: c.backgroundTertiary, borderColor: c.border }]}>
+        <View style={[styles.searchBarTop, { backgroundColor: c.backgroundTertiary, borderColor: c.border }]}>
           <Ionicons name="search-outline" size={16} color={c.textTertiary} />
           <Text style={[styles.searchPlaceholder, { color: c.textTertiary }]}>Search...</Text>
         </View>
@@ -53,7 +53,7 @@ export default function NetworkScreen() {
       <View style={styles.header}>
         <Text style={[styles.title, { color: c.text }]}>My Network</Text>
         <Text style={[styles.subtitle, { color: c.textSecondary }]}>
-          Connect with students, alumni, and faculty from{'\n'}raghuenggcollege.in
+          Connect with students, alumni, and faculty
         </Text>
       </View>
 
@@ -70,9 +70,6 @@ export default function NetworkScreen() {
         <View style={styles.filterBtns}>
           <Pressable style={styles.filterBtn}>
             <Ionicons name="options-outline" size={16} color={c.textTertiary} />
-          </Pressable>
-          <Pressable style={styles.filterBtn}>
-            <Ionicons name="funnel-outline" size={16} color={c.textTertiary} />
           </Pressable>
         </View>
       </View>
@@ -104,8 +101,8 @@ export default function NetworkScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="people-outline" size={48} color={c.textTertiary} />
-            <Text style={[styles.emptyText, { color: c.textSecondary }]}>No results found</Text>
+            <Ionicons name="people-outline" size={40} color={c.textTertiary} />
+            <Text style={[styles.emptyText, { color: c.textSecondary }]}>No users found</Text>
           </View>
         }
       />
@@ -130,7 +127,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchBar: {
+  searchBarTop: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -156,19 +153,18 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
-    marginTop: 4,
-    lineHeight: 17,
+    marginTop: 3,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 16,
-    marginBottom: 10,
     borderRadius: 10,
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     height: 40,
-    gap: 6,
+    gap: 8,
+    marginBottom: 12,
   },
   searchInput: {
     flex: 1,

@@ -1,0 +1,371 @@
+You are performing a full architectural and UI audit of a React web application being converted to a React Native mobile application.
+
+The goal is to ensure the mobile app is:
+
+Native-first (not web-styled mobile)
+
+Structurally correct
+
+Flow-consistent
+
+Design-token aligned
+
+Interaction-optimized for touch
+
+Lifecycle-safe
+
+Performance-safe
+
+CONTEXT
+
+Web app:
+
+Vite + React 18 + TypeScript
+
+Tailwind CSS
+
+shadcn/ui components
+
+Radix primitives
+
+Framer Motion
+
+Supabase backend
+
+TanStack Query
+
+60+ routes
+
+180+ components
+
+Desktop-first responsive UI
+
+Mobile app:
+
+Expo + React Native
+
+Shared core domain layer
+
+Native navigation stacks
+
+SecureStore auth
+
+Realtime messaging
+
+Screen registry pattern
+
+No DOM
+
+No Tailwind
+
+No Radix
+
+No hover states
+
+No web layout assumptions
+
+TASK 1 — FULL WORKING FLOW AUDIT
+
+For each major flow:
+
+Authentication flow (Login → Signup → Verify → Onboarding → Main)
+
+Feed flow (Load → Scroll → Open post → Back)
+
+Profile flow (Own vs Other)
+
+Messaging flow (List → Chat → Reconnect)
+
+Events flow (List → Detail → RSVP)
+
+Network flow (Browse → Request → Accept)
+
+Notifications flow (Badge → List → Navigate)
+
+Settings flow (Theme → Logout → Delete)
+
+For each flow:
+
+Describe current web behavior
+
+Identify web-only assumptions
+
+Identify mobile friction points
+
+Identify navigation differences
+
+Identify state handling differences
+
+Identify edge cases under background/foreground
+
+Identify lifecycle risk
+
+Identify potential gesture conflicts
+
+Recommend native corrections
+
+Output in structured sections per flow.
+
+TASK 2 — UI & DESIGN SYSTEM AUDIT
+
+Audit:
+
+Color tokens
+
+Spacing scale
+
+Typography scale
+
+Avatar sizing
+
+Card density
+
+Shadow usage
+
+Border radius consistency
+
+Iconography usage
+
+Touch target sizes
+
+Safe area usage
+
+Dark mode behavior
+
+For each:
+
+Identify where web assumptions leak into mobile
+
+Recommend native adjustments
+
+Ensure consistent design tokens
+
+Ensure accessibility (44px minimum tap targets)
+
+TASK 3 — COMPONENT PARITY AUDIT
+
+Evaluate required mobile components:
+
+ConversationItem
+
+PostCard
+
+UserCard
+
+EventCard
+
+NotificationItem
+
+SettingsRow
+
+ChatInput
+
+MessageBubble
+
+TabBar
+
+RootNavigator
+
+Stack layouts
+
+For each:
+
+Describe web equivalent
+
+Identify web-only patterns to remove
+
+Define minimal native version (Phase 1 discipline)
+
+Identify performance risks
+
+Identify memoization needs
+
+Identify FlatList usage constraints
+
+Define what must NOT be included in V1
+
+TASK 4 — LAYOUT ARCHITECTURE AUDIT
+
+Audit:
+
+Root layout
+
+Tab layout
+
+Stack nesting
+
+Modal usage
+
+Header usage
+
+Back navigation behavior
+
+Gesture handling
+
+Deep linking integration
+
+Screen registry pattern correctness
+
+Answer:
+
+Is navigation tree minimal?
+
+Are stacks too deep?
+
+Any circular screen imports?
+
+Any inconsistent header configuration?
+
+Any screen state leaks?
+
+TASK 5 — THEME & APPEARANCE AUDIT
+
+Evaluate:
+
+Dark mode consistency
+
+Theme persistence
+
+Appearance API usage
+
+System theme handling
+
+Token centralization
+
+No DOM theme leakage
+
+Recommend improvements for:
+
+Future theming scale
+
+Animation discipline
+
+Cross-platform consistency
+
+TASK 6 — PERFORMANCE RISK AUDIT
+
+Identify:
+
+Unnecessary re-renders
+
+FlatList misuse
+
+Inverted list risks
+
+Large object props
+
+Inline functions in render
+
+Missing React.memo
+
+Query invalidation overuse
+
+Memory leak risk
+
+Realtime subscription lifecycle risks
+
+TASK 7 — MOBILE-NATIVE CORRECTIONS
+
+For each major screen:
+
+Feed
+
+Chat
+
+Profile
+
+Events
+
+Network
+
+Notifications
+
+Settings
+
+Answer:
+
+What should be simplified?
+
+What should be removed?
+
+What should be redesigned?
+
+What should stay identical?
+
+What must feel native instead of web?
+
+Where should layout differ from desktop?
+
+Where should density be reduced?
+
+OUTPUT FORMAT
+
+Return:
+
+Executive Summary (critical findings first)
+
+Flow audit (per feature)
+
+UI audit
+
+Component audit
+
+Layout audit
+
+Performance audit
+
+Native correction roadmap
+
+Priority-ranked fix list (Critical / High / Medium / Low)
+
+Be brutally honest.
+Do not sugarcoat.
+Call out architectural mistakes.
+Flag lifecycle dangers.
+Flag UX anti-patterns.
+Flag anything that feels like web-in-a-wrapper.
+
+Additional Instruction
+
+Assume:
+
+This app will scale to 10,000 daily active users.
+
+Messaging must be lifecycle-safe.
+
+Navigation must be resilient to deep links.
+
+Performance must hold on mid-range Android devices.
+
+END OF PROMPT
+💡 How You Use This
+
+Feed your web repo
+
+Feed your mobile repo
+
+Run this audit prompt
+
+Fix architecture before building more screens
+
+⚠ Important
+
+Do NOT continue building:
+
+ConversationItem
+
+PostCard
+
+UserCard
+
+EventCard
+
+Tab screens
+
+Root layout
+
+Chat screen
+
+until you run this audit once.
+
+Otherwise you’ll rework everything.

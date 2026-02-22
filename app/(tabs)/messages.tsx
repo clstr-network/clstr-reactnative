@@ -112,7 +112,7 @@ export default function MessagesScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="chatbubbles-outline" size={48} color={c.textTertiary} />
+              <Ionicons name="chatbubbles-outline" size={40} color={c.textTertiary} />
               <Text style={[styles.emptyTitle, { color: c.textSecondary }]}>No conversations yet</Text>
             </View>
           }
@@ -126,8 +126,8 @@ export default function MessagesScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="people-outline" size={48} color={c.textTertiary} />
-              <Text style={[styles.emptyTitle, { color: c.textSecondary }]}>No contacts yet</Text>
+              <Ionicons name="people-outline" size={40} color={c.textTertiary} />
+              <Text style={[styles.emptyTitle, { color: c.textSecondary }]}>No contacts found</Text>
             </View>
           }
         />
@@ -180,12 +180,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 16,
-    marginBottom: 10,
     borderRadius: 10,
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     height: 40,
-    gap: 6,
+    gap: 8,
+    marginBottom: 12,
   },
   searchInput: {
     flex: 1,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     marginRight: 8,
     gap: 6,
     borderBottomWidth: 2,

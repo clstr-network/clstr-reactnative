@@ -78,9 +78,10 @@ export default function MoreScreen() {
               {section.items.map((item, i) => (
                 <Pressable
                   key={item.label}
-                  style={[
+                  style={({ pressed }) => [
                     styles.menuItem,
                     i < section.items.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.border },
+                    { opacity: pressed ? 0.7 : 1 },
                   ]}
                 >
                   <View style={styles.menuItemLeft}>
@@ -130,17 +131,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 16,
     borderRadius: 14,
     borderWidth: 1,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+    marginBottom: 20,
   },
   profileInfo: {
+    marginLeft: 14,
     flex: 1,
   },
   profileName: {
