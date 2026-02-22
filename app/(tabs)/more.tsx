@@ -1,13 +1,13 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View, Text, Platform, Pressable, useColorScheme, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, Platform, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useThemeColors } from '@/constants/colors';
-import { Avatar } from '@/components/Avatar';
+import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
-import { getProfileById } from '@/lib/api';
+import { getProfile } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/query-keys';
 
 import * as Haptics from 'expo-haptics';
@@ -51,14 +51,14 @@ const getMenuSections = (handleSignOut: () => void): { title: string; items: Men
 ];
 
 export default function MoreScreen() {
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const { user, signOut } = useAuth();
 
   const { data: profile, isLoading } = useQuery({
     queryKey: QUERY_KEYS.profile(user?.id ?? ''),
-    queryFn: () => getProfileById(user!.id),
+    queryFn: () => getProfile(user!.id),
     enabled: !!user?.id,
   });
 

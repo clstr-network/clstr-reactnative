@@ -1,12 +1,30 @@
 /**
  * Mentorship API adapter — Phase 9.2
  *
- * **No @clstr/core module exists** — this replicates the web hook
- * (`src/hooks/useMentorship.ts`) as standalone async functions that
- * accept the mobile Supabase client.
+ * **No @clstr/core module exists** for mentorship — this replicates the web hook
+ * (`src/hooks/useMentorship.ts`) as standalone async functions using the
+ * mobile Supabase client directly.
  *
  * Tables: `mentorship_offers`, `mentorship_requests`, `profiles`,
  *         `alumni_profiles` (joined).
+ *
+ * ──────────────────────────────────────────────────────────────────────
+ * F11 API Consistency Note (2026-02-22):
+ *
+ * This module uses raw `supabase.from()` queries instead of the
+ * `withClient()` pattern used by other adapters (social, profile,
+ * events, etc.). This is intentional — `@clstr/core` does NOT provide
+ * mentorship API functions yet.
+ *
+ * When `@clstr/core` adds a `mentorship-api.ts` module:
+ *   1. Import the core functions: `import { getMentors as _getMentors, ... } from '@clstr/core/api/mentorship-api'`
+ *   2. Bind them: `export const getMentors = withClient(_getMentors)`
+ *   3. Remove the raw Supabase queries below
+ *   4. Keep the type re-exports from `@clstr/shared/types/mentorship`
+ *
+ * Until then, these direct queries are the correct approach and match
+ * how the web app handles mentorship (`src/hooks/useMentorship.ts`).
+ * ──────────────────────────────────────────────────────────────────────
  */
 
 import { supabase } from '../adapters/core-client';

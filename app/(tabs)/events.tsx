@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Pressable, useColorScheme, Platform, RefreshControl, ActivityIndicator
+  View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl, ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -98,7 +98,7 @@ const InlineEventCard = React.memo(function InlineEventCard({ event, colors, onR
 });
 
 export default function EventsScreen() {
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [activeCategory, setActiveCategory] = useState('All');

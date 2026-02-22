@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, useColorScheme, Alert, Share, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, Share, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,7 +12,7 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 
 export default function PostActionsSheet() {
   const { id, isSaved } = useLocalSearchParams<{ id: string; isSaved: string }>();
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const saved = isSaved === 'true';

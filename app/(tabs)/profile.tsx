@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, useColorScheme, Platform, Alert, ActivityIndicator
+  View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert, ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,17 +8,18 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
-import { Avatar } from '@/components/Avatar';
-import { RoleBadge } from '@/components/RoleBadge';
+import Avatar from '@/components/Avatar';
+import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
-import { getProfileById, type UserProfile, calculateProfileCompletion, getMissingProfileFields, getConnectionCount } from '@/lib/api';
+import { getProfile, type Profile } from '@/lib/api';
+import { calculateProfileCompletion, getMissingProfileFields, getConnectionCount } from '@/lib/api/profile';
 import { getUserPostsCount } from '@/lib/api/social';
 import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
 
 export default function ProfileScreen() {
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
@@ -29,7 +30,7 @@ export default function ProfileScreen() {
 
   const { data: profile, isLoading } = useQuery({
     queryKey: QUERY_KEYS.profile(user?.id ?? ''),
-    queryFn: () => getProfileById(user!.id),
+    queryFn: () => getProfile(user!.id),
     enabled: !!user?.id,
   });
 
@@ -67,7 +68,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const badgeColor = getRoleBadgeColor(profile.role ?? 'Student', colors);
+  const badgeColor = getRoleBadgeColor(profile.role ?? 'Student');
   // F9: connectionsCount and postsCount now come from dedicated useQuery hooks above
   const completionPct = calculateProfileCompletion(profile);
   const missingFields = getMissingProfileFields(profile);
@@ -119,12 +120,12 @@ export default function ProfileScreen() {
           </View>
         </View>
         <View style={styles.profileSection}>
-          <Avatar uri={profile.avatar_url} name={profile.full_name ?? 'User'} size={80} showBorder />
+          <Avatar uri={profile.avatar_url} name={profile.full_name ?? 'User'} size={80} />
           <Text style={[styles.name, { color: colors.text }]}>{profile.full_name ?? 'User'}</Text>
           {profile.headline && (
             <Text style={[styles.username, { color: colors.textSecondary }]}>{profile.headline}</Text>
           )}
-          {profile.role && <RoleBadge role={profile.role} size="medium" />}
+          {profile.role && <RoleBadge role={profile.role} size="md" />}
           {!!profile.bio && <Text style={[styles.bio, { color: colors.textSecondary }]}>{profile.bio}</Text>}
         </View>
 

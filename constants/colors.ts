@@ -24,6 +24,7 @@ const light = {
   surface: '#FFFFFF',
   surfaceSecondary: '#F1F5F9',
   surfaceHover: '#F1F5F9',
+  surfaceElevated: '#F1F5F9',
 
   // Text hierarchy
   text: '#0F172A',
@@ -69,6 +70,7 @@ const dark = {
   surface: '#1E293B',
   surfaceSecondary: '#334155',
   surfaceHover: '#334155',
+  surfaceElevated: '#334155',
 
   // Text hierarchy
   text: '#F1F5F9',

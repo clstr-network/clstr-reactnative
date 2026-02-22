@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, radius } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
@@ -31,6 +31,7 @@ interface TopReaction {
 interface Post {
   id: number | string;
   content?: string;
+  images?: string[] | null;
   user?: PostUser;
   likes_count?: number;
   comments_count?: number;
@@ -88,6 +89,22 @@ function PostCard({ post, onPress, onReact, onComment, onShare, onRepost }: Post
         <Text style={[styles.content, { color: colors.text }]} numberOfLines={5}>
           {post.content}
         </Text>
+      ) : null}
+
+      {post.images && post.images.length > 0 ? (
+        <View style={styles.imageContainer}>
+          {post.images.slice(0, 4).map((uri, idx) => (
+            <Image
+              key={idx}
+              source={{ uri }}
+              style={[
+                styles.postImage,
+                post.images!.length === 1 && styles.postImageSingle,
+              ]}
+              resizeMode="cover"
+            />
+          ))}
+        </View>
       ) : null}
 
       {totalReactions > 0 && topReactions.length > 0 ? (
@@ -204,6 +221,23 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingHorizontal: 14,
     paddingBottom: 12,
+  },
+  imageContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 2,
+    marginHorizontal: 14,
+    marginBottom: 10,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  postImage: {
+    width: '49%',
+    aspectRatio: 1,
+  },
+  postImageSingle: {
+    width: '100%',
+    aspectRatio: 16 / 9,
   },
   reactionsRow: {
     flexDirection: 'row',

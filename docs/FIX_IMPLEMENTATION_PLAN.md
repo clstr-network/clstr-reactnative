@@ -47,11 +47,16 @@ This plan is organized into **12 fix phases (F1–F12)**, ordered by severity. E
 | 20 | Profile stats use `profile.connections?.length` instead of DB count | 🟡 Medium | F9 | `app/(tabs)/profile.tsx`, `app/user/[id].tsx` | ✅ Fixed |
 | 21 | Hardcoded query keys (`['connectionStatus', id]`, etc.) | 🟡 Medium | F9 | `app/user/[id].tsx` | ✅ Fixed |
 | 22 | Post share/repost not wired in Feed | 🟡 Medium | F10 | `app/(tabs)/index.tsx` | ✅ Fixed |
-| 23 | `lib/api/mentorship.ts` uses raw Supabase (no `@clstr/core`) | 🟡 Medium | F11 | `lib/api/mentorship.ts` | ⬜ Deferred |
-| 24 | `lib/api/alumni.ts` uses raw Supabase RPC | 🟡 Medium | F11 | `lib/api/alumni.ts` | ⬜ Deferred |
-| 25 | No block-connection UI | 🔵 Low | F12 | NEW | ⬜ Pending |
-| 26 | No online/last-seen status | 🔵 Low | F12 | Future | ⬜ Pending |
-| 27 | College-domain feed isolation not verified on mobile | 🟡 Medium | F12 | `app/(tabs)/index.tsx` | ⬜ Pending |
+| 23 | `lib/api/mentorship.ts` uses raw Supabase (no `@clstr/core`) | 🟡 Medium | F11 | `lib/api/mentorship.ts` | ✅ Documented |
+| 24 | `lib/api/alumni.ts` uses raw Supabase RPC | 🟡 Medium | F11 | `lib/api/alumni.ts` | ✅ Documented |
+| 25 | No block-connection UI | 🔵 Low | F12 | `app/user/[id].tsx` | ✅ Fixed |
+| 26 | No online/last-seen status | 🔵 Low | F12 | Future | ⏳ Deferred (requires backend) |
+| 27 | College-domain feed isolation not verified on mobile | 🟡 Medium | F12 | `@clstr/core/api/social-api.ts` | ✅ Verified |
+| 28 | No notification badge on tab bar | 🔵 Low | F12 | `app/(tabs)/_layout.tsx`, `app/(tabs)/index.tsx` | ✅ Fixed |
+| 29 | No event share button | 🔵 Low | F12 | `app/event/[id].tsx` | ✅ Fixed |
+| 30 | Image attachments on posts (mobile text-only) | 🟡 Medium | F12 | `app/create-post.tsx`, `components/PostCard.tsx` | ✅ Fixed |
+| 31 | Deep Link cold start queue | 🔵 Low | F12 | Unverified | ⏳ Deferred (manual test) |
+| 32 | Background → Foreground realtime reconnect | 🔵 Low | F12 | Unverified | ⏳ Deferred (manual test) |
 
 ---
 
@@ -1181,9 +1186,19 @@ Three files were modified to fully wire post share and repost functionality in t
 
 ---
 
-## Phase F11 — API Consistency (Mentorship & Alumni)
+## Phase F11 — API Consistency (Mentorship & Alumni) ✅ DONE
 
 **Priority**: 🟡 MEDIUM — Works but breaks the `withClient` pattern.
+**Status**: ✅ DOCUMENTED (2026-02-22)
+
+### Resolution Summary
+
+Both `lib/api/mentorship.ts` and `lib/api/alumni.ts` use direct Supabase queries because no `@clstr/core` modules exist for these domains yet. Comprehensive documentation headers were added to both files explaining:
+- Why raw Supabase is used (no core module exists)
+- What the migration path looks like (create `@clstr/core/api/mentorship-api.ts` and `alumni-api.ts`)
+- That the current approach is functionally correct
+
+No refactoring needed until `@clstr/core` adds these modules.
 
 ### Problem
 
@@ -1196,43 +1211,55 @@ Both work correctly but create maintenance risk — if the Supabase client chang
 
 This is a **refactor** not a bug fix. The mentorship and alumni modules have no equivalent in `@clstr/core` (the header of `mentorship.ts` says "No @clstr/core module exists for mentorship"). Until core modules are created, these direct queries are acceptable.
 
-### Recommendation
-
-**Defer to Phase F12 or a future sprint.** Document the inconsistency. When `@clstr/core` adds mentorship/alumni modules, refactor these adapters.
-
 ### Deliverables
 
-- Document the inconsistency in this plan (done)
-- No code changes required now
+- ✅ Documentation headers added to `lib/api/mentorship.ts` explaining the gap and migration path
+- ✅ Documentation headers added to `lib/api/alumni.ts` explaining the gap and migration path
+- ✅ Inconsistency documented in this plan
 
 ---
 
-## Phase F12 — Polish & Web Parity Gaps
+## Phase F12 — Polish & Web Parity Gaps ✅ DONE
 
 **Priority**: 🔵 LOW — Nice-to-have features for full web parity.
+**Status**: ✅ COMPLETED (2026-02-22) — 5/8 items implemented, 3 deferred to future sprint.
+
+### Resolution Summary
+
+**Implemented:**
+- **Block Connection UI**: Added block mutation, confirmation dialog, share profile, and ellipsis options menu to `app/user/[id].tsx`.
+- **Notification Badge on Tab Bar**: Added unread count badge to Home tab icon in `app/(tabs)/_layout.tsx` and notification bell in `app/(tabs)/index.tsx` using `useNotificationSubscription` hook.
+- **Event Share Button**: Added share (native share sheet) and copy-link buttons to `app/event/[id].tsx` header.
+- **College-Domain Feed Isolation**: Verified — `getPosts` in `@clstr/core/api/social-api.ts` already enforces `.eq("college_domain", collegeDomain)` at line 497. No changes needed.
+- **Image Attachments on Posts**: Added `expo-image-picker` integration to `app/create-post.tsx` with image preview, remove button, and toolbar. Added image rendering to `components/PostCard.tsx` supporting single and multi-image layouts. Uses core `CreatePostPayload.attachment` with `CrossPlatformFile` for Supabase storage upload.
+
+**Deferred:**
+- **Online/Last-Seen Status**: Requires Supabase Presence channel integration and backend schema changes (new `last_seen_at` column, presence triggers). Deferred to future sprint.
+- **Deep Link Cold Start Queue**: Requires manual device testing (kill app → open `clstr://post/123` → verify navigation). Cannot be automated; deferred to QA pass.
+- **Background → Foreground Realtime Reconnect**: Requires manual device testing (background 5min → foreground → verify channels reconnect). Deferred to QA pass.
 
 ### Items
 
 | Feature | Status | Action |
 |---------|--------|--------|
-| Block Connection UI | Missing | Add block button to user profile + `blockConnection` from `lib/api/profile.ts` |
-| Online / Last-Seen Status | Missing | Requires Supabase Presence integration — future sprint |
-| College-Domain Feed Isolation | Unverified | `getPosts` in `@clstr/core` should filter by `college_domain` — verify RLS policy |
-| Event Share | Missing | Add share button to event detail — `shareEvent` / `shareEventToMultiple` already in `lib/api/events.ts` |
-| Notification Badge on Tab Bar | Missing | Tab bar should show unread notification count |
-| Deep Link Cold Start Queue | Unverified | Test: kill app → open `clstr://post/123` → app should navigate after auth |
-| Background → Foreground Realtime Reconnect | Unverified | Test: background app 5min → foreground → realtime channels should reconnect |
-| Image Attachments on Posts | Missing | Web supports image posts — mobile only supports text |
+| Block Connection UI | ✅ Done | Added block mutation, confirmation Alert, options menu (⋯) to `app/user/[id].tsx` |
+| Online / Last-Seen Status | ⏳ Deferred | Requires Supabase Presence integration — future sprint |
+| College-Domain Feed Isolation | ✅ Verified | `getPosts` in `@clstr/core` filters by `college_domain` at line 497 — no changes needed |
+| Event Share | ✅ Done | Added share + copy-link buttons to `app/event/[id].tsx` header |
+| Notification Badge on Tab Bar | ✅ Done | Badge overlay on Home tab + feed header bell using `useNotificationSubscription` |
+| Deep Link Cold Start Queue | ⏳ Deferred | Requires manual device testing — deferred to QA pass |
+| Background → Foreground Realtime Reconnect | ⏳ Deferred | Requires manual device testing — deferred to QA pass |
+| Image Attachments on Posts | ✅ Done | Image picker in `create-post.tsx` + image rendering in `PostCard.tsx` |
 
-### Implementation Order
+### Implementation Order (Completed)
 
-1. Block Connection UI (uses existing `blockConnection` API)
-2. Notification Badge on Tab Bar
-3. Event Share Button
-4. College-Domain Feed Isolation verification
-5. Image Attachments on Posts
-6. Deep Link & Background/Foreground testing
-7. Online/Last-Seen (requires new backend work)
+1. ✅ Block Connection UI (uses existing `blockConnection` API)
+2. ✅ Notification Badge on Tab Bar
+3. ✅ Event Share Button
+4. ✅ College-Domain Feed Isolation verification
+5. ✅ Image Attachments on Posts
+6. ⏳ Deep Link & Background/Foreground testing (deferred to QA)
+7. ⏳ Online/Last-Seen (deferred — requires backend work)
 
 ---
 
@@ -1266,27 +1293,64 @@ F12 (Polish & Parity)    ←─────────────────�
 
 **Total**: ~8–12 development days.
 
+**Status**: ✅ **ALL 12 PHASES COMPLETE** — F1–F10 implemented, F11 documented, F12 implemented (5/8 items, 3 deferred to future sprint/QA).
+
+---
+
+## Phase F13 — Post-Fix TypeScript Verification (added post-implementation)
+
+During verification, `npx tsc --noEmit` revealed **~50+ TypeScript errors** across app/, components/, and lib/ files introduced during the F1–F12 phases. All app-layer errors have been resolved.
+
+### F13 Fixes Applied
+
+| # | Category | Files affected | Fix |
+|---|----------|---------------|-----|
+| 1 | Missing `surfaceElevated` token | `constants/colors.ts` | Added `surfaceElevated` to both `light` and `dark` palettes |
+| 2 | Wrong `useThemeColors(useColorScheme())` call | 11 files in `app/` | Changed to `useThemeColors()` (0 args, hook calls `useColorScheme` internally); removed `useColorScheme` from RN imports |
+| 3 | Non-existent `getProfileById` import | `app/(tabs)/profile.tsx`, `app/(tabs)/more.tsx` | Changed to `getProfile` from `@/lib/api` |
+| 4 | Non-existent connection API names | `app/(tabs)/network.tsx` | `getConnectionRequests` → `getPendingRequests`, `acceptConnectionRequest` → `acceptConnection`, `rejectConnectionRequest` → `rejectConnection` |
+| 5 | Named import for default-exported components | `profile.tsx`, `event/[id].tsx`, `more.tsx` | `{ Avatar }` → `Avatar`, `{ RoleBadge }` → `RoleBadge` (default imports) |
+| 6 | `getMessages` return type mismatch | `app/chat/[id].tsx` | `getMessages` returns `Message[]` not `{ messages, partner }`; added separate `getProfile(partnerId)` query for partner data |
+| 7 | Missing Event fields | `lib/api.ts` | Added `category?`, `attendees_count?`, `max_attendees?` to `Event` interface |
+| 8 | Missing Profile fields | `lib/api.ts` | Added `user_type?`, `major?`, `university?` to `Profile` interface |
+| 9 | `user.fullName` on Supabase User | `app/index.tsx` | Changed to `user.user_metadata?.full_name` |
+| 10 | `getRoleBadgeColor` wrong arity | `app/(tabs)/profile.tsx` | Removed second arg (function takes 1 param) |
+| 11 | `showBorder` not in AvatarProps | `app/(tabs)/profile.tsx` | Removed invalid prop |
+| 12 | RoleBadge `size="medium"` invalid | `app/(tabs)/profile.tsx` | Changed to `size="md"` |
+| 13 | QUERY_KEYS.post/comments missing | `app/post/[id].tsx` | Replaced with inline `['post', id]` / `['comments', id]` keys |
+| 14 | `unknown` type in reactions reduce/sort | `app/post/[id].tsx` | Added `Record<string, number>` type assertion and explicit callback param types |
+| 15 | Conversation type mismatch | `components/ConversationItem.tsx` | Updated `Partner.role` to `string \| null` for compatibility with `Profile.role` |
+| 16 | Profile API split misimport | `app/(tabs)/profile.tsx` | Split imports: `getProfile`/`Profile` from `@/lib/api`, `calculateProfileCompletion`/`getMissingProfileFields`/`getConnectionCount` from `@/lib/api/profile` |
+
+### Pre-existing lib/ errors (NOT caused by F1–F12)
+
+**~35 errors in `lib/api.ts`** — All are Supabase client typing issues: `supabase.from('table')` resolves to `never` because the project lacks generated database types (`supabase gen types typescript`). These require running the Supabase type generator and updating `database.types.ts`.
+
+**3 errors in `lib/auth-context.tsx`** — Type narrowing issues (`string | null` → `string` assignments) and `ProfileSignupPayload` parameter shape mismatch. Pre-existing, not introduced by any fix phase.
+
+**Status**: ✅ **All app-layer TS errors resolved** (0 errors in `app/`, `components/`, `constants/`).
+
 ---
 
 ## Post-Fix Verification Checklist
 
 After all phases are complete, run:
 
-- [ ] `grep -r "lib/storage\|lib/mock-data\|lib/data-context" app/` → **0 results**
-- [ ] `grep -r "onPress: () => {}" app/` → **0 results**
-- [ ] `grep -r "\['posts'\]" app/` → **0 results** (all use `QUERY_KEYS.feed`)
-- [ ] `grep -r "Colors\.dark\." app/` → **0 results** (all use `useThemeColors()`)
-- [ ] `npx expo start` → Builds without errors
-- [ ] `npx tsc --noEmit` → No type errors
-- [ ] Create post → appears in feed (Supabase)
-- [ ] Save post → persists across restart
-- [ ] Share post → native share sheet
-- [ ] Edit profile → avatar + fields save to DB
-- [ ] Message only works between connected users
-- [ ] Feed loads 20+20+20 posts with infinite scroll
-- [ ] Create event → appears in events list
-- [ ] All profile menu items navigate correctly
-- [ ] No `app/(main)/` directory exists
+- [x] `grep -r "lib/storage\|lib/mock-data\|lib/data-context" app/` → **0 results** ✅
+- [x] `grep -r "onPress: () => {}" app/` → **0 results** ✅
+- [x] `grep -r "\['posts'\]" app/` → **0 results** (all use `QUERY_KEYS.feed`) ✅
+- [x] `grep -r "Colors\.dark\." app/` → **0 results** (all use `useThemeColors()`) ✅
+- [ ] `npx expo start` → Builds without errors (manual check required)
+- [x] `npx tsc --noEmit` → **0 type errors in app/components/constants/** ✅ (lib/ has pre-existing Supabase typing issues — see F13)
+- [ ] Create post → appears in feed (Supabase) (runtime test)
+- [ ] Save post → persists across restart (runtime test)
+- [ ] Share post → native share sheet (runtime test)
+- [ ] Edit profile → avatar + fields save to DB (runtime test)
+- [ ] Message only works between connected users (runtime test)
+- [ ] Feed loads 20+20+20 posts with infinite scroll (runtime test)
+- [ ] Create event → appears in events list (runtime test)
+- [ ] All profile menu items navigate correctly (runtime test)
+- [x] No `app/(main)/` directory exists ✅
 
 ---
 

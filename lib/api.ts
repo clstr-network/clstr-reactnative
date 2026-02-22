@@ -27,9 +27,12 @@ export interface Profile {
   full_name: string;
   avatar_url: string | null;
   role: string | null;
+  user_type?: string | null;
   college_domain: string | null;
   bio: string | null;
   headline: string | null;
+  major?: string | null;
+  university?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -105,6 +108,9 @@ export interface Event {
   creator?: Profile;
   is_registered?: boolean;
   registration_count?: number;
+  category?: string;
+  attendees_count?: number;
+  max_attendees?: number;
 }
 
 export interface Notification {

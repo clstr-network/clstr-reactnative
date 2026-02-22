@@ -19,7 +19,7 @@ export default function Index() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (!user.fullName) {
+  if (!user.user_metadata?.full_name) {
     return <Redirect href="/(auth)/onboarding" />;
   }
 

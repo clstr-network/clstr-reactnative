@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -11,7 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
 import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
-import { getProfileById, getConnectionCount } from '@/lib/api/profile';
+import { getProfileById, getConnectionCount, blockConnection } from '@/lib/api/profile';
 import type { UserProfile } from '@/lib/api/profile';
 import {
   checkConnectionStatus,
@@ -94,6 +94,67 @@ export default function UserProfileScreen() {
     disconnectMutation.mutate();
   }, [id, disconnectMutation]);
 
+  // F12 — Block Connection mutation
+  const blockMutation = useMutation({
+    mutationFn: () => blockConnection(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionStatus(id ?? '') });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionCount(id ?? '') });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
+      Alert.alert('Blocked', 'This user has been blocked.');
+      router.back();
+    },
+    onError: () => {
+      Alert.alert('Error', 'Failed to block user. Please try again.');
+    },
+  });
+
+  const handleBlock = useCallback(() => {
+    if (!id) return;
+    Alert.alert(
+      'Block User',
+      `Are you sure you want to block ${profile?.full_name ?? 'this user'}? They won't be able to see your profile or message you.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            blockMutation.mutate();
+          },
+        },
+      ],
+    );
+  }, [id, profile?.full_name, blockMutation]);
+
+  const handleShareProfile = useCallback(async () => {
+    if (!id || !profile) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const profileUrl = `https://clstr.network/user/${id}`;
+    try {
+      await Share.share({
+        message: `Check out ${profile.full_name ?? 'this profile'} on Clstr: ${profileUrl}`,
+        url: profileUrl,
+      });
+    } catch (_e) {
+      // User cancelled
+    }
+  }, [id, profile]);
+
+  const handleMoreOptions = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      'Options',
+      undefined,
+      [
+        { text: 'Share Profile', onPress: handleShareProfile },
+        { text: 'Block User', style: 'destructive', onPress: handleBlock },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }, [handleShareProfile, handleBlock]);
+
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -140,7 +201,9 @@ export default function UserProfileScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
-        <View style={{ width: 24 }} />
+        <Pressable onPress={handleMoreOptions} hitSlop={8}>
+          <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

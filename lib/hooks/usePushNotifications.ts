@@ -11,28 +11,50 @@
  *
  * Adapted from apps/mobile/src/hooks/usePushNotificationsMobile.ts
  * Uses the root-app Supabase client (lib/adapters/core-client).
+ *
+ * NOTE: expo-notifications is lazily required (not top-level imported) to avoid
+ * the DevicePushTokenAutoRegistration side-effect that warns in Expo Go.
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/adapters/core-client';
 import { useAuth } from '@/lib/auth-context';
 
-// ─── Default foreground notification handler ─────────────────
+// ─── Expo Go detection ───────────────────────────────────────
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    priority: Notifications.AndroidNotificationPriority.HIGH,
-  }),
-});
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// ─── Lazy-loaded Notifications module ────────────────────────
+// We use a getter so the side-effect-laden module is only loaded in dev builds.
+
+let _Notifications: typeof import('expo-notifications') | null = null;
+function getNotifications() {
+  if (_Notifications) return _Notifications;
+  if (isExpoGo) return null;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  _Notifications = require('expo-notifications') as typeof import('expo-notifications');
+  return _Notifications;
+}
+
+// ─── Default foreground notification handler ─────────────────
+// Only set up outside Expo Go to avoid the push-token warning.
+
+if (!isExpoGo) {
+  const N = getNotifications();
+  N?.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      priority: N.AndroidNotificationPriority.HIGH,
+    }),
+  });
+}
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -51,8 +73,9 @@ interface PushNotificationState {
 
 /** Get Expo push token. Returns null on simulator or config error. */
 async function getExpoPushToken(): Promise<string | null> {
-  if (!Device.isDevice) {
-    console.warn('[push] Push notifications require a physical device');
+  const Notifications = getNotifications();
+  if (!Notifications || !Device.isDevice) {
+    console.warn('[push] Push notifications require a physical device and a dev build');
     return null;
   }
   try {
@@ -69,7 +92,8 @@ async function getExpoPushToken(): Promise<string | null> {
 
 /** Configure Android notification channel (required for Android 8+). */
 async function setupAndroidChannel() {
-  if (Platform.OS === 'android') {
+  const Notifications = getNotifications();
+  if (Platform.OS === 'android' && Notifications) {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'Default',
       importance: Notifications.AndroidImportance.HIGH,
@@ -88,16 +112,17 @@ export function usePushNotifications() {
     expoPushToken: null,
     permissionGranted: false,
     isRegistering: false,
-    error: null,
+    error: isExpoGo ? 'Push notifications are not available in Expo Go' : null,
   });
 
   const tokenRef = useRef<string | null>(null);
-  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
-  const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  const notificationListener = useRef<any>(null);
+  const responseListener = useRef<any>(null);
 
   // ── Request permission + register token ──
   const requestPermission = useCallback(async () => {
-    if (!user) return;
+    const Notifications = getNotifications();
+    if (!user || !Notifications) return;
     setState((prev) => ({ ...prev, isRegistering: true, error: null }));
 
     try {
@@ -179,6 +204,9 @@ export function usePushNotifications() {
 
   // ── Notification listeners ──
   useEffect(() => {
+    const Notifications = getNotifications();
+    if (!Notifications) return;
+
     // Notification received while app is in foreground
     notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
       console.log('[push] Notification received:', notification.request.content.title);
@@ -200,7 +228,8 @@ export function usePushNotifications() {
 
   // ── Auto-register on login if permission was previously granted ──
   useEffect(() => {
-    if (!user) return;
+    const Notifications = getNotifications();
+    if (!user || !Notifications) return;
     let cancelled = false;
 
     (async () => {

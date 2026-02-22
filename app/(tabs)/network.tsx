@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Pressable, useColorScheme, Platform, RefreshControl, ActivityIndicator
+  View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl, ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,9 +14,9 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
 import {
   getConnections,
-  getConnectionRequests,
-  acceptConnectionRequest,
-  rejectConnectionRequest,
+  getPendingRequests,
+  acceptConnection,
+  rejectConnection,
 } from '@/lib/api';
 
 const FILTERS = ['All', 'Connected', 'Pending'];
@@ -28,7 +28,7 @@ interface CardItem {
 }
 
 export default function NetworkScreen() {
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -47,7 +47,7 @@ export default function NetworkScreen() {
 
   const { data: pendingRequests = [], isLoading: loadingPending } = useQuery({
     queryKey: ['connection-requests'],
-    queryFn: getConnectionRequests,
+    queryFn: getPendingRequests,
     staleTime: 10_000,       // 10s — pending requests change more frequently
     gcTime: 5 * 60 * 1000,
   });
@@ -55,7 +55,7 @@ export default function NetworkScreen() {
   const isLoading = loadingConnections || loadingPending;
 
   const acceptMutation = useMutation({
-    mutationFn: (connectionId: string) => acceptConnectionRequest(connectionId),
+    mutationFn: (connectionId: string) => acceptConnection(connectionId),
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
@@ -64,7 +64,7 @@ export default function NetworkScreen() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (connectionId: string) => rejectConnectionRequest(connectionId),
+    mutationFn: (connectionId: string) => rejectConnection(connectionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
     },

@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput, Pressable, useColorScheme, Platform
+  View, Text, StyleSheet, FlatList, TextInput, Pressable, Platform
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -15,6 +15,7 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 import { useMessageSubscription } from '@/lib/hooks/useMessageSubscription';
 import {
   getMessages,
+  getProfile,
   sendMessage,
   markMessagesAsRead,
   type Message,
@@ -23,7 +24,7 @@ import { checkConnectionStatus } from '@/lib/api/social';
 
 export default function ChatScreen() {
   const { id: partnerId } = useLocalSearchParams<{ id: string }>();
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -50,8 +51,13 @@ export default function ChatScreen() {
     gcTime: 5 * 60 * 1000,   // 5min
   });
 
-  const messages = data?.messages ?? [];
-  const partner = data?.partner;
+  const { data: partner } = useQuery({
+    queryKey: QUERY_KEYS.profile(partnerId!),
+    queryFn: () => getProfile(partnerId!),
+    enabled: !!partnerId,
+  });
+
+  const messages = data ?? [];
   const reversedMessages = [...messages].reverse();
 
   // Mark messages as read on mount

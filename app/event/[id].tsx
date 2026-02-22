@@ -1,15 +1,16 @@
 import React, { useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, useColorScheme, Platform, ActivityIndicator
+  View, Text, StyleSheet, ScrollView, Pressable, Platform, ActivityIndicator, Share, Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import { useThemeColors } from '@/constants/colors';
-import { Avatar } from '@/components/Avatar';
-import { RoleBadge } from '@/components/RoleBadge';
+import Avatar from '@/components/Avatar';
+import RoleBadge from '@/components/RoleBadge';
 import { getEventById, toggleEventRegistration, type Event } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/query-keys';
 
@@ -25,7 +26,7 @@ function formatDateBanner(dateStr?: string): { month: string; day: string; weekd
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
@@ -49,6 +50,28 @@ export default function EventDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     rsvpMutation.mutate();
   }, [id, rsvpMutation]);
+
+  // F12 — Event Share
+  const eventUrl = `https://clstr.network/event/${id}`;
+
+  const handleShareEvent = useCallback(async () => {
+    if (!event) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Share.share({
+        message: `Check out "${event.title}" on Clstr: ${eventUrl}`,
+        url: eventUrl,
+      });
+    } catch (_e) {
+      // User cancelled
+    }
+  }, [event, eventUrl]);
+
+  const handleCopyEventLink = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Clipboard.setStringAsync(eventUrl);
+    Alert.alert('Copied', 'Event link copied to clipboard.');
+  }, [eventUrl]);
 
   if (isLoading) {
     return (
@@ -97,7 +120,14 @@ export default function EventDetailScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Event Details</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerActions}>
+          <Pressable onPress={handleCopyEventLink} hitSlop={8} style={styles.headerBtn}>
+            <Ionicons name="copy-outline" size={20} color={colors.text} />
+          </Pressable>
+          <Pressable onPress={handleShareEvent} hitSlop={8} style={styles.headerBtn}>
+            <Ionicons name="share-outline" size={20} color={colors.text} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -192,6 +222,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingBottom: 12, borderBottomWidth: 1,
   },
   headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  headerBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   dateBanner: { alignItems: 'center', paddingVertical: 24 },
   dateMonth: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   dateDay: { fontSize: 48, fontWeight: '800', fontFamily: 'Inter_800ExtraBold', marginTop: -4 },

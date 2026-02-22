@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput, Pressable, useColorScheme, Platform
+  View, Text, StyleSheet, FlatList, TextInput, Pressable, Platform
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -26,14 +26,14 @@ import { formatRelativeTime } from '@/lib/time';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState('');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   const { data: post } = useQuery({
-    queryKey: QUERY_KEYS.post ? QUERY_KEYS.post(id!) : ['post', id],
+    queryKey: ['post', id],
     queryFn: () => getPostById(id!),
     enabled: !!id,
     staleTime: 30_000,       // 30s
@@ -41,7 +41,7 @@ export default function PostDetailScreen() {
   });
 
   const { data: comments = [] } = useQuery({
-    queryKey: QUERY_KEYS.comments ? QUERY_KEYS.comments(id!) : ['comments', id],
+    queryKey: ['comments', id],
     queryFn: () => getComments(id!),
     enabled: !!id,
     staleTime: 15_000,       // 15s — comments update moderately
@@ -52,7 +52,7 @@ export default function PostDetailScreen() {
     mutationFn: ({ postId, type }: { postId: string; type: ReactionType }) =>
       toggleReaction(postId, type),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post ? QUERY_KEYS.post(id!) : ['post', id] });
+      queryClient.invalidateQueries({ queryKey: ['post', id] });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
@@ -61,8 +61,8 @@ export default function PostDetailScreen() {
     mutationFn: (content: string) => addComment(id!, content),
     onSuccess: () => {
       setCommentText('');
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.comments ? QUERY_KEYS.comments(id!) : ['comments', id] });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post ? QUERY_KEYS.post(id!) : ['post', id] });
+      queryClient.invalidateQueries({ queryKey: ['comments', id] });
+      queryClient.invalidateQueries({ queryKey: ['post', id] });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
@@ -116,8 +116,8 @@ export default function PostDetailScreen() {
 
   const keyExtractor = useCallback((item: Comment) => item.id, []);
 
-  const reactionsSummary = post.reactions_summary ?? {};
-  const totalReactions = Object.values(reactionsSummary).reduce((s, c) => s + c, 0);
+  const reactionsSummary = (post.reactions_summary ?? {}) as Record<string, number>;
+  const totalReactions: number = Object.values(reactionsSummary).reduce((s: number, c: number) => s + c, 0);
 
   const listHeader = useMemo(() => (
     <View style={styles.postSection}>
@@ -139,7 +139,7 @@ export default function PostDetailScreen() {
       {totalReactions > 0 && (
         <View style={[styles.reactionsRow, { borderTopColor: colors.borderLight ?? colors.border }]}>
           {Object.entries(reactionsSummary)
-            .sort(([, a], [, b]) => b - a)
+            .sort(([, a], [, b]) => (b as number) - (a as number))
             .slice(0, 3)
             .map(([type]) => (
               <Text key={type} style={styles.reactionEmoji}>

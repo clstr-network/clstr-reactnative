@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   Pressable,
-  useColorScheme,
   Platform,
   RefreshControl,
   ActivityIndicator,
@@ -20,6 +19,7 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 import PostCard from '@/components/PostCard';
 import { useFeedSubscription } from '@/lib/hooks/useFeedSubscription';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
+import { useNotificationSubscription } from '@/lib/hooks/useNotificationSubscription';
 import {
   getPosts,
   toggleReaction,
@@ -30,7 +30,7 @@ import {
 } from '@/lib/api';
 
 export default function FeedScreen() {
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
@@ -42,6 +42,9 @@ export default function FeedScreen() {
 
   // Phase 4 — Role-based permissions
   const { canCreatePost } = useFeatureAccess();
+
+  // F12 — Notification badge
+  const { unreadCount } = useNotificationSubscription();
 
   // F7 — Infinite query pagination
   const {
@@ -189,6 +192,13 @@ export default function FeedScreen() {
             hitSlop={8}
           >
             <Ionicons name="notifications-outline" size={22} color={colors.text} />
+            {unreadCount > 0 && (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>
+                  {unreadCount > 99 ? '99+' : String(unreadCount)}
+                </Text>
+              </View>
+            )}
           </Pressable>
           {canCreatePost && (
             <Pressable
@@ -283,6 +293,23 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  notifBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
   },
   title: {
     fontSize: 28,

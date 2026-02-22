@@ -8,7 +8,7 @@ import Avatar from '@/components/Avatar';
 interface Partner {
   full_name?: string;
   avatar_url?: string | null;
-  role?: string;
+  role?: string | null;
 }
 
 interface LastMessage {

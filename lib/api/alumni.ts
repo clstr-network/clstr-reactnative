@@ -4,6 +4,25 @@
  * Uses the SECURITY DEFINER RPC `get_alumni_by_domain` to fetch alumni
  * profiles visible within the same college domain.
  * Also re-exports alumni identification helpers from @clstr/core.
+ *
+ * ──────────────────────────────────────────────────────────────────────
+ * F11 API Consistency Note (2026-02-22):
+ *
+ * This module uses raw `supabase.rpc()` instead of the `withClient()`
+ * pattern because `@clstr/core` does NOT provide an alumni directory
+ * API module. The RPC `get_alumni_by_domain` is a SECURITY DEFINER
+ * function that bypasses per-row RLS — this cannot simply be replaced
+ * with a `.from('profiles')` query.
+ *
+ * When `@clstr/core` adds an `alumni-api.ts` module:
+ *   1. Import the core function: `import { getAlumniByDomain as _getAlumniByDomain } from '@clstr/core/api/alumni-api'`
+ *   2. Bind it: `export const getAlumniByDomain = withClient(_getAlumniByDomain)`
+ *   3. Remove the raw RPC call below
+ *   4. Keep the re-exports from `@clstr/core/api/alumni-identification`
+ *
+ * Until then, the direct RPC call is correct and matches the web
+ * implementation pattern.
+ * ──────────────────────────────────────────────────────────────────────
  */
 
 import { supabase } from '../adapters/core-client';

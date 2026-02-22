@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, useColorScheme, Platform, RefreshControl, ActivityIndicator, Pressable
+  View, Text, StyleSheet, FlatList, Platform, RefreshControl, ActivityIndicator, Pressable
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +18,7 @@ const ItemSeparator = React.memo(function ItemSeparator({ color }: { color: stri
 });
 
 export default function MessagesScreen() {
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
