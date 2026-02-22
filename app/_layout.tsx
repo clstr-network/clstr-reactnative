@@ -4,22 +4,25 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import { StatusBar } from "expo-status-bar";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
-import { DataProvider } from "@/lib/data-context";
+import { AuthProvider } from "@/lib/auth-context";
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerBackTitle: "Back", headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="chat/[id]" options={{ headerShown: false, presentation: "card" }} />
-      <Stack.Screen name="post/[id]" options={{ headerShown: false, presentation: "card" }} />
-      <Stack.Screen name="event/[id]" options={{ headerShown: false, presentation: "card" }} />
-      <Stack.Screen name="settings" options={{ headerShown: false, presentation: "card" }} />
-      <Stack.Screen name="new-post" options={{ headerShown: false, presentation: "modal" }} />
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
+      <Stack.Screen name="(main)" />
+      <Stack.Screen
+        name="(auth)"
+        options={{
+          presentation: "modal",
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }
@@ -43,13 +46,14 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <DataProvider>
-          <GestureHandlerRootView>
+        <AuthProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
+              <StatusBar style="light" />
               <RootLayoutNav />
             </KeyboardProvider>
           </GestureHandlerRootView>
-        </DataProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

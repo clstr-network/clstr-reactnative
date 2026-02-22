@@ -1,28 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Colors from '@/constants/colors';
-import { getInitials } from '@/lib/mock-data';
+import { getInitials, getAvatarColor } from '@/lib/mock-data';
+import { colors } from '@/constants/colors';
 
 interface AvatarProps {
   name: string;
   size?: number;
+  imageUrl?: string | null;
 }
 
-export function Avatar({ name, size = 44 }: AvatarProps) {
-  const c = Colors.colors;
-  const initials = getInitials(name);
-  const fontSize = size * 0.34;
+export function Avatar({ name, size = 40, imageUrl }: AvatarProps) {
+  const initials = getInitials(name || '?');
+  const bgColor = getAvatarColor(name || '?');
 
   return (
-    <View style={[styles.container, {
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-      backgroundColor: c.tier1,
-      borderWidth: 1.5,
-      borderColor: c.borderStrong,
-    }]}>
-      <Text style={[styles.text, { fontSize, color: c.textSecondary }]}>{initials}</Text>
+    <View style={[styles.container, { width: size, height: size, borderRadius: size / 2, backgroundColor: bgColor }]}>
+      <Text style={[styles.initials, { fontSize: size * 0.38 }]}>{initials}</Text>
     </View>
   );
 }
@@ -32,8 +25,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  text: {
-    fontFamily: 'Inter_600SemiBold',
-    letterSpacing: 0.3,
+  initials: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });

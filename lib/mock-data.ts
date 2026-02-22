@@ -1,407 +1,405 @@
-import { formatDistanceToNow } from 'date-fns';
-
-export interface User {
-  id: string;
-  name: string;
-  avatar: string;
-  role: string;
-  userType: 'Student' | 'Alumni' | 'Faculty';
-  department: string;
-  year: string;
-  bio: string;
-  location: string;
-  college: string;
-  connectionStatus: 'none' | 'pending' | 'connected';
-  skills: string[];
-  experience: { title: string; company: string; period: string }[];
-  education: { school: string; degree: string; period: string }[];
-}
+import type { UserRole } from './auth-context';
 
 export interface Post {
   id: string;
-  author: User;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string | null;
+  authorDepartment: string;
+  authorRole: UserRole;
   content: string;
-  timestamp: Date;
-  likes: number;
-  comments: number;
+  likesCount: number;
+  commentsCount: number;
+  sharesCount: number;
   isLiked: boolean;
-  tags: string[];
-  college: string;
+  isSaved: boolean;
+  createdAt: string;
+  attachmentUrl?: string;
 }
 
-export interface Conversation {
+export interface Comment {
   id: string;
-  partner: User;
-  lastMessage: string;
-  timestamp: Date;
-  unread: number;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  authorRole: UserRole;
+  content: string;
+  createdAt: string;
+  likesCount: number;
+  isLiked: boolean;
 }
 
-export interface Message {
+export interface Person {
   id: string;
-  senderId: string;
-  text: string;
-  timestamp: Date;
+  fullName: string;
+  department: string;
+  graduationYear: string;
+  role: UserRole;
+  bio: string;
+  avatarUrl: string | null;
+  connectionStatus: 'none' | 'pending' | 'connected';
+  mutualConnections: number;
+  title?: string;
+  postCount: number;
+  connectionCount: number;
 }
 
 export interface Event {
   id: string;
   title: string;
   description: string;
-  date: Date;
+  date: string;
+  time: string;
   location: string;
-  organizer: string;
-  attendees: number;
-  category: string;
-  isRegistered: boolean;
+  organizerName: string;
+  organizerId: string;
+  attendeesCount: number;
+  isRsvpd: boolean;
+  category: 'workshop' | 'meetup' | 'seminar' | 'social' | 'career';
+}
+
+export interface Conversation {
+  id: string;
+  participantId: string;
+  participantName: string;
+  participantAvatar: string | null;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+  isOnline: boolean;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  timestamp: string;
+  isRead: boolean;
+}
+
+export interface Notification {
+  id: string;
+  type: 'like' | 'comment' | 'connection' | 'event' | 'mention' | 'message';
+  actorName: string;
+  actorId: string;
+  targetId: string;
+  message: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
+const names = [
+  'Arjun Sharma', 'Priya Patel', 'Ravi Kumar', 'Sneha Reddy',
+  'Vikram Singh', 'Anita Desai', 'Karthik Iyer', 'Meera Nair',
+  'Rohit Gupta', 'Divya Menon', 'Aditya Joshi', 'Lakshmi Pillai',
+  'Dr. Ramesh Rao', 'Prof. Sunita Verma', 'Dr. Amit Khanna',
+];
+
+const departments = [
+  'Computer Science', 'Electronics', 'Mechanical', 'Civil',
+  'Information Technology', 'Electrical', 'Chemical', 'Biotechnology',
+];
+
+const bios = [
+  'Passionate about building things that matter',
+  'Full-stack developer | Open source enthusiast',
+  'Learning something new every day',
+  'Building the future, one line at a time',
+  'Data Science | Machine Learning | AI',
+  'Cloud architect | DevOps practitioner',
+  'Research in distributed systems and IoT',
+  'Teaching and mentoring the next generation',
+];
+
+const facultyTitles = [
+  'Associate Professor', 'Assistant Professor', 'Professor',
+  'Head of Department', 'Dean of Engineering',
+];
+
+function getRoleForIndex(i: number): UserRole {
+  if (i >= 12) return 'faculty';
+  if (i % 4 === 0) return 'alumni';
+  return 'student';
+}
+
+export function generateMockPosts(count: number = 15): Post[] {
+  const posts: Post[] = [];
+  const contents = [
+    'Just completed my final year project on distributed systems! Thanks to everyone who helped along the way.',
+    'Looking for teammates for the upcoming hackathon. Anyone interested in building an AI-powered study assistant?',
+    'Great networking session at the alumni meetup yesterday. Connected with some amazing people from the industry.',
+    'Tips for cracking tech interviews: 1. Practice DSA daily 2. Build projects 3. Network with alumni 4. Stay consistent',
+    'Excited to share that I got placed at a top tech company! Hard work pays off.',
+    'Anyone else attending the workshop on cloud computing this weekend? Would love to connect!',
+    'Just published my first research paper on machine learning applications in healthcare. Surreal feeling!',
+    'Organizing a coding bootcamp for juniors next month. Drop a comment if you want to volunteer as a mentor.',
+    'The campus sustainability drive was a huge success! Over 500 students participated.',
+    'Sharing my internship experience at a startup - thread below with key takeaways and lessons learned.',
+    'New club alert: We are starting a blockchain and Web3 interest group. Join us for the first meeting!',
+    'Completed the AWS Solutions Architect certification. Happy to help anyone preparing for it.',
+    'The annual techfest dates are out! Mark your calendars and start preparing your projects.',
+    'Looking for open source contributors for our college management app. Tech stack: React, Node.js, PostgreSQL.',
+    'Alumni spotlight: Our 2020 batch senior just got featured in Forbes 30 Under 30!',
+  ];
+
+  for (let i = 0; i < count; i++) {
+    const nameIdx = i % names.length;
+    const hoursAgo = Math.floor(Math.random() * 72);
+    const date = new Date(Date.now() - hoursAgo * 3600000);
+    posts.push({
+      id: `post_${i}`,
+      authorId: `user_${nameIdx}`,
+      authorName: names[nameIdx],
+      authorAvatar: null,
+      authorDepartment: departments[nameIdx % departments.length],
+      authorRole: getRoleForIndex(nameIdx),
+      content: contents[i % contents.length],
+      likesCount: Math.floor(Math.random() * 50),
+      commentsCount: Math.floor(Math.random() * 20),
+      sharesCount: Math.floor(Math.random() * 10),
+      isLiked: Math.random() > 0.7,
+      isSaved: Math.random() > 0.85,
+      createdAt: date.toISOString(),
+    });
+  }
+  return posts;
+}
+
+export function generateMockComments(postId: string, count: number = 5): Comment[] {
+  const comments: Comment[] = [];
+  const texts = [
+    'Great post! Really insightful.',
+    'Thanks for sharing this, very helpful!',
+    'I had a similar experience. Would love to connect.',
+    'This is exactly what I needed. Appreciate it!',
+    'Can you share more details about this?',
+    'Congratulations! Well deserved.',
+    'Interesting perspective, thanks for sharing.',
+    'I would love to collaborate on this!',
+  ];
+
+  for (let i = 0; i < count; i++) {
+    const nameIdx = (i + 2) % names.length;
+    const minutesAgo = Math.floor(Math.random() * 1440);
+    comments.push({
+      id: `comment_${postId}_${i}`,
+      postId,
+      authorId: `user_${nameIdx}`,
+      authorName: names[nameIdx],
+      authorRole: getRoleForIndex(nameIdx),
+      content: texts[i % texts.length],
+      createdAt: new Date(Date.now() - minutesAgo * 60000).toISOString(),
+      likesCount: Math.floor(Math.random() * 10),
+      isLiked: Math.random() > 0.7,
+    });
+  }
+  return comments;
+}
+
+export function generateMockPeople(count: number = 20): Person[] {
+  const people: Person[] = [];
+  for (let i = 0; i < count; i++) {
+    const nameIdx = i % names.length;
+    const statuses: ('none' | 'pending' | 'connected')[] = ['none', 'pending', 'connected'];
+    const role = getRoleForIndex(nameIdx);
+    people.push({
+      id: `user_${i}`,
+      fullName: names[nameIdx],
+      department: departments[i % departments.length],
+      graduationYear: role === 'faculty' ? '' : `${2022 + (i % 5)}`,
+      role,
+      bio: bios[i % bios.length],
+      avatarUrl: null,
+      connectionStatus: statuses[i % 3],
+      mutualConnections: Math.floor(Math.random() * 15),
+      title: role === 'faculty' ? facultyTitles[i % facultyTitles.length] : undefined,
+      postCount: Math.floor(Math.random() * 30),
+      connectionCount: Math.floor(Math.random() * 100) + 5,
+    });
+  }
+  return people;
+}
+
+export function generateMockEvents(count: number = 8): Event[] {
+  const events: Event[] = [];
+  const titles = [
+    'Tech Talk: Future of AI',
+    'Alumni Networking Dinner',
+    'Hackathon 2026',
+    'Resume Building Workshop',
+    'Campus Career Fair',
+    'Web Development Bootcamp',
+    'Research Symposium',
+    'Startup Pitch Night',
+  ];
+  const descriptions = [
+    'Join us for an insightful session on the latest trends in artificial intelligence and machine learning. Industry experts will share their experiences and answer your questions.',
+    'Connect with distinguished alumni over dinner and expand your professional network. This is a great opportunity to learn from those who have been in your shoes.',
+    'Build something amazing in 24 hours! Teams of 3-5 welcome. Prizes worth over $5,000 to be won across multiple categories.',
+    'Learn how to craft the perfect resume that gets you noticed by top recruiters. Bring your current resume for a live review session.',
+    'Meet hiring managers from 50+ companies across various industries. Bring multiple copies of your resume and dress professionally.',
+    'Hands-on workshop covering modern web development with React and Node.js. Laptops required. Prior programming experience recommended.',
+    'Present your research findings and get feedback from peers and professors. Paper submissions due one week before the event.',
+    'Pitch your startup idea to a panel of investors and mentors. Top 3 ideas receive seed funding and mentorship support.',
+  ];
+  const categories: Event['category'][] = ['seminar', 'social', 'workshop', 'workshop', 'career', 'workshop', 'seminar', 'meetup'];
+  const locations = ['Auditorium A', 'Conference Hall', 'Lab 201', 'Seminar Room 3', 'Main Campus', 'Computer Lab', 'Library Hall', 'Innovation Center'];
+
+  for (let i = 0; i < count; i++) {
+    const daysAhead = Math.floor(Math.random() * 30) + 1;
+    const eventDate = new Date(Date.now() + daysAhead * 86400000);
+    const nameIdx = i % names.length;
+    events.push({
+      id: `event_${i}`,
+      title: titles[i % titles.length],
+      description: descriptions[i % descriptions.length],
+      date: eventDate.toISOString().split('T')[0],
+      time: `${10 + (i % 8)}:00`,
+      location: locations[i % locations.length],
+      organizerName: names[nameIdx],
+      organizerId: `user_${nameIdx}`,
+      attendeesCount: Math.floor(Math.random() * 100) + 10,
+      isRsvpd: Math.random() > 0.7,
+      category: categories[i % categories.length],
+    });
+  }
+  return events;
+}
+
+export function generateMockConversations(count: number = 8): Conversation[] {
+  const conversations: Conversation[] = [];
+  const messages = [
+    'Hey! Are you attending the hackathon?',
+    'Sure, let me send you the project details.',
+    'Thanks for connecting! Would love to chat.',
+    'Can you share the notes from today?',
+    'Great presentation today!',
+    'Let me know when you are free to discuss.',
+    'I saw your post about the internship, interested!',
+    'Welcome to the college network!',
+  ];
+
+  for (let i = 0; i < count; i++) {
+    const nameIdx = (i + 3) % names.length;
+    const minutesAgo = Math.floor(Math.random() * 1440);
+    conversations.push({
+      id: `conv_${i}`,
+      participantId: `user_${nameIdx}`,
+      participantName: names[nameIdx],
+      participantAvatar: null,
+      lastMessage: messages[i % messages.length],
+      lastMessageTime: new Date(Date.now() - minutesAgo * 60000).toISOString(),
+      unreadCount: Math.random() > 0.6 ? Math.floor(Math.random() * 5) + 1 : 0,
+      isOnline: Math.random() > 0.5,
+    });
+  }
+  return conversations;
+}
+
+export function generateMockMessages(conversationId: string): Message[] {
+  const msgs: Message[] = [];
+  const texts = [
+    'Hey, how are you doing?',
+    'I am good! Working on the project.',
+    'Nice! Which tech stack are you using?',
+    'React Native with TypeScript. Its going well so far.',
+    'That sounds great! Let me know if you need help.',
+    'Will do, thanks! Are you going to the meetup?',
+    'Yes, I will be there. See you then!',
+    'Perfect, see you there!',
+  ];
+
+  for (let i = 0; i < texts.length; i++) {
+    msgs.push({
+      id: `msg_${conversationId}_${i}`,
+      conversationId,
+      senderId: i % 2 === 0 ? 'other' : 'me',
+      text: texts[i],
+      timestamp: new Date(Date.now() - (texts.length - i) * 300000).toISOString(),
+      isRead: true,
+    });
+  }
+  return msgs;
+}
+
+export function generateMockNotifications(count: number = 12): Notification[] {
+  const notifications: Notification[] = [];
+  const types: Notification['type'][] = ['like', 'comment', 'connection', 'event', 'mention', 'message'];
+  const messageTemplates: Record<Notification['type'], string[]> = {
+    like: ['liked your post', 'liked your comment'],
+    comment: ['commented on your post', 'replied to your comment'],
+    connection: ['sent you a connection request', 'accepted your connection request', 'wants to connect with you'],
+    event: ['invited you to an event', 'RSVP\'d to your event'],
+    mention: ['mentioned you in a post', 'tagged you in a comment'],
+    message: ['sent you a message'],
+  };
+
+  for (let i = 0; i < count; i++) {
+    const type = types[i % types.length];
+    const nameIdx = (i + 1) % names.length;
+    const templates = messageTemplates[type];
+    const minutesAgo = Math.floor(Math.random() * 2880) + 5;
+    notifications.push({
+      id: `notif_${i}`,
+      type,
+      actorName: names[nameIdx],
+      actorId: `user_${nameIdx}`,
+      targetId: type === 'event' ? `event_${i % 8}` : `post_${i % 15}`,
+      message: `${names[nameIdx]} ${templates[i % templates.length]}`,
+      createdAt: new Date(Date.now() - minutesAgo * 60000).toISOString(),
+      isRead: i > 3,
+    });
+  }
+  return notifications;
+}
+
+export function formatTimeAgo(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return 'now';
+  if (minutes < 60) return `${minutes}m`;
+  if (hours < 24) return `${hours}h`;
+  if (days < 7) return `${days}d`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+export function formatEventDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 export function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  return name
+    .split(' ')
+    .filter(n => !n.startsWith('Dr') && !n.startsWith('Prof'))
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 }
 
-export function formatTime(date: Date): string {
-  return formatDistanceToNow(date, { addSuffix: false });
+export function getAvatarColor(name: string): string {
+  const avatarColors = [
+    '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
+    '#F59E0B', '#10B981', '#06B6D4', '#3B82F6',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return avatarColors[Math.abs(hash) % avatarColors.length];
 }
 
-export const CURRENT_USER: User = {
-  id: 'me',
-  name: 'Epu Sri Ram',
-  avatar: '',
-  role: 'Full-stack Developer',
-  userType: 'Student',
-  department: 'Computer Science and Engineering',
-  year: '2026',
-  bio: "Full-stack developer, student innovator, and startup enthusiast.",
-  location: 'Visakhapatnam, India',
-  college: 'raghuenggcollege.in',
-  connectionStatus: 'connected',
-  skills: ['React', 'Node.js', 'Python', 'AWS', 'TypeScript'],
-  experience: [
-    { title: 'Full Stack Developer', company: 'Freelance', period: '2024 - Present' },
-  ],
-  education: [
-    { school: 'Raghu Engineering College', degree: 'B.Tech CSE', period: '2022 - 2026' },
-  ],
-};
-
-export const USERS: User[] = [
-  {
-    id: '1',
-    name: 'Pothuraju Ratna Teja',
-    avatar: '',
-    role: 'Software Engineer',
-    userType: 'Alumni',
-    department: 'Computer Science and Engineering',
-    year: '2023',
-    bio: 'Building products that make a difference. Focused on edtech and social impact.',
-    location: 'Hyderabad, India',
-    college: 'raghuenggcollege.in',
-    connectionStatus: 'pending',
-    skills: ['Java', 'Spring Boot', 'React', 'SQL', 'Docker'],
-    experience: [
-      { title: 'Software Engineer', company: 'TCS', period: '2023 - Present' },
-    ],
-    education: [
-      { school: 'Raghu Engineering College', degree: 'B.Tech CSE', period: '2019 - 2023' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Chinta Dhaneshwarsa',
-    avatar: '',
-    role: 'Data Analyst',
-    userType: 'Alumni',
-    department: 'Computer Science',
-    year: '2026',
-    bio: 'Data enthusiast exploring ML and analytics. Open to collaborations.',
-    location: 'Vizag, India',
-    college: 'raghuenggcollege.in',
-    connectionStatus: 'pending',
-    skills: ['Python', 'SQL', 'Tableau', 'R', 'Statistics'],
-    experience: [],
-    education: [
-      { school: 'Raghu Engineering College', degree: 'B.Tech CS', period: '2022 - 2026' },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Gudivada Sri Vidya',
-    avatar: '',
-    role: 'Event Coordinator',
-    userType: 'Student',
-    department: 'Computer Science',
-    year: '2026',
-    bio: 'Active in campus clubs and events. Passionate about bringing the community together.',
-    location: 'Visakhapatnam, India',
-    college: 'raghuenggcollege.in',
-    connectionStatus: 'connected',
-    skills: ['Event Planning', 'Communication', 'Leadership'],
-    experience: [],
-    education: [
-      { school: 'Raghu Engineering College', degree: 'B.Tech CS', period: '2022 - 2026' },
-    ],
-  },
-  {
-    id: '4',
-    name: 'Ankit Sharma',
-    avatar: '',
-    role: 'ML Engineer',
-    userType: 'Alumni',
-    department: 'Information Technology',
-    year: '2022',
-    bio: 'Machine learning engineer with a passion for NLP and computer vision.',
-    location: 'Bangalore, India',
-    college: 'raghuenggcollege.in',
-    connectionStatus: 'connected',
-    skills: ['Python', 'TensorFlow', 'PyTorch', 'NLP'],
-    experience: [
-      { title: 'ML Engineer', company: 'Infosys', period: '2022 - Present' },
-    ],
-    education: [
-      { school: 'Raghu Engineering College', degree: 'B.Tech IT', period: '2018 - 2022' },
-    ],
-  },
-  {
-    id: '5',
-    name: 'Priya Reddy',
-    avatar: '',
-    role: 'Product Designer',
-    userType: 'Alumni',
-    department: 'Electronics and Communication',
-    year: '2021',
-    bio: 'Designing user-centric products at scale. Previously at Zoho.',
-    location: 'Chennai, India',
-    college: 'raghuenggcollege.in',
-    connectionStatus: 'none',
-    skills: ['Figma', 'UX Research', 'Prototyping', 'Design Systems'],
-    experience: [
-      { title: 'Product Designer', company: 'Freshworks', period: '2023 - Present' },
-      { title: 'UI/UX Designer', company: 'Zoho', period: '2021 - 2023' },
-    ],
-    education: [
-      { school: 'Raghu Engineering College', degree: 'B.Tech ECE', period: '2017 - 2021' },
-    ],
-  },
-  {
-    id: '6',
-    name: 'Dr. Ramesh Kumar',
-    avatar: '',
-    role: 'Professor - AI & ML',
-    userType: 'Faculty',
-    department: 'Computer Science and Engineering',
-    year: '',
-    bio: 'Research interests in deep learning and intelligent systems. PhD from IIT Madras.',
-    location: 'Visakhapatnam, India',
-    college: 'raghuenggcollege.in',
-    connectionStatus: 'none',
-    skills: ['Deep Learning', 'Research', 'Published Papers'],
-    experience: [
-      { title: 'Professor', company: 'Raghu Engineering College', period: '2015 - Present' },
-    ],
-    education: [
-      { school: 'IIT Madras', degree: 'PhD Computer Science', period: '2010 - 2015' },
-    ],
-  },
-  {
-    id: '7',
-    name: 'Kavya Nair',
-    avatar: '',
-    role: 'Cloud Architect',
-    userType: 'Alumni',
-    department: 'Computer Science and Engineering',
-    year: '2020',
-    bio: 'AWS certified solutions architect. Building scalable cloud infrastructure.',
-    location: 'Mumbai, India',
-    college: 'raghuenggcollege.in',
-    connectionStatus: 'none',
-    skills: ['AWS', 'Kubernetes', 'Terraform', 'DevOps'],
-    experience: [
-      { title: 'Cloud Architect', company: 'Wipro', period: '2022 - Present' },
-    ],
-    education: [
-      { school: 'Raghu Engineering College', degree: 'B.Tech CSE', period: '2016 - 2020' },
-    ],
-  },
-];
-
-export const POSTS: Post[] = [
-  {
-    id: 'p1',
-    author: USERS[0],
-    content: 'Just completed my first open-source contribution! The feeling of seeing your code merged into a large project is incredible. Keep pushing, everyone!',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    likes: 24,
-    comments: 8,
-    isLiked: false,
-    tags: ['opensource', 'coding'],
-    college: 'raghuenggcollege.in',
-  },
-  {
-    id: 'p2',
-    author: USERS[4],
-    content: 'Excited to share that I\'ve been promoted to Senior Product Designer at Freshworks! Grateful for the mentorship from Raghu Engineering alumni who guided me through my career journey.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
-    likes: 67,
-    comments: 15,
-    isLiked: true,
-    tags: ['career', 'design'],
-    college: 'raghuenggcollege.in',
-  },
-  {
-    id: 'p3',
-    author: USERS[5],
-    content: 'Our AI lab has published a new paper on transformer architectures for regional language processing. Proud of the student researchers who contributed. Link in comments.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8),
-    likes: 42,
-    comments: 6,
-    isLiked: false,
-    tags: ['research', 'AI'],
-    college: 'raghuenggcollege.in',
-  },
-  {
-    id: 'p4',
-    author: USERS[2],
-    content: 'Looking for teammates for the upcoming hackathon! We need a backend developer and a UI/UX designer. DM me if interested.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    likes: 18,
-    comments: 12,
-    isLiked: false,
-    tags: ['hackathon', 'teamup'],
-    college: 'raghuenggcollege.in',
-  },
-  {
-    id: 'p5',
-    author: USERS[3],
-    content: 'Tip for freshers: Start building projects early. Don\'t wait for the perfect idea. Ship fast, learn faster. My GitHub is full of half-finished projects that taught me more than any course.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    likes: 89,
-    comments: 22,
-    isLiked: true,
-    tags: ['advice', 'career'],
-    college: 'raghuenggcollege.in',
-  },
-];
-
-export const CONVERSATIONS: Conversation[] = [
-  {
-    id: 'c1',
-    partner: USERS[0],
-    lastMessage: 'Sure, I can help you with the React project. Let me check the repo.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 15),
-    unread: 2,
-  },
-  {
-    id: 'c2',
-    partner: USERS[2],
-    lastMessage: 'The event details have been finalized. Check the updated schedule.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60),
-    unread: 0,
-  },
-  {
-    id: 'c3',
-    partner: USERS[3],
-    lastMessage: 'Thanks for the ML resources! I\'ll go through them this weekend.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    unread: 1,
-  },
-  {
-    id: 'c4',
-    partner: USERS[4],
-    lastMessage: 'Would love to collaborate on the design system. Let\'s set up a call.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    unread: 0,
-  },
-  {
-    id: 'c5',
-    partner: USERS[6],
-    lastMessage: 'The AWS certification study group starts next Monday.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    unread: 0,
-  },
-];
-
-export const MESSAGES: Record<string, Message[]> = {
-  c1: [
-    { id: 'm1', senderId: USERS[0].id, text: 'Hey! Can you help me with a React project?', timestamp: new Date(Date.now() - 1000 * 60 * 30) },
-    { id: 'm2', senderId: 'me', text: 'Of course! What do you need help with?', timestamp: new Date(Date.now() - 1000 * 60 * 25) },
-    { id: 'm3', senderId: USERS[0].id, text: 'I\'m having trouble with state management in a large app. Redux vs Context?', timestamp: new Date(Date.now() - 1000 * 60 * 20) },
-    { id: 'm4', senderId: 'me', text: 'For most cases, React Query + Context works great. Redux is overkill unless you have very complex client state.', timestamp: new Date(Date.now() - 1000 * 60 * 18) },
-    { id: 'm5', senderId: USERS[0].id, text: 'That makes sense. Can you share any examples?', timestamp: new Date(Date.now() - 1000 * 60 * 16) },
-    { id: 'm6', senderId: USERS[0].id, text: 'Sure, I can help you with the React project. Let me check the repo.', timestamp: new Date(Date.now() - 1000 * 60 * 15) },
-  ],
-  c2: [
-    { id: 'm7', senderId: 'me', text: 'Hi! Are the event details ready?', timestamp: new Date(Date.now() - 1000 * 60 * 90) },
-    { id: 'm8', senderId: USERS[2].id, text: 'The event details have been finalized. Check the updated schedule.', timestamp: new Date(Date.now() - 1000 * 60 * 60) },
-  ],
-  c3: [
-    { id: 'm9', senderId: 'me', text: 'Here are some great ML resources for beginners.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6) },
-    { id: 'm10', senderId: USERS[3].id, text: 'Thanks for the ML resources! I\'ll go through them this weekend.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5) },
-  ],
-  c4: [
-    { id: 'm11', senderId: USERS[4].id, text: 'I saw your portfolio work. Really impressive!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25) },
-    { id: 'm12', senderId: 'me', text: 'Thank you! I\'d love to get your design feedback.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24.5) },
-    { id: 'm13', senderId: USERS[4].id, text: 'Would love to collaborate on the design system. Let\'s set up a call.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24) },
-  ],
-  c5: [
-    { id: 'm14', senderId: USERS[6].id, text: 'The AWS certification study group starts next Monday.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48) },
-  ],
-};
-
-export const EVENTS: Event[] = [
-  {
-    id: 'e1',
-    title: 'Cultural Night 2026',
-    description: 'Annual cultural fest with performances, art exhibitions, and food stalls. A celebration of creativity and talent.',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3),
-    location: 'Main Auditorium',
-    organizer: 'Akruthi Fine Arts Club',
-    attendees: 120,
-    category: 'Arts',
-    isRegistered: true,
-  },
-  {
-    id: 'e2',
-    title: 'Backend Dev Workshop',
-    description: 'Learn REST APIs, GraphQL, and microservices architecture. Hands-on coding session with real-world examples.',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-    location: 'CS Lab Block A',
-    organizer: 'Coding Club',
-    attendees: 45,
-    category: 'Technology',
-    isRegistered: false,
-  },
-  {
-    id: 'e3',
-    title: 'Alumni Networking Night',
-    description: 'An evening of networking with alumni from top companies. Food and refreshments provided.',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10),
-    location: 'Grand Hall',
-    organizer: 'Alumni Association',
-    attendees: 200,
-    category: 'Networking',
-    isRegistered: false,
-  },
-  {
-    id: 'e4',
-    title: 'AI/ML Research Symposium',
-    description: 'Presenting research in AI and machine learning. Paper presentations, poster sessions, and panel discussions.',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14),
-    location: 'Seminar Hall',
-    organizer: 'AI Lab',
-    attendees: 89,
-    category: 'Research',
-    isRegistered: true,
-  },
-  {
-    id: 'e5',
-    title: 'Startup Pitch Competition',
-    description: 'Student startups pitch to a panel of VCs and angel investors. Top 3 teams win seed funding.',
-    date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 21),
-    location: 'Innovation Hub',
-    organizer: 'E-Cell',
-    attendees: 95,
-    category: 'Entrepreneurship',
-    isRegistered: false,
-  },
-];
+export function getRoleBadge(role: UserRole): { text: string; variant: 'primary' | 'success' | 'warning' } {
+  switch (role) {
+    case 'alumni': return { text: 'Alumni', variant: 'primary' };
+    case 'faculty': return { text: 'Faculty', variant: 'warning' };
+    default: return { text: 'Student', variant: 'success' };
+  }
+}
