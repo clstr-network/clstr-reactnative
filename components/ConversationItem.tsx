@@ -1,59 +1,65 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
+import { View, Text, StyleSheet, Pressable, useColorScheme } from 'react-native';
+import { useThemeColors } from '@/constants/colors';
 import { Avatar } from './Avatar';
-import { Conversation } from '@/lib/types';
+import { RoleBadge } from './RoleBadge';
+import { formatMessageTime } from '@/lib/time';
+import type { Conversation } from '@/lib/storage';
 
 interface ConversationItemProps {
   conversation: Conversation;
-  onPress: () => void;
+  onPress: (id: string) => void;
 }
 
-export function ConversationItem({ conversation, onPress }: ConversationItemProps) {
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
-  };
+export const ConversationItem = React.memo(function ConversationItem({ conversation, onPress }: ConversationItemProps) {
+  const colors = useThemeColors(useColorScheme());
+  const hasUnread = conversation.unreadCount > 0;
 
   return (
     <Pressable
-      onPress={handlePress}
-      style={({ pressed }) => [styles.container, pressed && { backgroundColor: Colors.dark.surfaceHover }]}
+      onPress={() => onPress(conversation.id)}
+      style={({ pressed }) => [
+        styles.container,
+        { backgroundColor: pressed ? colors.surfaceElevated : 'transparent' },
+      ]}
     >
-      <Avatar
-        initials={conversation.participantAvatar}
-        size={48}
-        isOnline={conversation.isOnline}
-      />
+      <Avatar uri={conversation.participantAvatar} name={conversation.participantName} size={52} />
       <View style={styles.content}>
         <View style={styles.topRow}>
-          <Text style={styles.name} numberOfLines={1}>
-            {conversation.participantName}
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { color: colors.text }, hasUnread && styles.nameBold]} numberOfLines={1}>
+              {conversation.participantName}
+            </Text>
+            <RoleBadge role={conversation.participantRole} />
+          </View>
+          <Text style={[styles.time, { color: hasUnread ? colors.tint : colors.textTertiary }]}>
+            {formatMessageTime(conversation.lastMessageAt)}
           </Text>
-          <Text style={styles.time}>{conversation.timestamp}</Text>
         </View>
-        <Text style={[styles.message, conversation.unread > 0 && styles.unreadMessage]} numberOfLines={1}>
-          {conversation.lastMessage}
-        </Text>
+        <View style={styles.bottomRow}>
+          <Text
+            style={[styles.lastMsg, { color: hasUnread ? colors.text : colors.textSecondary }]}
+            numberOfLines={1}
+          >
+            {conversation.lastMessage}
+          </Text>
+          {hasUnread && (
+            <View style={[styles.unreadBadge, { backgroundColor: colors.tint }]}>
+              <Text style={styles.unreadText}>{conversation.unreadCount}</Text>
+            </View>
+          )}
+        </View>
       </View>
-      {conversation.unread > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{conversation.unread}</Text>
-        </View>
-      )}
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.divider,
   },
   content: {
     flex: 1,
@@ -63,40 +69,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 3,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    marginRight: 8,
   },
   name: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
     fontSize: 15,
-    color: Colors.dark.text,
-    flex: 1,
+    fontWeight: '500',
+    flexShrink: 1,
+  },
+  nameBold: {
+    fontWeight: '700',
   },
   time: {
-    fontFamily: 'SpaceGrotesk_400Regular',
     fontSize: 12,
-    color: Colors.dark.textMeta,
-    marginLeft: 8,
   },
-  message: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 13,
-    color: Colors.dark.textSecondary,
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
   },
-  unreadMessage: {
-    color: Colors.dark.text,
+  lastMsg: {
+    fontSize: 14,
+    flex: 1,
+    marginRight: 8,
   },
-  badge: {
-    backgroundColor: Colors.dark.text,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+  unreadBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    paddingHorizontal: 6,
   },
-  badgeText: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+  unreadText: {
+    color: '#fff',
     fontSize: 11,
-    color: Colors.dark.background,
+    fontWeight: '700',
   },
 });

@@ -1,88 +1,96 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Platform } from 'react-native';
+import {
+  View, Text, StyleSheet, FlatList, useColorScheme, Platform, RefreshControl, ActivityIndicator
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import Colors from '@/constants/colors';
-import { useData } from '@/lib/data-context';
+import { useThemeColors } from '@/constants/colors';
 import { ConversationItem } from '@/components/ConversationItem';
-import { Conversation } from '@/lib/types';
+import { getConversations, type Conversation } from '@/lib/storage';
 
 export default function MessagesScreen() {
+  const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
-  const { conversations } = useData();
+  const queryClient = useQueryClient();
+  const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
-  const totalUnread = conversations.reduce((sum, c) => sum + c.unread, 0);
+  const { data: conversations = [], isLoading } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: getConversations,
+  });
 
-  const renderConversation = useCallback(({ item }: { item: Conversation }) => (
-    <ConversationItem
-      conversation={item}
-      onPress={() => router.push({ pathname: '/chat/[id]', params: { id: item.id } })}
-    />
-  ), []);
+  const handlePress = useCallback((id: string) => {
+    router.push({ pathname: '/chat/[id]', params: { id } });
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['conversations'] });
+  }, [queryClient]);
+
+  const renderItem = useCallback(({ item }: { item: Conversation }) => (
+    <ConversationItem conversation={item} onPress={handlePress} />
+  ), [handlePress]);
 
   const keyExtractor = useCallback((item: Conversation) => item.id, []);
 
-  const webTopInset = Platform.OS === 'web' ? 67 : 0;
+  const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
   return (
-    <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 8 }]}>
-        <View>
-          <Text style={styles.title}>Messages</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12, borderBottomColor: colors.border }]}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
           {totalUnread > 0 && (
-            <Text style={styles.unreadLabel}>{totalUnread} unread</Text>
+            <View style={[styles.unreadPill, { backgroundColor: colors.tint }]}>
+              <Text style={styles.unreadPillText}>{totalUnread} new</Text>
+            </View>
           )}
         </View>
       </View>
 
-      <FlatList
-        data={conversations}
-        renderItem={renderConversation}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 }}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={!!conversations.length}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={40} color={Colors.dark.textMeta} />
-            <Text style={styles.emptyText}>No messages yet</Text>
-          </View>
-        }
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.tint} />
+        </View>
+      ) : (
+        <FlatList
+          data={conversations}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={colors.tint} />
+          }
+          ItemSeparatorComponent={() => (
+            <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="chatbubbles-outline" size={48} color={colors.textTertiary} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No conversations yet</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>Connect with people to start chatting</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  title: {
-    fontFamily: 'SpaceGrotesk_700Bold',
-    fontSize: 24,
-    color: Colors.dark.text,
-  },
-  unreadLabel: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 13,
-    color: Colors.dark.textSecondary,
-    marginTop: 2,
-  },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 100,
-    gap: 12,
-  },
-  emptyText: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 14,
-    color: Colors.dark.textMeta,
-  },
+  container: { flex: 1 },
+  header: { borderBottomWidth: 1, paddingBottom: 12, paddingHorizontal: 16 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  title: { fontSize: 28, fontWeight: '800' },
+  unreadPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
+  unreadPillText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  listContent: { paddingBottom: 100 },
+  separator: { height: 1, marginLeft: 80 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyState: { alignItems: 'center', paddingTop: 80, gap: 8 },
+  emptyText: { fontSize: 16, fontWeight: '600' },
+  emptySubtext: { fontSize: 14 },
 });

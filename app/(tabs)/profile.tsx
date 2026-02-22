@@ -1,224 +1,147 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import React from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, Pressable, useColorScheme, Platform, Alert
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import Colors from '@/constants/colors';
-import { useData } from '@/lib/data-context';
+import * as Haptics from 'expo-haptics';
+import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
 import { Avatar } from '@/components/Avatar';
-import { GlassContainer } from '@/components/GlassContainer';
-import { SettingsRow } from '@/components/SettingsRow';
+import { RoleBadge } from '@/components/RoleBadge';
+import { useAuth } from '@/lib/auth-context';
+import { resetAllData } from '@/lib/storage';
 
 export default function ProfileScreen() {
+  const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
-  const { user } = useData();
-  const [notifs, setNotifs] = useState(true);
-
+  const { user, refresh } = useAuth();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+
+  if (!user) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.emptyState}>
+          <Ionicons name="person-outline" size={48} color={colors.textTertiary} />
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Profile not found</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const badgeColor = getRoleBadgeColor(user.role, colors);
+
+  const handleLogout = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out? This will reset all data.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await resetAllData();
+          await refresh();
+          router.replace('/onboarding');
+        },
+      },
+    ]);
+  };
+
+  const MENU_ITEMS = [
+    { icon: 'person-outline' as const, label: 'Edit Profile', color: colors.accent, onPress: () => {} },
+    { icon: 'bookmark-outline' as const, label: 'Saved Posts', color: colors.warning, onPress: () => {} },
+    { icon: 'settings-outline' as const, label: 'Settings', color: colors.textSecondary, onPress: () => router.push('/settings') },
+    { icon: 'help-circle-outline' as const, label: 'Help & Support', color: colors.textSecondary, onPress: () => {} },
+  ];
 
   return (
     <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 8,
-          paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100,
-        },
-      ]}
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={{ paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
+      <View style={[styles.headerBg, { backgroundColor: badgeColor + '15', paddingTop: insets.top + webTopInset }]}>
+        <View style={styles.profileSection}>
+          <Avatar uri={user.avatarUrl} name={user.name} size={80} showBorder />
+          <Text style={[styles.name, { color: colors.text }]}>{user.name}</Text>
+          <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.username}</Text>
+          <RoleBadge role={user.role} size="medium" />
+          {!!user.bio && <Text style={[styles.bio, { color: colors.textSecondary }]}>{user.bio}</Text>}
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{user.connectionsCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Connections</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{user.postsCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Posts</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{user.department}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Department</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.menuSection}>
+        {MENU_ITEMS.map((item) => (
+          <Pressable
+            key={item.label}
+            style={({ pressed }) => [
+              styles.menuItem,
+              { backgroundColor: pressed ? colors.surfaceElevated : colors.surface, borderColor: colors.border },
+            ]}
+            onPress={() => { Haptics.selectionAsync(); item.onPress?.(); }}
+          >
+            <View style={[styles.menuIconBg, { backgroundColor: item.color + '15' }]}>
+              <Ionicons name={item.icon} size={20} color={item.color} />
+            </View>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
+        ))}
+
         <Pressable
-          onPress={() => router.push('/settings')}
-          style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.7 }]}
-          hitSlop={8}
+          style={({ pressed }) => [
+            styles.menuItem,
+            styles.logoutItem,
+            { backgroundColor: pressed ? colors.danger + '10' : 'transparent', borderColor: colors.border },
+          ]}
+          onPress={handleLogout}
         >
-          <Ionicons name="settings-outline" size={22} color={Colors.dark.textSecondary} />
+          <View style={[styles.menuIconBg, { backgroundColor: colors.danger + '15' }]}>
+            <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+          </View>
+          <Text style={[styles.menuLabel, { color: colors.danger }]}>Sign Out</Text>
         </Pressable>
-      </View>
-
-      <GlassContainer style={styles.profileCard} tier={1}>
-        <View style={styles.profileRow}>
-          <Avatar initials={user.avatar} size={64} isOnline={user.isOnline} />
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user.name}</Text>
-            <Text style={styles.profileHandle}>{user.handle}</Text>
-            <Text style={styles.profileRole}>{user.role}</Text>
-          </View>
-        </View>
-        <Text style={styles.bio}>{user.bio}</Text>
-        <View style={styles.profileStats}>
-          <View style={styles.profileStat}>
-            <Text style={styles.profileStatNum}>{user.connections}</Text>
-            <Text style={styles.profileStatLabel}>Connections</Text>
-          </View>
-          <View style={[styles.profileStat, styles.profileStatBorder]}>
-            <Text style={styles.profileStatNum}>{user.posts}</Text>
-            <Text style={styles.profileStatLabel}>Posts</Text>
-          </View>
-          <View style={[styles.profileStat, styles.profileStatBorder]}>
-            <Text style={styles.profileStatNum}>{user.joined}</Text>
-            <Text style={styles.profileStatLabel}>Joined</Text>
-          </View>
-        </View>
-      </GlassContainer>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <GlassContainer noPadding tier={2}>
-          <SettingsRow
-            icon="notifications-outline"
-            iconColor={Colors.dark.textSecondary}
-            label="Push Notifications"
-            isSwitch
-            switchValue={notifs}
-            onSwitchChange={setNotifs}
-          />
-          <SettingsRow
-            icon="moon-outline"
-            iconColor={Colors.dark.textSecondary}
-            label="Appearance"
-            value="Dark"
-            onPress={() => {}}
-          />
-          <SettingsRow
-            icon="shield-checkmark-outline"
-            iconColor={Colors.dark.success}
-            label="Privacy"
-            onPress={() => {}}
-            isLast
-          />
-        </GlassContainer>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
-        <GlassContainer noPadding tier={2}>
-          <SettingsRow
-            icon="person-outline"
-            iconColor={Colors.dark.textSecondary}
-            label="Edit Profile"
-            onPress={() => {}}
-          />
-          <SettingsRow
-            icon="key-outline"
-            iconColor={Colors.dark.warning}
-            label="Change Password"
-            onPress={() => {}}
-          />
-          <SettingsRow
-            icon="log-out-outline"
-            label="Sign Out"
-            isDestructive
-            onPress={() => {}}
-            isLast
-          />
-        </GlassContainer>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
+  container: { flex: 1 },
+  headerBg: { paddingBottom: 24 },
+  profileSection: { alignItems: 'center', paddingTop: 24, gap: 6 },
+  name: { fontSize: 24, fontWeight: '800', marginTop: 8 },
+  username: { fontSize: 15 },
+  bio: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40, marginTop: 4, lineHeight: 20 },
+  statsRow: { flexDirection: 'row', marginTop: 20, marginHorizontal: 16, borderRadius: 14, overflow: 'hidden' },
+  statItem: { flex: 1, alignItems: 'center', paddingVertical: 14 },
+  statNum: { fontSize: 18, fontWeight: '800' },
+  statLabel: { fontSize: 12, marginTop: 2 },
+  statDivider: { width: 1, marginVertical: 10 },
+  menuSection: { paddingHorizontal: 16, paddingTop: 20, gap: 8 },
+  menuItem: {
+    flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14,
+    borderWidth: 1, gap: 12,
   },
-  content: {
-    paddingHorizontal: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginBottom: 16,
-  },
-  title: {
-    fontFamily: 'SpaceGrotesk_700Bold',
-    fontSize: 24,
-    color: Colors.dark.text,
-  },
-  settingsBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileCard: {
-    marginBottom: 24,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  profileName: {
-    fontFamily: 'SpaceGrotesk_700Bold',
-    fontSize: 20,
-    color: Colors.dark.text,
-  },
-  profileHandle: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 14,
-    color: Colors.dark.textSecondary,
-    marginTop: 1,
-  },
-  profileRole: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 12,
-    color: Colors.dark.textMeta,
-    marginTop: 2,
-  },
-  bio: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 14,
-    color: Colors.dark.textBody,
-    lineHeight: 24.5,
-    marginBottom: 16,
-  },
-  profileStats: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: Colors.dark.divider,
-    paddingTop: 14,
-  },
-  profileStat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  profileStatBorder: {
-    borderLeftWidth: 1,
-    borderLeftColor: Colors.dark.divider,
-  },
-  profileStatNum: {
-    fontFamily: 'SpaceGrotesk_700Bold',
-    fontSize: 18,
-    color: Colors.dark.text,
-  },
-  profileStatLabel: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 11,
-    color: Colors.dark.textMeta,
-    marginTop: 2,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
-    fontSize: 13,
-    color: Colors.dark.textMeta,
-    marginBottom: 8,
-    paddingHorizontal: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
+  menuIconBg: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  menuLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
+  logoutItem: { marginTop: 12, borderWidth: 0 },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  emptyText: { fontSize: 16 },
 });

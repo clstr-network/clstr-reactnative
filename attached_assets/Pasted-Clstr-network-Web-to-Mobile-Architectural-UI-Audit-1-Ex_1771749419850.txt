@@ -1,0 +1,98 @@
+Clstr.network: Web-to-Mobile Architectural & UI Audit
+1. Executive Summary
+Converting a Vite + React + Tailwind + shadcn/ui web app to an Expo + React Native mobile app requires a fundamental shift in mental models. The current web architecture relies heavily on the DOM, CSS-based responsive design, hover states, and URL-based routing.
+
+Critical Findings:
+
+Navigation Paradigm Mismatch: Web uses URL-based routing (likely react-router-dom). Mobile requires Stack and Tab navigators (React Navigation). Deep linking must be explicitly configured; it is not free like on the web.
+Performance Dangers: Web apps often map over arrays to render lists. Doing this in React Native will destroy performance on mid-range Androids. FlatList or FlashList is mandatory.
+Lifecycle & Realtime Risks: Supabase realtime subscriptions that remain active when the app is backgrounded will cause memory leaks and battery drain.
+UI/UX Anti-patterns: Relying on web-based padding/margins without respecting mobile Safe Areas (notches, home indicators) will result in broken UI. Touch targets under 44x44px will cause severe user frustration.
+2. Flow Audit (Per Feature)
+Authentication Flow (Login → Signup → Verify → Onboarding → Main)
+Web Behavior: Redirects via URLs, relies on cookies/localStorage, often uses complex multi-step forms with scroll.
+Web Assumptions: Unlimited screen height, easy tab switching for email verification.
+Mobile Friction: Switching to an email app to verify a link can kill the app process on low-RAM Androids.
+Lifecycle Risk: App restarting during the magic link return.
+Native Correction: Use SecureStore for token storage. Implement deep linking for magic links. Use a native Stack Navigator to replace the auth flow with the main app flow upon success (resetting the stack so users can't swipe back to login).
+Feed Flow (Load → Scroll → Open post → Back)
+Web Behavior: Window scrolling, map() over arrays, hover effects on cards.
+Web Assumptions: Mouse wheel scrolling is fast, DOM handles large lists reasonably well.
+Mobile Friction: Janky scrolling, memory crashes if rendering 100+ complex PostCards.
+Native Correction: Must use FlatList with estimatedItemSize (or Shopify's FlashList). Implement pull-to-refresh (RefreshControl) and infinite scroll (onEndReached).
+Profile Flow (Own vs Other)
+Web Behavior: Sidebars, wide layouts, sticky headers.
+Mobile Friction: Horizontal space is constrained.
+Native Correction: Use a collapsible native header (e.g., react-native-reanimated scroll interpolation) or a simple Stack header. Use top-tabs for sub-sections (Posts, About, Network) instead of sidebars.
+Messaging Flow (List → Chat → Reconnect)
+Web Behavior: Split pane (List on left, Chat on right). WebSocket stays open.
+Mobile Friction: Split panes don't work on phones. Keyboard pushes UI off-screen.
+Lifecycle Risk: WebSocket must disconnect on AppState background and reconnect on foreground.
+Native Correction: Two distinct screens (List Screen → Chat Screen). Use KeyboardAvoidingView (crucial and notoriously tricky). Use Inverted FlatList for messages.
+Events Flow (List → Detail → RSVP)
+Web Behavior: Modals or new pages for details.
+Native Correction: Use a Bottom Sheet (e.g., @gorhom/bottom-sheet) for quick RSVP actions, and a full Stack push for deep event details.
+Network Flow (Browse → Request → Accept)
+Web Behavior: Grid layouts (e.g., 3-4 columns).
+Native Correction: 2-column grid via FlatList numColumns={2}. Ensure touch targets for "Connect" buttons are massive.
+Notifications Flow (Badge → List → Navigate)
+Web Behavior: Dropdown popover from the navbar.
+Native Correction: Dedicated Tab or a dedicated Screen accessed via a header bell icon. Must integrate with Expo Push Notifications.
+Settings Flow (Theme → Logout → Delete)
+Web Behavior: Long scrolling page with sections.
+Native Correction: Use a native grouped list style (like iOS Settings).
+3. UI & Design System Audit
+Color Tokens: Web CSS variables (--primary) must be converted to a JS/TS theme object. No CSS means no CSS variables.
+Spacing & Typography: Web uses rem or px. React Native uses density-independent pixels (dp). A 1:1 translation usually works, but text often needs to be slightly larger on mobile for readability.
+Hover States: REMOVE ALL. Replace with Pressable and TouchableHighlight using android_ripple or opacity changes on press.
+Touch Targets: Web buttons are often 32px or 36px. Mobile minimum is 44x44px. Wrap smaller icons in a Pressable with hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}.
+Safe Areas: Web ignores notches. Mobile MUST wrap root screens in SafeAreaView or use useSafeAreaInsets() to pad headers and footers.
+Shadows: Web box-shadow does not work. You must use elevation for Android and shadowColor/shadowOffset for iOS.
+4. Component Parity Audit
+Component	Web Equivalent	Native Minimal Version (Phase 1)	Risks & Constraints
+ConversationItem	div with hover	Pressable row with Avatar and Text	Re-renders if parent list updates. Wrap in React.memo.
+PostCard	Complex div with Radix menus	View with Pressable actions	High memory usage in lists. Keep layout flat. No complex nested views.
+UserCard	Grid item	View with fixed height/width	Image loading. Use expo-image for caching.
+EventCard	Card with absolute positioned dates	View with flexbox	Avoid absolute positioning if flexbox can solve it.
+ChatInput	textarea	TextInput with multiline	Keyboard avoiding behavior is critical.
+MessageBubble	div with max-width	View with maxWidth: '80%'	Must be inside an inverted FlatList.
+TabBar	Fixed bottom div	@react-navigation/bottom-tabs	Do not build a custom tab bar until V2. Use the native one.
+What NOT to include in V1:
+
+Complex gesture-driven swipe-to-reply (use simple long-press menus first).
+Custom routing transitions (use default native stack animations).
+5. Layout Architecture Audit
+Root Layout: Should be a NavigationContainer wrapping a Root Stack.
+Tab Layout: The main app should be a Bottom Tab Navigator (Feed, Network, Messages, Profile).
+Stack Nesting: DANGER. Do not nest Stacks inside Stacks unnecessarily. Keep it flat: Tab Navigator -> Each Tab has its own Stack.
+Modals: Use native modal presentations (presentation: 'modal' in Stack Navigator) rather than building custom JS overlays.
+Back Navigation: Android hardware back button MUST be handled. React Navigation handles this automatically if stacks are configured correctly.
+Screen Registry: Avoid circular imports by keeping screen components in a flat /screens directory and registering them in a single /navigation file.
+6. Performance Risk Audit
+FlatList Misuse: Using ScrollView with .map() for feeds or messages will crash the app.
+Inverted Lists: Chat must use <FlatList inverted />. Do not try to auto-scroll a standard list to the bottom on load; it will flicker and lag.
+Inline Functions: <Pressable onPress={() => doSomething(id)}> inside a FlatList item will cause the item to re-render every time the list scrolls. Extract to a memoized component.
+Image Caching: Standard <Image> does not cache aggressively. Use expo-image to prevent re-downloading avatars as users scroll.
+Realtime Subscriptions:
+7. Mobile-Native Corrections Roadmap
+Feed: Simplify cards. Remove complex hover menus. Use a native Bottom Sheet for "Report/Share" actions.
+Chat: Redesign input area to integrate tightly with the iOS/Android keyboard. Remove split-pane desktop views.
+Profile: Reduce density. Stack information vertically. Use native sticky headers.
+Events: Ensure maps open in the native Apple Maps / Google Maps app via Linking.openURL, not an embedded web iframe.
+Settings: Use standard native list UI. Do not use custom web-styled cards for settings toggles.
+8. Priority-Ranked Fix List
+🔴 CRITICAL (Fix before writing any UI code)
+Setup React Navigation properly: Define the exact Stack and Tab hierarchy. Ensure no circular dependencies.
+Implement AppState Lifecycle hooks: Wrap Supabase realtime connections in AppState listeners to prevent background battery drain.
+Configure KeyboardAvoidingView: Create a global wrapper or standard pattern for screens with text inputs (Auth, Chat).
+🟠 HIGH (Fix during component creation)
+Replace all arrays with FlatList/FlashList: Feed, Network, and Messages must use virtualized lists.
+Implement expo-image: Replace all web <img> and standard React Native <Image> tags for avatars and post media.
+Audit Touch Targets: Enforce a strict 44x44px minimum hit area for all interactive elements using hitSlop.
+🟡 MEDIUM (Fix during polish)
+Safe Area Insets: Ensure headers don't bleed into the notch and bottom tabs don't overlap the iOS home indicator.
+Convert CSS Tokens to JS: Create a strict theme.ts file. Do not rely on inline hex codes.
+Deep Linking: Configure Expo linking prefixes so magic links and push notifications route to the correct screens.
+🟢 LOW (Post-launch optimizations)
+Gesture Polish: Add swipe-to-go-back (iOS default, but ensure it works with custom headers).
+Dark Mode Flash: Ensure SplashScreen waits for the async storage theme preference to load before hiding to prevent white flashes.

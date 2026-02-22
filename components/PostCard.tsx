@@ -1,134 +1,179 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
+import { useThemeColors } from '@/constants/colors';
 import { Avatar } from './Avatar';
-import { GlassContainer } from './GlassContainer';
-import { Post } from '@/lib/types';
+import { RoleBadge } from './RoleBadge';
+import { formatRelativeTime } from '@/lib/time';
+import type { Post } from '@/lib/storage';
 
 interface PostCardProps {
   post: Post;
   onLike: (id: string) => void;
+  onPress?: (id: string) => void;
+  onLongPress?: (id: string) => void;
 }
 
-const tagColors: Record<string, string> = {
-  Engineering: 'rgba(255, 255, 255, 0.75)',
-  Performance: Colors.dark.success,
-  Product: 'rgba(255, 255, 255, 0.75)',
-  Team: Colors.dark.warning,
-  Insights: Colors.dark.danger,
+const CATEGORY_ICONS: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
+  academic: { name: 'school-outline', color: '#3B82F6' },
+  career: { name: 'briefcase-outline', color: '#F59E0B' },
+  events: { name: 'calendar-outline', color: '#8B5CF6' },
+  social: { name: 'people-outline', color: '#10B981' },
+  general: { name: 'chatbubble-outline', color: '#6B7280' },
 };
 
-export function PostCard({ post, onLike }: PostCardProps) {
+export const PostCard = React.memo(function PostCard({ post, onLike, onPress, onLongPress }: PostCardProps) {
+  const colors = useThemeColors(useColorScheme());
+  const cat = CATEGORY_ICONS[post.category] || CATEGORY_ICONS.general;
+
   const handleLike = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onLike(post.id);
   };
 
-  const tagColor = post.tag ? (tagColors[post.tag] || Colors.dark.textSecondary) : Colors.dark.textSecondary;
+  const handleLongPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onLongPress?.(post.id);
+  };
 
   return (
-    <GlassContainer style={styles.container}>
+    <Pressable
+      onPress={() => onPress?.(post.id)}
+      onLongPress={handleLongPress}
+      delayLongPress={400}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        pressed && { opacity: 0.95 },
+      ]}
+    >
       <View style={styles.header}>
-        <Avatar initials={post.authorAvatar} size={40} />
-        <View style={styles.authorInfo}>
-          <Text style={styles.authorName}>{post.authorName}</Text>
-          <Text style={styles.meta}>
-            {post.authorHandle} · {post.timestamp}
-          </Text>
-        </View>
-        {post.tag && (
-          <View style={[styles.tag, { backgroundColor: Colors.dark.secondary }]}>
-            <Text style={[styles.tagText, { color: tagColor }]}>{post.tag}</Text>
+        <Avatar uri={post.authorAvatar} name={post.authorName} size={42} />
+        <View style={styles.headerInfo}>
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{post.authorName}</Text>
+            <RoleBadge role={post.authorRole} />
           </View>
-        )}
+          <View style={styles.metaRow}>
+            <Text style={[styles.username, { color: colors.textTertiary }]}>@{post.authorUsername}</Text>
+            <Text style={[styles.dot, { color: colors.textTertiary }]}>{'\u00B7'}</Text>
+            <Text style={[styles.time, { color: colors.textTertiary }]}>{formatRelativeTime(post.createdAt)}</Text>
+          </View>
+        </View>
       </View>
-      <Text style={styles.content}>{post.content}</Text>
-      <View style={styles.actions}>
-        <Pressable
-          onPress={handleLike}
-          style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
-          hitSlop={8}
-        >
+
+      <Text style={[styles.content, { color: colors.text }]}>{post.content}</Text>
+
+      <View style={[styles.categoryTag, { backgroundColor: cat.color + '15' }]}>
+        <Ionicons name={cat.name} size={13} color={cat.color} />
+        <Text style={[styles.categoryText, { color: cat.color }]}>{post.category}</Text>
+      </View>
+
+      <View style={[styles.actions, { borderTopColor: colors.border }]}>
+        <Pressable onPress={handleLike} style={styles.actionBtn} hitSlop={8}>
           <Ionicons
             name={post.isLiked ? 'heart' : 'heart-outline'}
-            size={18}
-            color={post.isLiked ? Colors.dark.danger : Colors.dark.textMeta}
+            size={20}
+            color={post.isLiked ? colors.danger : colors.textTertiary}
           />
-          <Text style={[styles.actionText, post.isLiked && { color: Colors.dark.danger }]}>
-            {post.likes}
+          <Text style={[styles.actionText, { color: post.isLiked ? colors.danger : colors.textTertiary }]}>
+            {post.likesCount}
           </Text>
         </Pressable>
-        <View style={styles.action}>
-          <Ionicons name="chatbubble-outline" size={17} color={Colors.dark.textMeta} />
-          <Text style={styles.actionText}>{post.comments}</Text>
+        <View style={styles.actionBtn}>
+          <Ionicons name="chatbubble-outline" size={18} color={colors.textTertiary} />
+          <Text style={[styles.actionText, { color: colors.textTertiary }]}>{post.commentsCount}</Text>
         </View>
-        <View style={styles.action}>
-          <Ionicons name="share-outline" size={17} color={Colors.dark.textMeta} />
-        </View>
+        <Pressable style={styles.actionBtn} hitSlop={8}>
+          <Ionicons name="share-outline" size={18} color={colors.textTertiary} />
+        </Pressable>
       </View>
-    </GlassContainer>
+    </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
-  container: {
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginHorizontal: 16,
     marginBottom: 12,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    padding: 14,
+    paddingBottom: 0,
   },
-  authorInfo: {
+  headerInfo: {
     flex: 1,
     marginLeft: 10,
   },
-  authorName: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  name: {
     fontSize: 15,
-    color: Colors.dark.text,
+    fontWeight: '700',
+    flexShrink: 1,
   },
-  meta: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 12,
-    color: Colors.dark.textMeta,
-    marginTop: 1,
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  username: {
+    fontSize: 13,
   },
-  tagText: {
-    fontFamily: 'SpaceGrotesk_500Medium',
-    fontSize: 11,
-    letterSpacing: 0.3,
+  dot: {
+    marginHorizontal: 4,
+    fontSize: 13,
+  },
+  time: {
+    fontSize: 13,
   },
   content: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 14,
-    color: Colors.dark.textBody,
-    lineHeight: 24.5,
-    marginBottom: 14,
+    fontSize: 15,
+    lineHeight: 22,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+  categoryTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginLeft: 14,
+    marginBottom: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
     borderTopWidth: 1,
-    borderTopColor: Colors.dark.divider,
-    paddingTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 24,
   },
-  action: {
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
   },
   actionText: {
-    fontFamily: 'SpaceGrotesk_400Regular',
     fontSize: 13,
-    color: Colors.dark.textMeta,
+    fontWeight: '500',
   },
 });

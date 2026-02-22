@@ -1,246 +1,217 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  FlatList,
-  Pressable,
-  Platform,
-  ActivityIndicator,
-  RefreshControl,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import * as Haptics from "expo-haptics";
-import { useData, type Event } from "@/lib/data-context";
-import Colors from "@/constants/colors";
-import { format, parseISO } from "date-fns";
+  View, Text, StyleSheet, FlatList, Pressable, useColorScheme, Platform, RefreshControl, ActivityIndicator
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
+import { Avatar } from '@/components/Avatar';
+import { getEvents, toggleRsvp, type Event } from '@/lib/storage';
+import { formatEventDate } from '@/lib/time';
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Career: "#6C5CE7",
-  Tech: "#00CEC9",
-  Startup: "#FF6B6B",
-  Workshop: "#FDCB6E",
-  Networking: "#00B894",
+const CATEGORIES = ['All', 'Academic', 'Career', 'Social', 'Workshop', 'Sports'];
+
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  academic: 'school', career: 'briefcase', social: 'people', workshop: 'construct', sports: 'basketball',
 };
 
-const EventCard = React.memo(function EventCard({ event, onRSVP }: { event: Event; onRSVP: () => void }) {
-  const categoryColor = CATEGORY_COLORS[event.category] || Colors.dark.primary;
-  const eventDate = parseISO(event.date);
-  const monthStr = format(eventDate, "MMM").toUpperCase();
-  const dayStr = format(eventDate, "dd");
+const EventCard = React.memo(function EventCard({ event, colors, onRsvp, onPress }: {
+  event: Event; colors: any; onRsvp: (id: string) => void; onPress: (id: string) => void;
+}) {
+  const dateInfo = formatEventDate(event.date);
+  const spotsLeft = event.maxAttendees - event.attendeesCount;
+  const catIcon = CATEGORY_ICONS[event.category] || 'calendar';
+  const badgeColor = getRoleBadgeColor(event.organizerRole, colors);
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.eventCard, pressed && { opacity: 0.8 }]}
-      onPress={() => router.push({ pathname: "/event/[id]", params: { id: event.id } })}
+      onPress={() => onPress(event.id)}
+      style={({ pressed }) => [styles.eventCard, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.95 }]}
     >
-      <View style={styles.eventDateBox}>
-        <Text style={styles.eventMonth}>{monthStr}</Text>
-        <Text style={styles.eventDay}>{dayStr}</Text>
-      </View>
-      <View style={styles.eventInfo}>
-        <View style={[styles.categoryBadge, { backgroundColor: `${categoryColor}20` }]}>
-          <Text style={[styles.categoryText, { color: categoryColor }]}>{event.category}</Text>
+      <View style={styles.eventTop}>
+        <View style={[styles.dateBox, { backgroundColor: colors.tint + '12' }]}>
+          <Text style={[styles.dateMonth, { color: colors.tint }]}>{dateInfo.month.toUpperCase()}</Text>
+          <Text style={[styles.dateDay, { color: colors.tint }]}>{dateInfo.day}</Text>
         </View>
-        <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-        <View style={styles.eventMeta}>
-          <View style={styles.eventMetaItem}>
-            <Ionicons name="location-outline" size={13} color={Colors.dark.textTertiary} />
-            <Text style={styles.eventMetaText}>{event.location}</Text>
+        <View style={styles.eventInfo}>
+          <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>{event.title}</Text>
+          <View style={styles.eventMeta}>
+            <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+            <Text style={[styles.eventLocation, { color: colors.textTertiary }]} numberOfLines={1}>{event.location}</Text>
           </View>
-          <View style={styles.eventMetaItem}>
-            <Ionicons name="people-outline" size={13} color={Colors.dark.textTertiary} />
-            <Text style={styles.eventMetaText}>{event.attendees}</Text>
+          <View style={styles.eventMeta}>
+            <Ionicons name="time-outline" size={13} color={colors.textTertiary} />
+            <Text style={[styles.eventTime, { color: colors.textTertiary }]}>{event.time}</Text>
           </View>
         </View>
       </View>
-      <Pressable
-        style={[styles.rsvpBtn, event.rsvpd && styles.rsvpBtnActive]}
-        onPress={() => {
-          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onRSVP();
-        }}
-        hitSlop={4}
-      >
-        <Ionicons
-          name={event.rsvpd ? "checkmark" : "add"}
-          size={18}
-          color={event.rsvpd ? "#fff" : Colors.dark.primary}
-        />
-      </Pressable>
+
+      <View style={[styles.eventBottom, { borderTopColor: colors.border }]}>
+        <View style={styles.eventStats}>
+          <View style={styles.eventStat}>
+            <Ionicons name={catIcon} size={14} color={colors.textSecondary} />
+            <Text style={[styles.eventStatText, { color: colors.textSecondary }]}>{event.category}</Text>
+          </View>
+          <View style={styles.eventStat}>
+            <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
+            <Text style={[styles.eventStatText, { color: colors.textSecondary }]}>{event.attendeesCount}/{event.maxAttendees}</Text>
+          </View>
+        </View>
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onRsvp(event.id); }}
+          style={({ pressed }) => [
+            styles.rsvpBtn,
+            event.isRsvped
+              ? { backgroundColor: colors.success + '15', borderColor: colors.success + '40', borderWidth: 1 }
+              : { backgroundColor: colors.tint },
+            pressed && { opacity: 0.85 },
+          ]}
+          hitSlop={8}
+        >
+          {event.isRsvped ? (
+            <>
+              <Ionicons name="checkmark" size={14} color={colors.success} />
+              <Text style={[styles.rsvpText, { color: colors.success }]}>Going</Text>
+            </>
+          ) : (
+            <Text style={[styles.rsvpText, { color: '#fff' }]}>RSVP</Text>
+          )}
+        </Pressable>
+      </View>
     </Pressable>
   );
-}, (prev, next) =>
-  prev.event.id === next.event.id &&
-  prev.event.rsvpd === next.event.rsvpd &&
-  prev.event.attendees === next.event.attendees
-);
+});
 
 export default function EventsScreen() {
+  const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
-  const { events, toggleRSVP, isLoading } = useData();
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+  const [activeCategory, setActiveCategory] = useState('All');
+  const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ['events'],
+    queryFn: getEvents,
+  });
+
+  const filtered = activeCategory === 'All'
+    ? events
+    : events.filter(e => e.category === activeCategory.toLowerCase());
+
+  const handleRsvp = useCallback(async (id: string) => {
+    const updated = await toggleRsvp(id);
+    queryClient.setQueryData(['events'], updated);
+  }, [queryClient]);
+
+  const handlePress = useCallback((id: string) => {
+    router.push({ pathname: '/event/[id]', params: { id } });
   }, []);
 
-  const handleRSVP = useCallback((id: string) => {
-    toggleRSVP(id);
-  }, [toggleRSVP]);
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['events'] });
+  }, [queryClient]);
+
+  const renderItem = useCallback(({ item }: { item: Event }) => (
+    <EventCard event={item} colors={colors} onRsvp={handleRsvp} onPress={handlePress} />
+  ), [colors, handleRsvp, handlePress]);
 
   const keyExtractor = useCallback((item: Event) => item.id, []);
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <ActivityIndicator size="large" color={Colors.dark.primary} style={{ marginTop: 40 }} />
-      </View>
-    );
-  }
+  const upcomingCount = events.length;
+  const rsvpCount = events.filter(e => e.isRsvped).length;
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <Text style={styles.headerTitle}>Events</Text>
-      </View>
-      <FlatList
-        data={events}
-        renderItem={({ item }) => (
-          <EventCard event={item} onRSVP={() => handleRSVP(item.id)} />
-        )}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={!!events.length}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.primary} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={48} color={Colors.dark.textTertiary} />
-            <Text style={styles.emptyTitle}>No events</Text>
-            <Text style={styles.emptySubtitle}>Check back later for upcoming events</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Events</Text>
+        <View style={styles.statsRow}>
+          <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
+            <Text style={[styles.statNum, { color: colors.tint }]}>{upcomingCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Upcoming</Text>
           </View>
-        }
-      />
+          <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
+            <Text style={[styles.statNum, { color: colors.success }]}>{rsvpCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Attending</Text>
+          </View>
+        </View>
+        <FlatList
+          data={CATEGORIES}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterList}
+          contentContainerStyle={styles.filterContent}
+          keyExtractor={item => item}
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => { setActiveCategory(item); Haptics.selectionAsync(); }}
+              style={[styles.filterChip, {
+                backgroundColor: activeCategory === item ? colors.tint : 'transparent',
+                borderColor: activeCategory === item ? colors.tint : colors.border,
+              }]}
+            >
+              <Text style={[styles.filterText, { color: activeCategory === item ? '#fff' : colors.textSecondary }]}>{item}</Text>
+            </Pressable>
+          )}
+        />
+      </View>
+
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.tint} />
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={colors.tint} />}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={48} color={colors.textTertiary} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No events in this category</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    color: Colors.dark.text,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-    gap: 12,
-  },
-  eventCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.dark.surface,
-    borderRadius: 16,
-    padding: 16,
-  },
-  eventDateBox: {
-    width: 52,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: Colors.dark.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  eventMonth: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.dark.primary,
-    letterSpacing: 0.5,
-  },
-  eventDay: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: Colors.dark.text,
-    marginTop: -2,
-  },
-  eventInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  categoryBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginBottom: 4,
-  },
-  categoryText: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-  },
-  eventTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.dark.text,
-    marginBottom: 6,
-  },
-  eventMeta: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  eventMetaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  eventMetaText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textTertiary,
-  },
-  rsvpBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: Colors.dark.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
-  rsvpBtnActive: {
-    backgroundColor: Colors.dark.primary,
-    borderColor: Colors.dark.primary,
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 80,
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.dark.text,
-    marginTop: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textSecondary,
-  },
+  container: { flex: 1 },
+  header: { borderBottomWidth: 1, paddingBottom: 0 },
+  title: { fontSize: 28, fontWeight: '800', paddingHorizontal: 16, marginBottom: 12 },
+  statsRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 12 },
+  statBox: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  statNum: { fontSize: 22, fontWeight: '800' },
+  statLabel: { fontSize: 12, marginTop: 2 },
+  filterList: { flexGrow: 0 },
+  filterContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
+  filterText: { fontSize: 13, fontWeight: '600' },
+  listContent: { paddingTop: 12, paddingBottom: 100 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
+  emptyText: { fontSize: 15 },
+  eventCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  eventTop: { flexDirection: 'row', padding: 14, gap: 14 },
+  dateBox: { width: 56, height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  dateMonth: { fontSize: 11, fontWeight: '700' },
+  dateDay: { fontSize: 22, fontWeight: '800', marginTop: -2 },
+  eventInfo: { flex: 1, gap: 4 },
+  eventTitle: { fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  eventMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  eventLocation: { fontSize: 12, flex: 1 },
+  eventTime: { fontSize: 12 },
+  eventBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1 },
+  eventStats: { flexDirection: 'row', gap: 14 },
+  eventStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  eventStatText: { fontSize: 12, fontWeight: '500', textTransform: 'capitalize' },
+  rsvpBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, gap: 4 },
+  rsvpText: { fontSize: 13, fontWeight: '700' },
 });

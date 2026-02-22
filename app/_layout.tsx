@@ -1,41 +1,48 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import {
-  useFonts,
-  SpaceGrotesk_300Light,
-  SpaceGrotesk_400Regular,
-  SpaceGrotesk_500Medium,
-  SpaceGrotesk_600SemiBold,
-  SpaceGrotesk_700Bold,
-} from "@expo-google-fonts/space-grotesk";
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from "@expo-google-fonts/inter";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
-import { DataProvider } from "@/lib/data-context";
+import { AuthProvider } from "@/lib/auth-context";
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerShown: false, headerBackTitle: "Back", contentStyle: { backgroundColor: '#000000' } }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="chat/[id]" options={{ headerShown: false, animation: 'slide_from_right' }} />
-      <Stack.Screen name="settings" options={{ headerShown: false, animation: 'slide_from_right' }} />
+    <Stack screenOptions={{ headerShown: false, headerBackTitle: "Back" }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="create-post" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="chat/[id]" />
+      <Stack.Screen name="notifications" />
+      <Stack.Screen name="post/[id]" />
+      <Stack.Screen name="user/[id]" />
+      <Stack.Screen name="event/[id]" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen
+        name="post-actions"
+        options={{
+          presentation: 'formSheet',
+          sheetAllowedDetents: [0.35],
+          sheetGrabberVisible: true,
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      />
     </Stack>
   );
 }
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    SpaceGrotesk_300Light,
-    SpaceGrotesk_400Regular,
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_600SemiBold,
-    SpaceGrotesk_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
   });
 
   useEffect(() => {
@@ -49,14 +56,13 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <DataProvider>
-          <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000000' }}>
+        <AuthProvider>
+          <GestureHandlerRootView>
             <KeyboardProvider>
-              <StatusBar style="light" />
               <RootLayoutNav />
             </KeyboardProvider>
           </GestureHandlerRootView>
-        </DataProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

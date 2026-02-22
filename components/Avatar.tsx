@@ -1,93 +1,46 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Colors from '@/constants/colors';
+import { View, Text, StyleSheet, useColorScheme } from 'react-native';
+import { Image } from 'expo-image';
+import { useThemeColors } from '@/constants/colors';
 
 interface AvatarProps {
-  initials: string;
+  uri?: string;
+  name?: string;
   size?: number;
-  isOnline?: boolean;
-  color?: string;
+  showBorder?: boolean;
 }
 
-const avatarColors = [
-  'rgba(255, 255, 255, 0.12)',
-  'rgba(255, 255, 255, 0.10)',
-  'rgba(255, 255, 255, 0.14)',
-  'rgba(255, 255, 255, 0.08)',
-  'rgba(255, 255, 255, 0.11)',
-];
-
-function getColorIndex(initials: string): number {
-  let hash = 0;
-  for (let i = 0; i < initials.length; i++) {
-    hash = initials.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash) % avatarColors.length;
-}
-
-export function Avatar({ initials, size = 44, isOnline }: AvatarProps) {
-  const bgColor = avatarColors[getColorIndex(initials)];
+export const Avatar = React.memo(function Avatar({ uri, name, size = 44, showBorder = false }: AvatarProps) {
+  const colors = useThemeColors(useColorScheme());
+  const initials = name ? name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
   const fontSize = size * 0.36;
 
-  return (
-    <View style={[styles.wrapper, { width: size, height: size }]}>
-      <View
-        style={[
-          styles.container,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: bgColor,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.text,
-            {
-              fontSize,
-              color: Colors.dark.textBody,
-            },
-          ]}
-        >
-          {initials}
-        </Text>
-      </View>
-      {isOnline !== undefined && (
-        <View
-          style={[
-            styles.indicator,
-            {
-              width: size * 0.27,
-              height: size * 0.27,
-              borderRadius: size * 0.135,
-              backgroundColor: isOnline ? Colors.dark.success : Colors.dark.textMeta,
-              borderWidth: 2,
-              borderColor: Colors.dark.background,
-              right: 0,
-              bottom: 0,
-            },
-          ]}
+  if (uri) {
+    return (
+      <View style={[{ width: size, height: size, borderRadius: size / 2 }, showBorder && { borderWidth: 2, borderColor: colors.tint }]}>
+        <Image
+          source={{ uri }}
+          style={{ width: size - (showBorder ? 4 : 0), height: size - (showBorder ? 4 : 0), borderRadius: size / 2 }}
+          contentFit="cover"
+          transition={200}
         />
-      )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.fallback, { width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surfaceElevated }, showBorder && { borderWidth: 2, borderColor: colors.tint }]}>
+      <Text style={[styles.initials, { fontSize, color: colors.textSecondary }]}>{initials}</Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
-  wrapper: {
-    position: 'relative',
-  },
-  container: {
+  fallback: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  text: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
-    letterSpacing: 0.5,
-  },
-  indicator: {
-    position: 'absolute',
+  initials: {
+    fontWeight: '700',
   },
 });

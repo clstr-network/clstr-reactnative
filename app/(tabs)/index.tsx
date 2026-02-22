@@ -1,271 +1,159 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Platform, Modal } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  View, Text, StyleSheet, FlatList, Pressable, useColorScheme, Platform, RefreshControl, ActivityIndicator
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
-import { useData } from '@/lib/data-context';
+import { useThemeColors } from '@/constants/colors';
 import { PostCard } from '@/components/PostCard';
-import { Post } from '@/lib/types';
+import { getPosts, toggleLikePost, type Post } from '@/lib/storage';
+import { useAuth } from '@/lib/auth-context';
+
+const CATEGORIES = ['All', 'Academic', 'Career', 'Events', 'Social', 'General'];
 
 export default function FeedScreen() {
+  const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
-  const { posts, toggleLike, addPost, user } = useData();
-  const [showCompose, setShowCompose] = useState(false);
-  const [composeText, setComposeText] = useState('');
-  const [selectedTag, setSelectedTag] = useState<string | undefined>();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [activeCategory, setActiveCategory] = useState('All');
+  const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
-  const tags = ['Engineering', 'Product', 'Team', 'Insights'];
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ['posts'],
+    queryFn: getPosts,
+  });
 
-  const handlePublish = () => {
-    if (composeText.trim()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      addPost(composeText.trim(), selectedTag);
-      setComposeText('');
-      setSelectedTag(undefined);
-      setShowCompose(false);
-    }
-  };
+  const filteredPosts = activeCategory === 'All'
+    ? posts
+    : posts.filter(p => p.category === activeCategory.toLowerCase());
+
+  const handleLike = useCallback(async (id: string) => {
+    const updated = await toggleLikePost(id);
+    queryClient.setQueryData(['posts'], updated);
+  }, [queryClient]);
+
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['posts'] });
+  }, [queryClient]);
+
+  const handlePostPress = useCallback((id: string) => {
+    router.push({ pathname: '/post/[id]', params: { id } });
+  }, []);
+
+  const handlePostLongPress = useCallback((id: string) => {
+    const post = posts.find(p => p.id === id);
+    router.push({ pathname: '/post-actions', params: { id, isSaved: String(post?.isSaved ?? false) } });
+  }, [posts]);
 
   const renderPost = useCallback(({ item }: { item: Post }) => (
-    <PostCard post={item} onLike={toggleLike} />
-  ), [toggleLike]);
+    <PostCard post={item} onLike={handleLike} onPress={handlePostPress} onLongPress={handlePostLongPress} />
+  ), [handleLike, handlePostPress, handlePostLongPress]);
 
   const keyExtractor = useCallback((item: Post) => item.id, []);
 
-  const webTopInset = Platform.OS === 'web' ? 67 : 0;
-
   return (
-    <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 8 }]}>
-        <View>
-          <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.userName}>{user.name}</Text>
-        </View>
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setShowCompose(true);
-          }}
-          style={({ pressed }) => [styles.composeBtn, pressed && { opacity: 0.7 }]}
-          hitSlop={8}
-        >
-          <Ionicons name="add" size={22} color={Colors.dark.primaryForeground} />
-        </Pressable>
-      </View>
-
-      <View style={styles.composerRow}>
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setShowCompose(true);
-          }}
-          style={styles.composerTrigger}
-        >
-          <Text style={styles.composerText}>Share an update...</Text>
-        </Pressable>
-      </View>
-
-      <FlatList
-        data={posts}
-        renderItem={renderPost}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 }]}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={!!posts.length}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="newspaper-outline" size={40} color={Colors.dark.textMeta} />
-            <Text style={styles.emptyText}>No posts yet</Text>
-          </View>
-        }
-      />
-
-      <Modal visible={showCompose} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 16 }]}>
-            <View style={styles.modalHeader}>
-              <Pressable onPress={() => setShowCompose(false)} hitSlop={12}>
-                <Ionicons name="close" size={24} color={Colors.dark.text} />
-              </Pressable>
-              <Text style={styles.modalTitle}>New Post</Text>
-              <Pressable
-                onPress={handlePublish}
-                style={({ pressed }) => [
-                  styles.publishBtn,
-                  !composeText.trim() && styles.publishBtnDisabled,
-                  pressed && { opacity: 0.7 },
-                ]}
-                disabled={!composeText.trim()}
-              >
-                <Text style={[styles.publishText, !composeText.trim() && styles.publishTextDisabled]}>
-                  Post
-                </Text>
-              </Pressable>
-            </View>
-            <TextInput
-              style={styles.composeInput}
-              placeholder="Share an update..."
-              placeholderTextColor={Colors.dark.textMeta}
-              multiline
-              autoFocus
-              value={composeText}
-              onChangeText={setComposeText}
-              textAlignVertical="top"
-            />
-            <View style={styles.tagRow}>
-              {tags.map(tag => (
-                <Pressable
-                  key={tag}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setSelectedTag(selectedTag === tag ? undefined : tag);
-                  }}
-                  style={[styles.tagOption, selectedTag === tag && styles.tagSelected]}
-                >
-                  <Text style={[styles.tagOptionText, selectedTag === tag && styles.tagSelectedText]}>
-                    {tag}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={styles.headerTop}>
+          <Text style={[styles.logo, { color: colors.tint }]}>clstr</Text>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => router.push('/notifications')}
+              hitSlop={8}
+            >
+              <Ionicons name="notifications-outline" size={24} color={colors.text} />
+            </Pressable>
           </View>
         </View>
-      </Modal>
+        <FlatList
+          data={CATEGORIES}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryList}
+          contentContainerStyle={styles.categoryContent}
+          keyExtractor={item => item}
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => { setActiveCategory(item); Haptics.selectionAsync(); }}
+              style={[
+                styles.categoryChip,
+                {
+                  backgroundColor: activeCategory === item ? colors.tint : colors.surfaceElevated,
+                  borderColor: activeCategory === item ? colors.tint : colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.categoryText, { color: activeCategory === item ? '#fff' : colors.textSecondary }]}>
+                {item}
+              </Text>
+            </Pressable>
+          )}
+        />
+      </View>
+
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.tint} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredPosts}
+          renderItem={renderPost}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={colors.tint} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="newspaper-outline" size={48} color={colors.textTertiary} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No posts in this category</Text>
+            </View>
+          }
+        />
+      )}
+
+      <Pressable
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/create-post'); }}
+        style={({ pressed }) => [
+          styles.fab,
+          { backgroundColor: colors.tint, bottom: 100 + (Platform.OS === 'web' ? 34 : 0) },
+          pressed && { opacity: 0.85, transform: [{ scale: 0.95 }] },
+        ]}
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
+  container: { flex: 1 },
+  header: { borderBottomWidth: 1 },
+  headerTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 16, paddingBottom: 8,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+  logo: { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
+  headerActions: { flexDirection: 'row', gap: 16 },
+  categoryList: { flexGrow: 0 },
+  categoryContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  categoryChip: {
+    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, borderWidth: 1,
   },
-  greeting: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 13,
-    color: Colors.dark.textMeta,
-    marginBottom: 2,
-  },
-  userName: {
-    fontFamily: 'SpaceGrotesk_700Bold',
-    fontSize: 24,
-    color: Colors.dark.text,
-  },
-  composeBtn: {
-    backgroundColor: Colors.dark.primary,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-  composerRow: {
-    paddingHorizontal: 16,
-    marginBottom: 14,
-  },
-  composerTrigger: {
-    borderWidth: 1,
-    borderColor: Colors.dark.composerBorder,
-    backgroundColor: Colors.dark.inputBackground,
-    borderRadius: 9999,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  composerText: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 14,
-    color: Colors.dark.composerText,
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingTop: 4,
-  },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 100,
-    gap: 12,
-  },
-  emptyText: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 14,
-    color: Colors.dark.textMeta,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
-  },
-  modalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
-    fontSize: 17,
-    color: Colors.dark.text,
-  },
-  publishBtn: {
-    backgroundColor: Colors.dark.primary,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  publishBtnDisabled: {
-    backgroundColor: Colors.dark.surface,
-  },
-  publishText: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
-    fontSize: 14,
-    color: Colors.dark.primaryForeground,
-  },
-  publishTextDisabled: {
-    color: Colors.dark.textMeta,
-  },
-  composeInput: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 16,
-    color: Colors.dark.text,
-    minHeight: 120,
-    lineHeight: 24,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
-  },
-  tagOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: Colors.dark.surface,
-    borderWidth: 1,
-    borderColor: Colors.dark.surfaceBorder,
-  },
-  tagSelected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderColor: Colors.dark.surfaceBorderStrong,
-  },
-  tagOptionText: {
-    fontFamily: 'SpaceGrotesk_500Medium',
-    fontSize: 12,
-    color: Colors.dark.textSecondary,
-  },
-  tagSelectedText: {
-    color: Colors.dark.text,
+  categoryText: { fontSize: 13, fontWeight: '600' },
+  listContent: { paddingTop: 12, paddingBottom: 120 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
+  emptyText: { fontSize: 15 },
+  fab: {
+    position: 'absolute', right: 20, width: 56, height: 56, borderRadius: 28,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 8,
   },
 });

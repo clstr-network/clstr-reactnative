@@ -1,189 +1,174 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import React from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, Pressable, useColorScheme, Platform, Alert, Switch
+} from 'react-native';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import Colors from '@/constants/colors';
-import { GlassContainer } from '@/components/GlassContainer';
-import { SettingsRow } from '@/components/SettingsRow';
+import * as Haptics from 'expo-haptics';
+import { useThemeColors } from '@/constants/colors';
+import { useAuth } from '@/lib/auth-context';
+import { resetAllData } from '@/lib/storage';
+
+type MenuSection = {
+  title: string;
+  items: {
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    color: string;
+    type: 'nav' | 'toggle' | 'danger';
+    value?: boolean;
+    onPress?: () => void;
+  }[];
+};
 
 export default function SettingsScreen() {
+  const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
-  const [pushNotifs, setPushNotifs] = useState(true);
-  const [emailNotifs, setEmailNotifs] = useState(false);
-  const [showActivity, setShowActivity] = useState(true);
-
+  const { user, refresh } = useAuth();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+  const webBottomInset = Platform.OS === 'web' ? 34 : 0;
+
+  const handleLogout = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out? This will reset all data.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out', style: 'destructive',
+        onPress: async () => {
+          await resetAllData();
+          await refresh();
+          router.replace('/onboarding');
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert('Delete Account', 'This will permanently delete all your data. This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          await resetAllData();
+          await refresh();
+          router.replace('/onboarding');
+        },
+      },
+    ]);
+  };
+
+  const sections: MenuSection[] = [
+    {
+      title: 'Account',
+      items: [
+        { icon: 'person-outline', label: 'Edit Profile', color: colors.accent, type: 'nav' },
+        { icon: 'mail-outline', label: 'Email & Username', color: colors.tint, type: 'nav' },
+        { icon: 'key-outline', label: 'Password & Security', color: colors.warning, type: 'nav' },
+      ],
+    },
+    {
+      title: 'Preferences',
+      items: [
+        { icon: 'notifications-outline', label: 'Push Notifications', color: colors.danger, type: 'toggle', value: true },
+        { icon: 'moon-outline', label: 'Dark Mode', color: colors.facultyBadge, type: 'toggle', value: true },
+        { icon: 'language-outline', label: 'Language', color: colors.accent, type: 'nav' },
+      ],
+    },
+    {
+      title: 'Privacy',
+      items: [
+        { icon: 'shield-checkmark-outline', label: 'Privacy Settings', color: colors.success, type: 'nav' },
+        { icon: 'eye-off-outline', label: 'Blocked Users', color: colors.textSecondary, type: 'nav' },
+        { icon: 'document-text-outline', label: 'Terms of Service', color: colors.textSecondary, type: 'nav' },
+      ],
+    },
+    {
+      title: 'Support',
+      items: [
+        { icon: 'help-circle-outline', label: 'Help Center', color: colors.accent, type: 'nav' },
+        { icon: 'chatbubble-ellipses-outline', label: 'Contact Us', color: colors.tint, type: 'nav' },
+        { icon: 'star-outline', label: 'Rate the App', color: colors.warning, type: 'nav' },
+      ],
+    },
+    {
+      title: '',
+      items: [
+        { icon: 'log-out-outline', label: 'Sign Out', color: colors.danger, type: 'danger', onPress: handleLogout },
+        { icon: 'trash-outline', label: 'Delete Account', color: colors.danger, type: 'danger', onPress: handleDeleteAccount },
+      ],
+    },
+  ];
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 8,
-          paddingBottom: Math.max(insets.bottom, 24) + 20,
-        },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
-          hitSlop={12}
-        >
-          <Ionicons name="chevron-back" size={24} color={Colors.dark.text} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, borderBottomColor: colors.border }]}>
+        <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Settings</Text>
-        <View style={{ width: 40 }} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <GlassContainer noPadding>
-          <SettingsRow
-            icon="notifications-outline"
-            iconColor={Colors.dark.textSecondary}
-            label="Push Notifications"
-            isSwitch
-            switchValue={pushNotifs}
-            onSwitchChange={setPushNotifs}
-          />
-          <SettingsRow
-            icon="mail-outline"
-            iconColor={Colors.dark.textSecondary}
-            label="Email Notifications"
-            isSwitch
-            switchValue={emailNotifs}
-            onSwitchChange={setEmailNotifs}
-            isLast
-          />
-        </GlassContainer>
-      </View>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 + webBottomInset }} showsVerticalScrollIndicator={false}>
+        {sections.map((section, si) => (
+          <View key={si} style={styles.section}>
+            {!!section.title && (
+              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>{section.title.toUpperCase()}</Text>
+            )}
+            <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {section.items.map((item, ii) => (
+                <Pressable
+                  key={item.label}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    item.onPress?.();
+                  }}
+                  style={({ pressed }) => [
+                    styles.menuItem,
+                    ii < section.items.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                    pressed && item.type !== 'toggle' && { backgroundColor: colors.surfaceElevated },
+                  ]}
+                >
+                  <View style={[styles.menuIconBg, { backgroundColor: item.color + '15' }]}>
+                    <Ionicons name={item.icon} size={18} color={item.color} />
+                  </View>
+                  <Text style={[
+                    styles.menuLabel,
+                    { color: item.type === 'danger' ? colors.danger : colors.text },
+                  ]}>{item.label}</Text>
+                  {item.type === 'toggle' ? (
+                    <Switch
+                      value={item.value}
+                      trackColor={{ false: colors.border, true: colors.tint }}
+                      thumbColor="#fff"
+                    />
+                  ) : item.type === 'nav' ? (
+                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ))}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Privacy</Text>
-        <GlassContainer noPadding>
-          <SettingsRow
-            icon="eye-outline"
-            iconColor={Colors.dark.success}
-            label="Show Activity Status"
-            isSwitch
-            switchValue={showActivity}
-            onSwitchChange={setShowActivity}
-          />
-          <SettingsRow
-            icon="lock-closed-outline"
-            iconColor={Colors.dark.warning}
-            label="Profile Visibility"
-            value="Everyone"
-            onPress={() => {}}
-          />
-          <SettingsRow
-            icon="shield-outline"
-            iconColor={Colors.dark.textSecondary}
-            label="Blocked Users"
-            value="0"
-            onPress={() => {}}
-            isLast
-          />
-        </GlassContainer>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>General</Text>
-        <GlassContainer noPadding>
-          <SettingsRow
-            icon="moon-outline"
-            iconColor={Colors.dark.textSecondary}
-            label="Appearance"
-            value="Dark"
-            onPress={() => {}}
-          />
-          <SettingsRow
-            icon="language-outline"
-            iconColor={Colors.dark.textSecondary}
-            label="Language"
-            value="English"
-            onPress={() => {}}
-          />
-          <SettingsRow
-            icon="help-circle-outline"
-            iconColor={Colors.dark.textSecondary}
-            label="Help & Support"
-            onPress={() => {}}
-            isLast
-          />
-        </GlassContainer>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Danger Zone</Text>
-        <GlassContainer noPadding>
-          <SettingsRow
-            icon="log-out-outline"
-            label="Sign Out"
-            isDestructive
-            onPress={() => {}}
-          />
-          <SettingsRow
-            icon="trash-outline"
-            label="Delete Account"
-            isDestructive
-            onPress={() => {}}
-            isLast
-          />
-        </GlassContainer>
-      </View>
-
-      <Text style={styles.version}>clstr v1.0.0</Text>
-    </ScrollView>
+        <Text style={[styles.version, { color: colors.textTertiary }]}>clstr v1.0.0</Text>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.dark.background,
-  },
-  content: {
-    paddingHorizontal: 16,
-  },
+  container: { flex: 1 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontFamily: 'SpaceGrotesk_700Bold',
-    fontSize: 20,
-    color: Colors.dark.text,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
-    fontSize: 13,
-    color: Colors.dark.textMeta,
-    marginBottom: 8,
-    paddingHorizontal: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  version: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 12,
-    color: Colors.dark.textMeta,
-    textAlign: 'center',
-    marginTop: 8,
-  },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
+  section: { marginTop: 20 },
+  sectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, paddingHorizontal: 20, marginBottom: 8 },
+  sectionCard: { marginHorizontal: 16, borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  menuIconBg: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  menuLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
+  version: { textAlign: 'center', fontSize: 12, marginTop: 24 },
 });

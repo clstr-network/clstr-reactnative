@@ -1,17 +1,19 @@
 import { Link, Stack } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useColorScheme } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/colors";
+import { useThemeColors } from "@/constants/colors";
 
 export default function NotFoundScreen() {
+  const colors = useThemeColors(useColorScheme());
+
   return (
     <>
-      <Stack.Screen options={{ title: "Not Found", headerShown: false }} />
-      <View style={styles.container}>
-        <Ionicons name="compass-outline" size={48} color={Colors.dark.textTertiary} />
-        <Text style={styles.title}>Page not found</Text>
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go home</Text>
+      <Stack.Screen options={{ title: "Not Found" }} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Ionicons name="compass-outline" size={64} color={colors.textTertiary} />
+        <Text style={[styles.title, { color: colors.text }]}>Page not found</Text>
+        <Link href="/" style={[styles.link, { color: colors.tint }]}>
+          <Text style={[styles.linkText, { color: colors.tint }]}>Go back home</Text>
         </Link>
       </View>
     </>
@@ -24,20 +26,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-    backgroundColor: Colors.dark.background,
     gap: 12,
   },
   title: {
-    fontSize: 18,
-    fontFamily: "SpaceGrotesk_600SemiBold",
-    color: Colors.dark.text,
+    fontSize: 20,
+    fontWeight: "700",
   },
   link: {
     marginTop: 8,
+    paddingVertical: 12,
   },
   linkText: {
-    fontSize: 14,
-    fontFamily: "SpaceGrotesk_500Medium",
-    color: Colors.dark.accent,
+    fontSize: 15,
+    fontWeight: "600",
   },
 });

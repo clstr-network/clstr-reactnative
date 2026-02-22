@@ -1,110 +1,119 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
+import { useThemeColors } from '@/constants/colors';
 import { Avatar } from './Avatar';
-import { GlassContainer } from './GlassContainer';
-import { Connection } from '@/lib/types';
+import { RoleBadge } from './RoleBadge';
+import type { Connection } from '@/lib/storage';
 
 interface ConnectionCardProps {
   connection: Connection;
-  onAction: (id: string, status: 'connected' | 'pending' | 'none') => void;
+  onConnect?: (id: string) => void;
+  onAccept?: (id: string) => void;
 }
 
-export function ConnectionCard({ connection, onAction }: ConnectionCardProps) {
+export const ConnectionCard = React.memo(function ConnectionCard({ connection, onConnect, onAccept }: ConnectionCardProps) {
+  const colors = useThemeColors(useColorScheme());
+
   const handleAction = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (connection.status === 'none') {
-      onAction(connection.id, 'pending');
-    } else if (connection.status === 'pending') {
-      onAction(connection.id, 'connected');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (connection.status === 'pending') {
+      onAccept?.(connection.id);
+    } else if (connection.status === 'suggested') {
+      onConnect?.(connection.id);
     }
   };
 
+  const handlePress = () => {
+    router.push({ pathname: '/user/[id]', params: { id: connection.id } });
+  };
+
   return (
-    <GlassContainer style={styles.container}>
-      <View style={styles.row}>
-        <Avatar initials={connection.avatar} size={46} isOnline={connection.isOnline} />
-        <View style={styles.info}>
-          <Text style={styles.name}>{connection.name}</Text>
-          <Text style={styles.role}>{connection.role}</Text>
-          <Text style={styles.mutual}>{connection.mutual} mutual</Text>
+    <Pressable
+      onPress={handlePress}
+      style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.95 }]}
+    >
+      <Avatar uri={connection.avatarUrl} name={connection.name} size={50} />
+      <View style={styles.info}>
+        <View style={styles.nameRow}>
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{connection.name}</Text>
+          <RoleBadge role={connection.role} />
         </View>
-        {connection.status !== 'connected' && (
-          <Pressable
-            onPress={handleAction}
-            style={({ pressed }) => [
-              styles.actionBtn,
-              connection.status === 'pending' && styles.pendingBtn,
-              pressed && { opacity: 0.7 },
-            ]}
-            hitSlop={4}
-          >
-            {connection.status === 'none' ? (
-              <Ionicons name="person-add-outline" size={16} color={Colors.dark.primaryForeground} />
-            ) : (
-              <Ionicons name="checkmark" size={16} color={Colors.dark.text} />
-            )}
-          </Pressable>
-        )}
-        {connection.status === 'connected' && (
-          <View style={styles.connectedBadge}>
-            <Ionicons name="checkmark-circle" size={18} color={Colors.dark.success} />
-          </View>
-        )}
+        <Text style={[styles.dept, { color: colors.textSecondary }]}>{connection.department}</Text>
+        <Text style={[styles.mutual, { color: colors.textTertiary }]}>
+          {connection.mutualConnections} mutual connections
+        </Text>
       </View>
-    </GlassContainer>
+      {connection.status === 'connected' ? (
+        <View style={[styles.statusBadge, { backgroundColor: colors.success + '20' }]}>
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+        </View>
+      ) : (
+        <Pressable
+          onPress={handleAction}
+          style={({ pressed }) => [
+            styles.actionBtn,
+            { backgroundColor: connection.status === 'pending' ? colors.tint : colors.tint + '20' },
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          <Text style={[styles.actionText, { color: connection.status === 'pending' ? '#fff' : colors.tint }]}>
+            {connection.status === 'pending' ? 'Accept' : 'Connect'}
+          </Text>
+        </Pressable>
+      )}
+    </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 10,
-    padding: 14,
-  },
-  row: {
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 14,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   info: {
     flex: 1,
     marginLeft: 12,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   name: {
-    fontFamily: 'SpaceGrotesk_600SemiBold',
     fontSize: 15,
-    color: Colors.dark.text,
+    fontWeight: '700',
+    flexShrink: 1,
   },
-  role: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 12,
-    color: Colors.dark.textSecondary,
-    marginTop: 1,
-  },
-  mutual: {
-    fontFamily: 'SpaceGrotesk_400Regular',
-    fontSize: 11,
-    color: Colors.dark.textMeta,
+  dept: {
+    fontSize: 13,
     marginTop: 2,
   },
+  mutual: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  statusBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actionBtn: {
-    backgroundColor: Colors.dark.primary,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
-  pendingBtn: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.dark.surfaceBorderStrong,
-  },
-  connectedBadge: {
-    width: 38,
-    height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
+  actionText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
