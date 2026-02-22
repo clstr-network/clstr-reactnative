@@ -11,8 +11,9 @@ import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
 import { Avatar } from '@/components/Avatar';
 import { RoleBadge } from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
-import { getProfileById, type UserProfile, calculateProfileCompletion, getMissingProfileFields } from '@/lib/api';
-import { QUERY_KEYS } from '@/lib/query-keys';
+import { getProfileById, type UserProfile, calculateProfileCompletion, getMissingProfileFields, getConnectionCount } from '@/lib/api';
+import { getUserPostsCount } from '@/lib/api/social';
+import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
 
@@ -29,6 +30,19 @@ export default function ProfileScreen() {
   const { data: profile, isLoading } = useQuery({
     queryKey: QUERY_KEYS.profile(user?.id ?? ''),
     queryFn: () => getProfileById(user!.id),
+    enabled: !!user?.id,
+  });
+
+  // F9 — Use dedicated DB count queries instead of profile.connections?.length
+  const { data: connectionsCount = 0 } = useQuery({
+    queryKey: MOBILE_QUERY_KEYS.connectionCount(user?.id ?? ''),
+    queryFn: () => getConnectionCount(user!.id),
+    enabled: !!user?.id,
+  });
+
+  const { data: postsCount = 0 } = useQuery({
+    queryKey: MOBILE_QUERY_KEYS.userPostsCount(user?.id ?? ''),
+    queryFn: () => getUserPostsCount(user!.id),
     enabled: !!user?.id,
   });
 
@@ -54,8 +68,7 @@ export default function ProfileScreen() {
   }
 
   const badgeColor = getRoleBadgeColor(profile.role ?? 'Student', colors);
-  const connectionsCount = profile.connections?.length ?? 0;
-  const postsCount = profile.posts?.length ?? 0;
+  // F9: connectionsCount and postsCount now come from dedicated useQuery hooks above
   const completionPct = calculateProfileCompletion(profile);
   const missingFields = getMissingProfileFields(profile);
 

@@ -11,7 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
 import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
-import { getProfileById } from '@/lib/api/profile';
+import { getProfileById, getConnectionCount } from '@/lib/api/profile';
 import type { UserProfile } from '@/lib/api/profile';
 import {
   checkConnectionStatus,
@@ -20,7 +20,7 @@ import {
   countMutualConnections,
   getUserPostsCount,
 } from '@/lib/api/social';
-import { QUERY_KEYS } from '@/lib/query-keys';
+import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 
 import { useAuth } from '@/lib/auth-context';
 
@@ -38,28 +38,37 @@ export default function UserProfileScreen() {
     enabled: !!id,
   });
 
+  // F9 — Centralized query keys (no more hardcoded array literals)
   const { data: connectionStatus } = useQuery<string | null>({
-    queryKey: ['connectionStatus', id],
+    queryKey: MOBILE_QUERY_KEYS.connectionStatus(id ?? ''),
     queryFn: () => checkConnectionStatus(id!),
     enabled: !!id,
   });
 
   const { data: mutualCount } = useQuery<number>({
-    queryKey: ['mutualConnections', id],
+    queryKey: MOBILE_QUERY_KEYS.mutualConnections(id ?? ''),
     queryFn: () => countMutualConnections(authUser!.id, id!),
     enabled: !!id && !!authUser,
   });
 
   const { data: postsCount } = useQuery<number>({
-    queryKey: ['userPostsCount', id],
+    queryKey: MOBILE_QUERY_KEYS.userPostsCount(id ?? ''),
     queryFn: () => getUserPostsCount(id!),
+    enabled: !!id,
+  });
+
+  // F9 — Use dedicated DB count instead of profile.connections?.length
+  const { data: connectionsCount = 0 } = useQuery<number>({
+    queryKey: MOBILE_QUERY_KEYS.connectionCount(id ?? ''),
+    queryFn: () => getConnectionCount(id!),
     enabled: !!id,
   });
 
   const connectMutation = useMutation({
     mutationFn: () => sendConnectionRequest(id!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['connectionStatus', id] });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionStatus(id ?? '') });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionCount(id ?? '') });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
     },
   });
@@ -67,7 +76,8 @@ export default function UserProfileScreen() {
   const disconnectMutation = useMutation({
     mutationFn: () => removeConnection(id!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['connectionStatus', id] });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionStatus(id ?? '') });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionCount(id ?? '') });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
     },
   });
@@ -149,7 +159,7 @@ export default function UserProfileScreen() {
 
         <View style={styles.statsRow}>
           <View style={[styles.statBox, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{profile.connections?.length ?? 0}</Text>
+            <Text style={[styles.statNum, { color: colors.text }]}>{connectionsCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Connections</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: colors.surface }]}>

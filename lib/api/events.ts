@@ -98,6 +98,66 @@ export async function getEvents() {
 }
 
 /**
+ * Create a new event for the current user's college domain.
+ * @clstr/core doesn't export a createEvent function, so this is a custom adapter
+ * matching the same pattern as getEvents above.
+ */
+export async function createEvent(input: {
+  title: string;
+  description?: string;
+  event_date: string;
+  event_time?: string;
+  location?: string;
+  is_virtual?: boolean;
+  category?: string;
+  max_attendees?: number;
+  external_registration_link?: string;
+  tags?: string[];
+  registration_required?: boolean;
+  registration_deadline?: string;
+  virtual_link?: string;
+  cover_image_url?: string;
+}) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const db = supabase as any;
+
+  // Get user's college domain
+  const { data: profile } = await db
+    .from('profiles')
+    .select('college_domain')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const { data, error } = await db
+    .from('events')
+    .insert({
+      title: input.title,
+      description: input.description ?? null,
+      event_date: input.event_date,
+      event_time: input.event_time ?? null,
+      location: input.location ?? null,
+      is_virtual: input.is_virtual ?? false,
+      category: input.category ?? null,
+      max_attendees: input.max_attendees ?? null,
+      external_registration_link: input.external_registration_link ?? null,
+      tags: input.tags ?? null,
+      registration_required: input.registration_required ?? false,
+      registration_deadline: input.registration_deadline ?? null,
+      virtual_link: input.virtual_link ?? null,
+      cover_image_url: input.cover_image_url ?? null,
+      creator_id: user.id,
+      college_domain: profile?.college_domain ?? null,
+    })
+    .select('*, creator:profiles!creator_id(id, full_name, avatar_url, role)')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
  * Toggle RSVP for an event — register if not registered, unregister if already registered.
  */
 export async function toggleEventRegistration(eventId: string) {

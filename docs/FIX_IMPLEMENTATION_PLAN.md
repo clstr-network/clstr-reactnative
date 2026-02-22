@@ -42,10 +42,10 @@ This plan is organized into **12 fix phases (F1–F12)**, ordered by severity. E
 | 15 | Chat screen has NO connection eligibility check | 🔴 Critical | F6 | `app/chat/[id].tsx` | ✅ Fixed |
 | 16 | No "New Conversation" / compose button in Messages tab | 🟠 High | F6 | `app/(tabs)/messages.tsx` | ✅ Fixed |
 | 17 | Feed uses `useQuery` not `useInfiniteQuery` — no pagination | 🟠 High | F7 | `app/(tabs)/index.tsx` | ✅ Fixed |
-| 18 | Create Event button is dead (`/* TODO */`) | 🟠 High | F8 | `app/(tabs)/events.tsx` | ⬜ Pending |
-| 19 | No `createEvent` function in `@clstr/core` or `lib/api/events.ts` | 🟠 High | F8 | `lib/api/events.ts` | ⬜ Pending |
-| 20 | Profile stats use `profile.connections?.length` instead of DB count | 🟡 Medium | F9 | `app/(tabs)/profile.tsx`, `app/user/[id].tsx` | ⬜ Pending |
-| 21 | Hardcoded query keys (`['connectionStatus', id]`, etc.) | 🟡 Medium | F9 | `app/user/[id].tsx` | ⬜ Pending |
+| 18 | Create Event button is dead (`/* TODO */`) | 🟠 High | F8 | `app/(tabs)/events.tsx` | ✅ Fixed |
+| 19 | No `createEvent` function in `@clstr/core` or `lib/api/events.ts` | 🟠 High | F8 | `lib/api/events.ts` | ✅ Fixed |
+| 20 | Profile stats use `profile.connections?.length` instead of DB count | 🟡 Medium | F9 | `app/(tabs)/profile.tsx`, `app/user/[id].tsx` | ✅ Fixed |
+| 21 | Hardcoded query keys (`['connectionStatus', id]`, etc.) | 🟡 Medium | F9 | `app/user/[id].tsx` | ✅ Fixed |
 | 22 | Post share/repost not wired in Feed | 🟡 Medium | F10 | `app/(tabs)/index.tsx` | ⬜ Pending |
 | 23 | `lib/api/mentorship.ts` uses raw Supabase (no `@clstr/core`) | 🟡 Medium | F11 | `lib/api/mentorship.ts` | ⬜ Deferred |
 | 24 | `lib/api/alumni.ts` uses raw Supabase RPC | 🟡 Medium | F11 | `lib/api/alumni.ts` | ⬜ Deferred |
@@ -860,9 +860,24 @@ Remove the `setPage(0)` state (no longer needed with `useInfiniteQuery`).
 
 ---
 
-## Phase F8 — Create Event Screen
+## Phase F8 — Create Event Screen ✅ DONE
 
 **Priority**: 🟠 HIGH — Create Event button exists but does nothing.
+**Status**: ✅ COMPLETED (2026-02-22)
+
+### Resolution Summary
+
+- **`lib/api/events.ts`**: Added `createEvent()` custom function (~55 lines) — inserts into `events` table with auto-detected `college_domain` from user profile, returns the created event with joined creator profile data.
+- **`app/create-event.tsx`** (NEW, ~310 lines): Full event creation form with:
+  - Title, Description, Category chips (Academic/Career/Social/Workshop/Sports)
+  - Inline date editor (Year/Month/Day fields) — no native datetimepicker dependency needed
+  - Time field (free text, e.g. "2:00 PM - 4:00 PM")
+  - Virtual Event toggle → shows Virtual Meeting Link field | Physical → shows Location field
+  - Max Attendees, Registration Required toggle, External Registration URL
+  - `useMutation` with `createEvent()` → invalidates `QUERY_KEYS.events` → `router.back()`
+  - Consistent UI matching `create-post.tsx` patterns (same header, KeyboardAwareScrollViewCompat, Haptics)
+- **`app/(tabs)/events.tsx`**: Replaced `/* TODO: navigate to create event */` with `router.push('/create-event')`
+- **Dependency change**: No `@react-native-community/datetimepicker` needed — used inline text-based date editor instead, which works on all platforms (iOS/Android/Web) without native linking.
 
 ### Problem
 
@@ -960,16 +975,15 @@ onPress={() => {
 
 ### Dependencies
 
-```bash
-npx expo install @react-native-community/datetimepicker
-```
+No additional dependencies required. Date input uses inline text fields instead of `@react-native-community/datetimepicker`.
 
 ### Verification
 
-- [ ] Create Event button navigates to form
-- [ ] Fill form → submit → event appears in events list
-- [ ] Event has correct college_domain
-- [ ] Role-gated: only users with `canCreateEvents` see the button
+- [x] Create Event button navigates to form
+- [x] Fill form → submit → event appears in events list
+- [x] Event has correct college_domain
+- [x] Role-gated: only users with `canCreateEvents` see the button
+- [x] Zero TypeScript errors in all modified files
 
 ### Deliverables
 
@@ -979,9 +993,19 @@ npx expo install @react-native-community/datetimepicker
 
 ---
 
-## Phase F9 — Fix Profile Stats & Hardcoded Query Keys
+## Phase F9 — Fix Profile Stats & Hardcoded Query Keys ✅ DONE
 
 **Priority**: 🟡 MEDIUM — Incorrect data display + inconsistent cache keys.
+**Status**: ✅ COMPLETED (2026-02-22)
+
+### Resolution Summary
+
+- **`lib/query-keys.ts`**: Extended with `MOBILE_QUERY_KEYS` constant containing centralized keys for `connectionStatus`, `mutualConnections`, `userPostsCount`, and `connectionCount`.
+- **`app/(tabs)/profile.tsx`**: Replaced `profile.connections?.length ?? 0` and `profile.posts?.length ?? 0` with dedicated `useQuery` hooks calling `getConnectionCount(userId)` and `getUserPostsCount(userId)` from the real API layer. Uses `MOBILE_QUERY_KEYS.connectionCount()` and `MOBILE_QUERY_KEYS.userPostsCount()` keys.
+- **`app/user/[id].tsx`**:
+  - Replaced `profile.connections?.length ?? 0` with `getConnectionCount(id)` via `useQuery`
+  - Replaced 3 hardcoded query key arrays (`['connectionStatus', id]`, `['mutualConnections', id]`, `['userPostsCount', id]`) with `MOBILE_QUERY_KEYS.*` factory functions
+  - Updated `connectMutation.onSuccess` and `disconnectMutation.onSuccess` to also invalidate `MOBILE_QUERY_KEYS.connectionCount(id)` for correct stats refresh after connect/disconnect
 
 ### Problem
 
@@ -1053,10 +1077,11 @@ Then replace all hardcoded key arrays in `app/user/[id].tsx`.
 
 ### Verification
 
-- [ ] Own profile shows accurate connection/post counts from DB
-- [ ] Other user profile shows accurate connection/post counts
-- [ ] All query keys are centralized (no hardcoded array literals)
-- [ ] Cache invalidation works correctly across screens
+- [x] Own profile shows accurate connection/post counts from DB
+- [x] Other user profile shows accurate connection/post counts
+- [x] All query keys are centralized (no hardcoded array literals)
+- [x] Cache invalidation works correctly across screens
+- [x] Zero TypeScript errors in all modified files
 
 ### Deliverables
 

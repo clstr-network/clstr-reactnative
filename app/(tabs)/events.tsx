@@ -153,7 +153,7 @@ export default function EventsScreen() {
           <Text style={[styles.title, { color: colors.text }]}>Events</Text>
           {canCreateEvents && (
             <Pressable
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); /* TODO: navigate to create event */ }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/create-event'); }}
               style={[styles.createEventBtn, { backgroundColor: colors.tint }]}
               hitSlop={8}
             >
