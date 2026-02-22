@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, useColorScheme, Platform, RefreshControl, ActivityIndicator
+  View, Text, StyleSheet, FlatList, useColorScheme, Platform, RefreshControl, ActivityIndicator, Pressable
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,11 +58,20 @@ export default function MessagesScreen() {
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12, borderBottomColor: colors.border }]}>
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
-          {totalUnread > 0 && (
-            <View style={[styles.unreadPill, { backgroundColor: colors.tint }]}>
-              <Text style={styles.unreadPillText}>{totalUnread} new</Text>
-            </View>
-          )}
+          <View style={styles.headerRight}>
+            {totalUnread > 0 && (
+              <View style={[styles.unreadPill, { backgroundColor: colors.tint }]}>
+                <Text style={styles.unreadPillText}>{totalUnread} new</Text>
+              </View>
+            )}
+            <Pressable
+              onPress={() => router.push('/new-conversation' as any)}
+              style={[styles.composeBtn, { backgroundColor: colors.tint }]}
+              hitSlop={8}
+            >
+              <Ionicons name="create-outline" size={18} color="#fff" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -101,7 +110,9 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { borderBottomWidth: 1, paddingBottom: 12, paddingHorizontal: 16 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  composeBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
   unreadPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
   unreadPillText: { color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold' },

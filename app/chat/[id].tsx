@@ -19,6 +19,7 @@ import {
   markMessagesAsRead,
   type Message,
 } from '@/lib/api';
+import { checkConnectionStatus } from '@/lib/api/social';
 
 export default function ChatScreen() {
   const { id: partnerId } = useLocalSearchParams<{ id: string }>();
@@ -32,6 +33,14 @@ export default function ChatScreen() {
 
   // Phase 3.1 — Realtime message subscription (active partner level)
   useMessageSubscription({ activePartnerId: partnerId });
+
+  // F6 — Connection eligibility check
+  const { data: connectionStatus, isLoading: isCheckingConnection } = useQuery({
+    queryKey: ['connectionStatus', partnerId],
+    queryFn: () => checkConnectionStatus(partnerId!),
+    enabled: !!partnerId,
+    staleTime: 60_000,
+  });
 
   const { data } = useQuery({
     queryKey: QUERY_KEYS.chat(partnerId!),
@@ -88,6 +97,37 @@ export default function ChatScreen() {
   }, [colors, partner, user?.id]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
+
+  // F6 — Block access if not connected
+  if (!isCheckingConnection && connectionStatus !== 'connected') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <Pressable onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </Pressable>
+          <View style={styles.headerInfo}>
+            <Text style={[styles.headerName, { color: colors.text }]}>Chat</Text>
+          </View>
+        </View>
+        <View style={styles.blockedState}>
+          <Ionicons name="lock-closed-outline" size={48} color={colors.textTertiary} />
+          <Text style={[styles.blockedTitle, { color: colors.textSecondary }]}>
+            Connection Required
+          </Text>
+          <Text style={[styles.blockedText, { color: colors.textTertiary }]}>
+            You need to be connected with this user to send messages.
+          </Text>
+          <Pressable
+            onPress={() => router.back()}
+            style={[styles.blockedBtn, { backgroundColor: colors.tint }]}
+          >
+            <Text style={styles.blockedBtnText}>Go Back</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior="padding" keyboardVerticalOffset={0}>
@@ -170,4 +210,9 @@ const styles = StyleSheet.create({
     maxHeight: 100, fontFamily: 'Inter_400Regular',
   },
   sendBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  blockedState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, paddingHorizontal: 40 },
+  blockedTitle: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  blockedText: { fontSize: 14, textAlign: 'center', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  blockedBtn: { marginTop: 12, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  blockedBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
 });

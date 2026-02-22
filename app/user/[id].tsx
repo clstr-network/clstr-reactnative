@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
-  ActivityIndicator,
+  ActivityIndicator, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -191,12 +191,23 @@ export default function UserProfileScreen() {
           )}
           <Pressable
             onPress={() => {
-              router.push({ pathname: '/chat/[id]', params: { id: id! } });
+              if (isConnected) {
+                router.push({ pathname: '/chat/[id]', params: { id: id! } });
+              } else {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                Alert.alert('Not Connected', 'You need to connect with this user before sending a message.');
+              }
             }}
-            style={({ pressed }) => [styles.msgBtn, { borderColor: colors.border }, pressed && { opacity: 0.85 }]}
+            disabled={!isConnected}
+            style={({ pressed }) => [
+              styles.msgBtn,
+              { borderColor: isConnected ? colors.border : colors.border + '40' },
+              !isConnected && { opacity: 0.5 },
+              pressed && isConnected && { opacity: 0.85 },
+            ]}
           >
-            <Ionicons name="chatbubble-outline" size={18} color={colors.text} />
-            <Text style={[styles.msgBtnText, { color: colors.text }]}>Message</Text>
+            <Ionicons name="chatbubble-outline" size={18} color={isConnected ? colors.text : colors.textTertiary} />
+            <Text style={[styles.msgBtnText, { color: isConnected ? colors.text : colors.textTertiary }]}>Message</Text>
           </Pressable>
         </View>
       </ScrollView>

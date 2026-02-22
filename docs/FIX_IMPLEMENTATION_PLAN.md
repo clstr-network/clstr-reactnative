@@ -34,13 +34,13 @@ This plan is organized into **12 fix phases (F1–F12)**, ordered by severity. E
 | 7 | Entire `app/(main)/` directory (10+ mock screens) still ships | 🟠 High | F3 | `app/(main)/**` | ✅ Fixed |
 | 8 | `app/(tabs)/more.tsx` imports `CURRENT_USER` from mock-data | 🟠 High | F3 | `app/(tabs)/more.tsx` | ✅ Fixed |
 | 9 | 7 profile menu items have empty `onPress: () => {}` | 🔴 Critical | F4 | `app/(tabs)/profile.tsx` | ✅ Fixed |
-| 10 | No Edit Profile screen exists | 🔴 Critical | F5 | NEW: `app/edit-profile.tsx` | ⬜ Pending |
-| 11 | No avatar upload (no `expo-image-picker`) | 🟠 High | F5 | NEW: `app/edit-profile.tsx` | ⬜ Pending |
-| 12 | No Education/Experience/Skills CRUD on mobile | 🟠 High | F5 | NEW: `app/edit-profile.tsx` | ⬜ Pending |
-| 13 | No Profile Completion banner | 🟡 Medium | F5 | `app/(tabs)/profile.tsx` | ⬜ Pending |
-| 14 | Message button has NO connection gate | 🔴 Critical | F6 | `app/user/[id].tsx` | ⬜ Pending |
-| 15 | Chat screen has NO connection eligibility check | 🔴 Critical | F6 | `app/chat/[id].tsx` | ⬜ Pending |
-| 16 | No "New Conversation" / compose button in Messages tab | 🟠 High | F6 | `app/(tabs)/messages.tsx` | ⬜ Pending |
+| 10 | No Edit Profile screen exists | 🔴 Critical | F5 | NEW: `app/edit-profile.tsx` | ✅ Fixed |
+| 11 | No avatar upload (no `expo-image-picker`) | 🟠 High | F5 | NEW: `app/edit-profile.tsx` | ✅ Fixed |
+| 12 | No Education/Experience/Skills CRUD on mobile | 🟠 High | F5 | NEW: `app/edit-profile.tsx` | ✅ Fixed |
+| 13 | No Profile Completion banner | 🟡 Medium | F5 | `app/(tabs)/profile.tsx` | ✅ Fixed |
+| 14 | Message button has NO connection gate | 🔴 Critical | F6 | `app/user/[id].tsx` | ✅ Fixed |
+| 15 | Chat screen has NO connection eligibility check | 🔴 Critical | F6 | `app/chat/[id].tsx` | ✅ Fixed |
+| 16 | No "New Conversation" / compose button in Messages tab | 🟠 High | F6 | `app/(tabs)/messages.tsx` | ✅ Fixed |
 | 17 | Feed uses `useQuery` not `useInfiniteQuery` — no pagination | 🟠 High | F7 | `app/(tabs)/index.tsx` | ⬜ Pending |
 | 18 | Create Event button is dead (`/* TODO */`) | 🟠 High | F8 | `app/(tabs)/events.tsx` | ⬜ Pending |
 | 19 | No `createEvent` function in `@clstr/core` or `lib/api/events.ts` | 🟠 High | F8 | `lib/api/events.ts` | ⬜ Pending |
@@ -472,9 +472,21 @@ All 7 dead `onPress: () => {}` handlers in `app/(tabs)/profile.tsx` `MENU_ITEMS`
 
 ---
 
-## Phase F5 — Edit Profile Screen + Avatar Upload + Profile Completion
+## Phase F5 — Edit Profile Screen + Avatar Upload + Profile Completion ✅ DONE
 
 **Priority**: 🔴 CRITICAL — No way to edit profile on mobile.
+**Status**: ✅ COMPLETED (2026-02-22)
+
+### Resolution Summary
+
+Created `app/edit-profile.tsx` (~550 lines) with full profile editing:
+- **Avatar upload** via `expo-image-picker` → `uploadProfileAvatar()` with camera icon overlay
+- **Form fields**: Full Name, Headline, Bio, Major, University, Location with `updateProfileRecord()`
+- **Education CRUD**: Inline add form (school, degree, dates) + swipe-to-delete
+- **Experience CRUD**: Inline add form (title, company, dates) + swipe-to-delete
+- **Skills CRUD**: Inline add form with level selector chips (Beginner/Intermediate/Expert/Professional) + delete
+- **Profile completion**: Progress bar at top using `calculateProfileCompletion()` + missing fields hint via `getMissingProfileFields()`
+- **Profile completion banner** added to `app/(tabs)/profile.tsx` — shows when < 100%, navigates to edit-profile on tap
 
 ### Problem
 
@@ -596,12 +608,12 @@ const missingFields = getMissingProfileFields(profile);
 
 ### Verification
 
-- [ ] Navigate to Edit Profile → see pre-filled form with current profile data
-- [ ] Change avatar → image picker opens → avatar updates in DB
-- [ ] Edit name, headline, bio → save → profile screen reflects changes
-- [ ] Add/remove education, experience, skills → persists to DB
-- [ ] Profile completion banner shows on profile screen when < 100%
-- [ ] Tapping banner navigates to edit-profile
+- [x] Navigate to Edit Profile → see pre-filled form with current profile data
+- [x] Change avatar → image picker opens → avatar updates in DB
+- [x] Edit name, headline, bio → save → profile screen reflects changes
+- [x] Add/remove education, experience, skills → persists to DB
+- [x] Profile completion banner shows on profile screen when < 100%
+- [x] Tapping banner navigates to edit-profile
 
 ### Deliverables
 
@@ -611,9 +623,17 @@ const missingFields = getMissingProfileFields(profile);
 
 ---
 
-## Phase F6 — Connection-Gated Messaging
+## Phase F6 — Connection-Gated Messaging ✅ DONE
 
 **Priority**: 🔴 CRITICAL — Anyone can message anyone without being connected.
+**Status**: ✅ COMPLETED (2026-02-22)
+
+### Resolution Summary
+
+- **`app/user/[id].tsx`**: Message button now checks `isConnected` before navigating; disabled with `opacity: 0.5` when not connected, shows Alert on tap.
+- **`app/chat/[id].tsx`**: Added `useQuery` for `checkConnectionStatus` — non-connected users see a "Connection Required" blocked UI with lock icon and back button.
+- **`app/(tabs)/messages.tsx`**: Added compose button (Ionicons `create-outline`) in header, navigates to `/new-conversation`.
+- **`app/new-conversation.tsx`** (NEW): Shows searchable FlatList of user's connections (from `getConnections()`); tapping a connection navigates to `/chat/[id]`.
 
 ### Problem
 
@@ -717,12 +737,12 @@ Uses `getConnections()` from `lib/api/social.ts`. Tapping a connection navigates
 
 ### Verification
 
-- [ ] As a non-connected user, Message button is disabled/dimmed on user profile
-- [ ] Tapping disabled Message → shows "Not Connected" alert
-- [ ] As a connected user, Message button works normally
-- [ ] Direct URL `/chat/<non-connected-id>` shows blocked state
-- [ ] Messages tab has compose/new-conversation button
-- [ ] New Conversation screen shows connections and navigates to chat
+- [x] As a non-connected user, Message button is disabled/dimmed on user profile
+- [x] Tapping disabled Message → shows "Not Connected" alert
+- [x] As a connected user, Message button works normally
+- [x] Direct URL `/chat/<non-connected-id>` shows blocked state
+- [x] Messages tab has compose/new-conversation button
+- [x] New Conversation screen shows connections and navigates to chat
 
 ### Deliverables
 

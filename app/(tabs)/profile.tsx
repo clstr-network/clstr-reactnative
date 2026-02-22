@@ -11,7 +11,7 @@ import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
 import { Avatar } from '@/components/Avatar';
 import { RoleBadge } from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
-import { getProfileById, type UserProfile } from '@/lib/api';
+import { getProfileById, type UserProfile, calculateProfileCompletion, getMissingProfileFields } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
@@ -56,6 +56,8 @@ export default function ProfileScreen() {
   const badgeColor = getRoleBadgeColor(profile.role ?? 'Student', colors);
   const connectionsCount = profile.connections?.length ?? 0;
   const postsCount = profile.posts?.length ?? 0;
+  const completionPct = calculateProfileCompletion(profile);
+  const missingFields = getMissingProfileFields(profile);
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -131,6 +133,29 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* F5 — Profile Completion Banner */}
+      {completionPct < 100 && (
+        <Pressable
+          onPress={() => router.push('/edit-profile' as any)}
+          style={[styles.completionBanner, { backgroundColor: colors.warning + '12', borderColor: colors.warning + '30' }]}
+        >
+          <View style={styles.completionRow}>
+            <Ionicons name="alert-circle-outline" size={20} color={colors.warning} />
+            <Text style={[styles.completionText, { color: colors.text }]}>
+              Profile {completionPct}% complete
+            </Text>
+          </View>
+          {missingFields.length > 0 && (
+            <Text style={[styles.completionHint, { color: colors.textSecondary }]}>
+              Add {missingFields.slice(0, 2).join(', ')} to stand out
+            </Text>
+          )}
+          <View style={[styles.completionBar, { backgroundColor: colors.border }]}>
+            <View style={[styles.completionFill, { width: `${completionPct}%`, backgroundColor: colors.warning }]} />
+          </View>
+        </Pressable>
+      )}
+
       <View style={styles.menuSection}>
         {MENU_ITEMS.map((item) => (
           <Pressable
@@ -191,6 +216,14 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, marginTop: 2, fontFamily: 'Inter_400Regular' },
   statDivider: { width: 1, marginVertical: 10 },
   menuSection: { paddingHorizontal: 16, paddingTop: 20, gap: 8 },
+  completionBanner: {
+    marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 14, borderWidth: 1,
+  },
+  completionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  completionText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  completionHint: { fontSize: 13, marginTop: 4, marginLeft: 28, fontFamily: 'Inter_400Regular' },
+  completionBar: { height: 4, borderRadius: 2, marginTop: 10, overflow: 'hidden' },
+  completionFill: { height: '100%', borderRadius: 2 },
   menuItem: {
     flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14,
     borderWidth: 1, gap: 12,
