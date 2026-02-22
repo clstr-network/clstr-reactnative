@@ -41,7 +41,7 @@ This plan is organized into **12 fix phases (F1–F12)**, ordered by severity. E
 | 14 | Message button has NO connection gate | 🔴 Critical | F6 | `app/user/[id].tsx` | ✅ Fixed |
 | 15 | Chat screen has NO connection eligibility check | 🔴 Critical | F6 | `app/chat/[id].tsx` | ✅ Fixed |
 | 16 | No "New Conversation" / compose button in Messages tab | 🟠 High | F6 | `app/(tabs)/messages.tsx` | ✅ Fixed |
-| 17 | Feed uses `useQuery` not `useInfiniteQuery` — no pagination | 🟠 High | F7 | `app/(tabs)/index.tsx` | ⬜ Pending |
+| 17 | Feed uses `useQuery` not `useInfiniteQuery` — no pagination | 🟠 High | F7 | `app/(tabs)/index.tsx` | ✅ Fixed |
 | 18 | Create Event button is dead (`/* TODO */`) | 🟠 High | F8 | `app/(tabs)/events.tsx` | ⬜ Pending |
 | 19 | No `createEvent` function in `@clstr/core` or `lib/api/events.ts` | 🟠 High | F8 | `lib/api/events.ts` | ⬜ Pending |
 | 20 | Profile stats use `profile.connections?.length` instead of DB count | 🟡 Medium | F9 | `app/(tabs)/profile.tsx`, `app/user/[id].tsx` | ⬜ Pending |
@@ -752,9 +752,21 @@ Uses `getConnections()` from `lib/api/social.ts`. Tapping a connection navigates
 
 ---
 
-## Phase F7 — Feed Pagination (useInfiniteQuery)
+## Phase F7 — Feed Pagination (useInfiniteQuery) ✅ DONE
 
 **Priority**: 🟠 HIGH — Feed only loads first 20 posts with no way to load more.
+**Status**: ✅ COMPLETED (2026-02-22)
+
+### Resolution Summary
+
+Converted `app/(tabs)/index.tsx` from `useQuery` to `useInfiniteQuery`:
+- **Removed**: `useState` for `page`, `useQuery` import, `setPage(0)` in refresh handler
+- **Added**: `useInfiniteQuery` with `pageParam`-based pagination (`PAGE_SIZE = 20`)
+- **Added**: `getNextPageParam` logic — returns `undefined` when last page < PAGE_SIZE (no more data)
+- **Added**: `onEndReached` handler (`handleLoadMore`) + `onEndReachedThreshold={0.5}` on FlatList
+- **Added**: `ListFooterComponent` — shows `ActivityIndicator` spinner while fetching next page
+- **Fixed**: `RefreshControl.refreshing` excludes `isFetchingNextPage` to avoid showing pull-to-refresh spinner during load-more
+- **Flattened**: `data.pages.flat()` to produce the unified posts array for FlatList
 
 ### Problem
 
@@ -833,16 +845,18 @@ Remove the `setPage(0)` state (no longer needed with `useInfiniteQuery`).
 
 ### Verification
 
-- [ ] Feed loads first 20 posts
-- [ ] Scrolling to bottom triggers loading indicator + loads next 20
-- [ ] Pull-to-refresh resets to page 0
-- [ ] Feed works with 0, 1, 20, and 100+ posts
+- [x] Feed loads first 20 posts
+- [x] Scrolling to bottom triggers loading indicator + loads next 20
+- [x] Pull-to-refresh resets to page 0 (invalidates query, `useInfiniteQuery` refetches from page 0)
+- [ ] Feed works with 0, 1, 20, and 100+ posts (needs manual QA)
 
 ### Deliverables
 
-- Feed uses `useInfiniteQuery` with proper pagination
-- Load-more spinner at bottom of list
-- Smooth scroll with no jank
+- ✅ Feed uses `useInfiniteQuery` with proper pagination
+- ✅ Load-more spinner at bottom of list (`ListFooterComponent`)
+- ✅ `onEndReached` with 0.5 threshold for smooth infinite scroll
+- ✅ No `useState` page tracking — `useInfiniteQuery` manages pagination internally
+- ✅ Refresh handler simplified (no `setPage(0)`)
 
 ---
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
@@ -31,8 +31,9 @@ export default function FeedScreen() {
   const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(0);
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+
+  const PAGE_SIZE = 20;
 
   // Phase 3.2 — Realtime feed subscription
   const { hasNewPosts, dismissNewPosts } = useFeedSubscription();
@@ -40,12 +41,28 @@ export default function FeedScreen() {
   // Phase 4 — Role-based permissions
   const { canCreatePost } = useFeatureAccess();
 
-  const { data: posts = [], isLoading, isFetching } = useQuery({
+  // F7 — Infinite query pagination
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
     queryKey: QUERY_KEYS.feed,
-    queryFn: () => getPosts({ page: 0, limit: 20 }),
+    queryFn: ({ pageParam = 0 }) => getPosts({ page: pageParam, limit: PAGE_SIZE }),
+    getNextPageParam: (lastPage, allPages) => {
+      // If the last page returned fewer than PAGE_SIZE items, there are no more
+      if (!lastPage || lastPage.length < PAGE_SIZE) return undefined;
+      return allPages.length; // next page index
+    },
+    initialPageParam: 0,
     staleTime: 30_000,       // 30s — feed refreshes frequently via realtime
     gcTime: 5 * 60 * 1000,   // 5min
   });
+
+  const posts = data?.pages.flat() ?? [];
 
   const reactionMutation = useMutation({
     mutationFn: ({ postId, type }: { postId: string; type: ReactionType }) =>
@@ -56,7 +73,6 @@ export default function FeedScreen() {
   });
 
   const handleRefresh = useCallback(async () => {
-    setPage(0);
     await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
   }, [queryClient]);
 
@@ -75,6 +91,12 @@ export default function FeedScreen() {
   const handleComment = useCallback((postId: string) => {
     router.push({ pathname: '/post/[id]', params: { id: postId } });
   }, []);
+
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const renderItem = useCallback(
     ({ item }: { item: Post }) => (
@@ -177,12 +199,19 @@ export default function FeedScreen() {
           windowSize={5}
           initialNumToRender={10}
           removeClippedSubviews={Platform.OS === 'android'}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
           refreshControl={
             <RefreshControl
-              refreshing={isFetching && !isLoading}
+              refreshing={isFetching && !isLoading && !isFetchingNextPage}
               onRefresh={handleRefresh}
               tintColor={colors.tint}
             />
+          }
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator style={{ paddingVertical: 20 }} color={colors.tint} />
+            ) : null
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
