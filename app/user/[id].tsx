@@ -1,17 +1,16 @@
 import React, { useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Pressable, useColorScheme, Platform
+  View, Text, StyleSheet, ScrollView, Pressable, useColorScheme, Platform
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
 import { Avatar } from '@/components/Avatar';
 import { RoleBadge } from '@/components/RoleBadge';
-import { PostCard } from '@/components/PostCard';
-import { getConnectionById, updateConnectionStatus, getPosts, toggleLikePost, type Post } from '@/lib/storage';
+import { getConnectionById, updateConnectionStatus, type Connection } from '@/lib/storage';
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -20,38 +19,26 @@ export default function UserProfileScreen() {
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
-  const { data: profile } = useQuery({
-    queryKey: ['user', id],
+  const { data: user } = useQuery({
+    queryKey: ['connection', id],
     queryFn: () => getConnectionById(id!),
     enabled: !!id,
   });
 
-  const { data: allPosts = [] } = useQuery({
-    queryKey: ['posts'],
-    queryFn: getPosts,
-  });
-
-  const userPosts = allPosts.filter(p => p.authorId === id);
-
-  const handleConnect = async () => {
-    if (!profile) return;
+  const handleConnect = useCallback(async () => {
+    if (!id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const updated = await updateConnectionStatus(profile.id, 'connected');
+    const updated = await updateConnectionStatus(id, 'connected');
     queryClient.setQueryData(['connections'], updated);
-    queryClient.invalidateQueries({ queryKey: ['user', id] });
-  };
+    queryClient.invalidateQueries({ queryKey: ['connection', id] });
+  }, [id, queryClient]);
 
-  const handleLike = useCallback(async (postId: string) => {
-    const updated = await toggleLikePost(postId);
-    queryClient.setQueryData(['posts'], updated);
-  }, [queryClient]);
-
-  if (!profile) {
+  if (!user) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, borderBottomColor: colors.border }]}>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Pressable onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
           <View style={{ width: 24 }} />
@@ -63,99 +50,72 @@ export default function UserProfileScreen() {
     );
   }
 
-  const badgeColor = getRoleBadgeColor(profile.role, colors);
+  const badgeColor = getRoleBadgeColor(user.role, colors);
 
-  const renderPost = ({ item }: { item: Post }) => (
-    <PostCard post={item} onLike={handleLike} onPress={(pid) => router.push({ pathname: '/post/[id]', params: { id: pid } })} />
-  );
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, borderBottomColor: colors.border }]}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </Pressable>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
-  const ProfileHeader = () => (
-    <View>
-      <View style={[styles.profileBg, { backgroundColor: badgeColor + '12' }]}>
-        <View style={styles.profileInfo}>
-          <Avatar uri={profile.avatarUrl} name={profile.name} size={80} showBorder />
-          <Text style={[styles.name, { color: colors.text }]}>{profile.name}</Text>
-          <Text style={[styles.username, { color: colors.textSecondary }]}>@{profile.username}</Text>
-          <RoleBadge role={profile.role} size="medium" />
-          {!!profile.bio && <Text style={[styles.bio, { color: colors.textSecondary }]}>{profile.bio}</Text>}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.profileBg, { backgroundColor: badgeColor + '12' }]}>
+          <Avatar uri={user.avatarUrl} name={user.name} size={88} showBorder />
+          <Text style={[styles.name, { color: colors.text }]}>{user.name}</Text>
+          <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.username}</Text>
+          <RoleBadge role={user.role} size="medium" />
+          <Text style={[styles.dept, { color: colors.textSecondary }]}>{user.department}</Text>
+          {!!user.bio && <Text style={[styles.bio, { color: colors.textSecondary }]}>{user.bio}</Text>}
         </View>
 
-        <View style={[styles.statsRow, { backgroundColor: colors.surface }]}>
-          <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{profile.connectionsCount}</Text>
+        <View style={styles.statsRow}>
+          <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{user.connectionsCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Connections</Text>
           </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{profile.postsCount}</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{user.postsCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Posts</Text>
           </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{profile.department}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Department</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{user.mutualConnections}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Mutual</Text>
           </View>
         </View>
 
-        <View style={styles.actionRow}>
-          {profile.status === 'connected' ? (
-            <View style={[styles.connectedBtn, { backgroundColor: colors.success + '15', borderColor: colors.success + '40' }]}>
+        <View style={styles.actionsRow}>
+          {user.status === 'connected' ? (
+            <View style={[styles.connectedBtn, { borderColor: colors.success + '40' }]}>
               <Ionicons name="checkmark-circle" size={18} color={colors.success} />
               <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
             </View>
           ) : (
             <Pressable
               onPress={handleConnect}
-              style={({ pressed }) => [
-                styles.connectBtn, { backgroundColor: colors.tint },
-                pressed && { opacity: 0.85 },
-              ]}
+              style={({ pressed }) => [styles.connectBtn, { backgroundColor: colors.tint }, pressed && { opacity: 0.85 }]}
             >
-              <Ionicons name="person-add" size={16} color="#fff" />
-              <Text style={styles.connectBtnText}>{profile.status === 'pending' ? 'Accept' : 'Connect'}</Text>
+              <Ionicons name="person-add" size={18} color="#fff" />
+              <Text style={styles.connectBtnText}>
+                {user.status === 'pending' ? 'Accept' : 'Connect'}
+              </Text>
             </Pressable>
           )}
           <Pressable
-            onPress={() => {}}
-            style={[styles.msgBtn, { borderColor: colors.border }]}
+            onPress={() => {
+              const convId = `conv_${id?.replace('user_', '')}`;
+              router.push({ pathname: '/chat/[id]', params: { id: convId } });
+            }}
+            style={({ pressed }) => [styles.msgBtn, { borderColor: colors.border }, pressed && { opacity: 0.85 }]}
           >
             <Ionicons name="chatbubble-outline" size={18} color={colors.text} />
+            <Text style={[styles.msgBtnText, { color: colors.text }]}>Message</Text>
           </Pressable>
         </View>
-      </View>
-
-      {userPosts.length > 0 && (
-        <View style={styles.postsHeader}>
-          <Text style={[styles.postsTitle, { color: colors.text }]}>Posts ({userPosts.length})</Text>
-        </View>
-      )}
-    </View>
-  );
-
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{profile.name}</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <FlatList
-        data={userPosts}
-        renderItem={renderPost}
-        keyExtractor={item => item.id}
-        ListHeaderComponent={ProfileHeader}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.noPostsState}>
-            <Ionicons name="newspaper-outline" size={36} color={colors.textTertiary} />
-            <Text style={{ color: colors.textTertiary, fontSize: 14 }}>No posts yet</Text>
-          </View>
-        }
-      />
+      </ScrollView>
     </View>
   );
 }
@@ -164,38 +124,25 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1,
+    paddingHorizontal: 14, paddingBottom: 12, borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  scrollContent: { paddingBottom: 40 },
+  profileBg: { alignItems: 'center', paddingTop: 32, paddingBottom: 24, gap: 6 },
+  name: { fontSize: 24, fontWeight: '800', marginTop: 12, fontFamily: 'Inter_800ExtraBold' },
+  username: { fontSize: 15, fontFamily: 'Inter_400Regular' },
+  dept: { fontSize: 14, marginTop: 2, fontFamily: 'Inter_400Regular' },
+  bio: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40, marginTop: 4, lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  statsRow: { flexDirection: 'row', padding: 16, gap: 8 },
+  statBox: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  statNum: { fontSize: 20, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
+  statLabel: { fontSize: 12, marginTop: 2, fontFamily: 'Inter_400Regular' },
+  actionsRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10 },
+  connectBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 14, gap: 6 },
+  connectBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  connectedBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 14, borderWidth: 1, gap: 6 },
+  connectedText: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  msgBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 14, borderWidth: 1, gap: 6 },
+  msgBtnText: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  profileBg: { paddingBottom: 20 },
-  profileInfo: { alignItems: 'center', paddingTop: 24, gap: 6 },
-  name: { fontSize: 24, fontWeight: '800', marginTop: 8 },
-  username: { fontSize: 15 },
-  bio: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40, marginTop: 4, lineHeight: 20 },
-  statsRow: {
-    flexDirection: 'row', marginTop: 20, marginHorizontal: 16, borderRadius: 14, overflow: 'hidden',
-  },
-  statItem: { flex: 1, alignItems: 'center', paddingVertical: 14 },
-  statNum: { fontSize: 18, fontWeight: '800' },
-  statLabel: { fontSize: 12, marginTop: 2 },
-  statDivider: { width: 1, marginVertical: 10 },
-  actionRow: { flexDirection: 'row', paddingHorizontal: 16, marginTop: 16, gap: 10 },
-  connectBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 12, borderRadius: 12, gap: 6,
-  },
-  connectBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  connectedBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 12, borderRadius: 12, gap: 6, borderWidth: 1,
-  },
-  connectedText: { fontSize: 15, fontWeight: '700' },
-  msgBtn: {
-    width: 48, height: 48, borderRadius: 12, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  postsHeader: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 },
-  postsTitle: { fontSize: 18, fontWeight: '700' },
-  noPostsState: { alignItems: 'center', paddingTop: 40, gap: 8 },
 });

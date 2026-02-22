@@ -24,7 +24,6 @@ const EventCard = React.memo(function EventCard({ event, colors, onRsvp, onPress
   const dateInfo = formatEventDate(event.date);
   const spotsLeft = event.maxAttendees - event.attendeesCount;
   const catIcon = CATEGORY_ICONS[event.category] || 'calendar';
-  const badgeColor = getRoleBadgeColor(event.organizerRole, colors);
 
   return (
     <Pressable
@@ -134,7 +133,7 @@ export default function EventsScreen() {
           </View>
           <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
             <Text style={[styles.statNum, { color: colors.success }]}>{rsvpCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Attending</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Going</Text>
           </View>
         </View>
         <FlatList
@@ -147,12 +146,17 @@ export default function EventsScreen() {
           renderItem={({ item }) => (
             <Pressable
               onPress={() => { setActiveCategory(item); Haptics.selectionAsync(); }}
-              style={[styles.filterChip, {
-                backgroundColor: activeCategory === item ? colors.tint : 'transparent',
-                borderColor: activeCategory === item ? colors.tint : colors.border,
-              }]}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: activeCategory === item ? colors.tint : 'transparent',
+                  borderColor: activeCategory === item ? colors.tint : colors.border,
+                },
+              ]}
             >
-              <Text style={[styles.filterText, { color: activeCategory === item ? '#fff' : colors.textSecondary }]}>{item}</Text>
+              <Text style={[styles.filterText, { color: activeCategory === item ? '#fff' : colors.textSecondary }]}>
+                {item}
+              </Text>
             </Pressable>
           )}
         />
@@ -185,33 +189,33 @@ export default function EventsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { borderBottomWidth: 1, paddingBottom: 0 },
-  title: { fontSize: 28, fontWeight: '800', paddingHorizontal: 16, marginBottom: 12 },
+  title: { fontSize: 28, fontWeight: '800', paddingHorizontal: 16, marginBottom: 12, fontFamily: 'Inter_800ExtraBold' },
   statsRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 12 },
   statBox: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
-  statNum: { fontSize: 22, fontWeight: '800' },
-  statLabel: { fontSize: 12, marginTop: 2 },
+  statNum: { fontSize: 22, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
+  statLabel: { fontSize: 12, marginTop: 2, fontFamily: 'Inter_400Regular' },
   filterList: { flexGrow: 0 },
   filterContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
-  filterText: { fontSize: 13, fontWeight: '600' },
+  filterText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   listContent: { paddingTop: 12, paddingBottom: 100 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyText: { fontSize: 15 },
+  emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
   eventCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   eventTop: { flexDirection: 'row', padding: 14, gap: 14 },
   dateBox: { width: 56, height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  dateMonth: { fontSize: 11, fontWeight: '700' },
-  dateDay: { fontSize: 22, fontWeight: '800', marginTop: -2 },
+  dateMonth: { fontSize: 11, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  dateDay: { fontSize: 22, fontWeight: '800', marginTop: -2, fontFamily: 'Inter_800ExtraBold' },
   eventInfo: { flex: 1, gap: 4 },
-  eventTitle: { fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  eventTitle: { fontSize: 15, fontWeight: '700', lineHeight: 20, fontFamily: 'Inter_700Bold' },
   eventMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  eventLocation: { fontSize: 12, flex: 1 },
-  eventTime: { fontSize: 12 },
+  eventLocation: { fontSize: 12, flex: 1, fontFamily: 'Inter_400Regular' },
+  eventTime: { fontSize: 12, fontFamily: 'Inter_400Regular' },
   eventBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1 },
   eventStats: { flexDirection: 'row', gap: 14 },
   eventStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  eventStatText: { fontSize: 12, fontWeight: '500', textTransform: 'capitalize' },
+  eventStatText: { fontSize: 12, fontWeight: '500', textTransform: 'capitalize', fontFamily: 'Inter_500Medium' },
   rsvpBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, gap: 4 },
-  rsvpText: { fontSize: 13, fontWeight: '700' },
+  rsvpText: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold' },
 });

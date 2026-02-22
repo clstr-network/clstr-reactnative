@@ -23,22 +23,8 @@ export const RoleBadge = React.memo(function RoleBadge({ role, size = 'small' }:
 });
 
 const styles = StyleSheet.create({
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  badgeSmall: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  badgeTextSmall: {
-    fontSize: 10,
-  },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1 },
+  badgeSmall: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  badgeText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  badgeTextSmall: { fontSize: 10 },
 });

@@ -36,11 +36,6 @@ export const Avatar = React.memo(function Avatar({ uri, name, size = 44, showBor
 });
 
 const styles = StyleSheet.create({
-  fallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initials: {
-    fontWeight: '700',
-  },
+  fallback: { alignItems: 'center', justifyContent: 'center' },
+  initials: { fontWeight: '700' },
 });

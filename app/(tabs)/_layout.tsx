@@ -3,13 +3,12 @@ import { Tabs, Redirect } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
-import { Platform, StyleSheet, useColorScheme, View, ActivityIndicator, Text } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Platform, StyleSheet, useColorScheme, View, ActivityIndicator } from "react-native";
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useThemeColors } from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { getConversations, getNotifications } from "@/lib/storage";
+import { getConversations } from "@/lib/storage";
 
 function NativeTabLayout() {
   return (
@@ -44,7 +43,6 @@ function ClassicTabLayout() {
   const isDark = colorScheme === "dark";
   const isWeb = Platform.OS === "web";
   const isIOS = Platform.OS === "ios";
-  const safeAreaInsets = useSafeAreaInsets();
 
   const { data: conversations = [] } = useQuery({ queryKey: ['conversations'], queryFn: getConversations });
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);

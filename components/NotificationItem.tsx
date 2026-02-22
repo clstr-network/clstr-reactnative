@@ -11,7 +11,7 @@ interface NotificationItemProps {
   onPress: (id: string) => void;
 }
 
-const TYPE_ICONS: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
+const NOTIF_ICONS: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
   like: { name: 'heart', color: '#EF4444' },
   comment: { name: 'chatbubble', color: '#3B82F6' },
   connection: { name: 'person-add', color: '#10B981' },
@@ -21,14 +21,14 @@ const TYPE_ICONS: Record<string, { name: keyof typeof Ionicons.glyphMap; color: 
 
 export const NotificationItem = React.memo(function NotificationItem({ notification, onPress }: NotificationItemProps) {
   const colors = useThemeColors(useColorScheme());
-  const icon = TYPE_ICONS[notification.type] || TYPE_ICONS.like;
+  const icon = NOTIF_ICONS[notification.type] || NOTIF_ICONS.like;
 
   return (
     <Pressable
       onPress={() => onPress(notification.id)}
       style={({ pressed }) => [
-        styles.container,
-        { backgroundColor: notification.read ? 'transparent' : colors.tint + '08' },
+        styles.item,
+        !notification.read && { backgroundColor: colors.tint + '08' },
         pressed && { backgroundColor: colors.surfaceElevated },
       ]}
     >
@@ -38,59 +38,25 @@ export const NotificationItem = React.memo(function NotificationItem({ notificat
           <Ionicons name={icon.name} size={10} color="#fff" />
         </View>
       </View>
-      <View style={styles.content}>
-        <Text style={[styles.text, { color: colors.text }]}>
-          <Text style={styles.bold}>{notification.actorName}</Text>
-          {' '}{notification.message}
+      <View style={styles.info}>
+        <Text style={[styles.message, { color: colors.text }]}>
+          <Text style={styles.actorName}>{notification.actorName}</Text>{' '}
+          {notification.message}
         </Text>
         <Text style={[styles.time, { color: colors.textTertiary }]}>{formatRelativeTime(notification.createdAt)}</Text>
       </View>
-      {!notification.read && <View style={[styles.dot, { backgroundColor: colors.tint }]} />}
+      {!notification.read && <View style={[styles.unreadDot, { backgroundColor: colors.tint }]} />}
     </Pressable>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  avatarWrap: {
-    position: 'relative',
-  },
-  iconBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#0A0E17',
-  },
-  content: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  text: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  bold: {
-    fontWeight: '700',
-  },
-  time: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
+  item: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 14 },
+  avatarWrap: { position: 'relative' },
+  iconBadge: { position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
+  info: { flex: 1, gap: 4 },
+  message: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  actorName: { fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  time: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  unreadDot: { width: 8, height: 8, borderRadius: 4 },
 });

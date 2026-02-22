@@ -2,10 +2,10 @@ import React, { useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, useColorScheme, Platform, RefreshControl
 } from 'react-native';
-import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useThemeColors } from '@/constants/colors';
 import { NotificationItem } from '@/components/NotificationItem';
 import { getNotifications, markNotificationRead, type Notification } from '@/lib/storage';
@@ -21,6 +21,8 @@ export default function NotificationsScreen() {
     queryFn: getNotifications,
   });
 
+  const unreadCount = notifications.filter(n => !n.read).length;
+
   const handlePress = useCallback(async (id: string) => {
     const updated = await markNotificationRead(id);
     queryClient.setQueryData(['notifications'], updated);
@@ -34,29 +36,27 @@ export default function NotificationsScreen() {
     <NotificationItem notification={item} onPress={handlePress} />
   ), [handlePress]);
 
-  const keyExtractor = useCallback((item: Notification) => item.id, []);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
-        {unreadCount > 0 && (
-          <View style={[styles.badge, { backgroundColor: colors.tint }]}>
-            <Text style={styles.badgeText}>{unreadCount}</Text>
-          </View>
-        )}
-        <View style={{ flex: 1 }} />
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
+          {unreadCount > 0 && (
+            <View style={[styles.countBadge, { backgroundColor: colors.tint }]}>
+              <Text style={styles.countText}>{unreadCount}</Text>
+            </View>
+          )}
+        </View>
+        <View style={{ width: 24 }} />
       </View>
 
       <FlatList
         data={notifications}
         renderItem={renderItem}
-        keyExtractor={keyExtractor}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -68,7 +68,7 @@ export default function NotificationsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No notifications</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No notifications yet</Text>
           </View>
         }
       />
@@ -79,14 +79,15 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12,
-    borderBottomWidth: 1, gap: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingBottom: 12, borderBottomWidth: 1,
   },
-  title: { fontSize: 20, fontWeight: '700' },
-  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  countBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  countText: { color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   listContent: { paddingBottom: 40 },
-  separator: { height: 1, marginLeft: 72 },
+  separator: { height: 1, marginLeft: 74 },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyText: { fontSize: 16 },
+  emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
 });

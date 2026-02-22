@@ -11,6 +11,7 @@ import { useThemeColors } from '@/constants/colors';
 import { PostCard } from '@/components/PostCard';
 import { getPosts, toggleLikePost, type Post } from '@/lib/storage';
 import { useAuth } from '@/lib/auth-context';
+import { useAppStateLifecycle } from '@/lib/app-state';
 
 const CATEGORIES = ['All', 'Academic', 'Career', 'Events', 'Social', 'General'];
 
@@ -25,6 +26,14 @@ export default function FeedScreen() {
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['posts'],
     queryFn: getPosts,
+  });
+
+  useAppStateLifecycle({
+    onForeground: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
   });
 
   const filteredPosts = activeCategory === 'All'
@@ -61,10 +70,7 @@ export default function FeedScreen() {
         <View style={styles.headerTop}>
           <Text style={[styles.logo, { color: colors.tint }]}>clstr</Text>
           <View style={styles.headerActions}>
-            <Pressable
-              onPress={() => router.push('/notifications')}
-              hitSlop={8}
-            >
+            <Pressable onPress={() => router.push('/notifications')} hitSlop={8}>
               <Ionicons name="notifications-outline" size={24} color={colors.text} />
             </Pressable>
           </View>
@@ -139,21 +145,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingBottom: 8,
   },
-  logo: { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
+  logo: { fontSize: 28, fontWeight: '900', letterSpacing: -1, fontFamily: 'Inter_800ExtraBold' },
   headerActions: { flexDirection: 'row', gap: 16 },
   categoryList: { flexGrow: 0 },
   categoryContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
-  categoryChip: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, borderWidth: 1,
-  },
-  categoryText: { fontSize: 13, fontWeight: '600' },
+  categoryChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
+  categoryText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   listContent: { paddingTop: 12, paddingBottom: 120 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyText: { fontSize: 15 },
+  emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
   fab: {
     position: 'absolute', right: 20, width: 56, height: 56, borderRadius: 28,
-    alignItems: 'center', justifyContent: 'center',
-    elevation: 8,
+    alignItems: 'center', justifyContent: 'center', elevation: 8,
   },
 });

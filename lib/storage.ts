@@ -139,193 +139,170 @@ function seedPosts(): Post[] {
   const now = Date.now();
   return [
     {
-      id: generateId(),
-      authorId: 'user_2',
-      authorName: 'Dr. Sarah Chen',
-      authorUsername: 'schen',
-      authorRole: 'faculty',
-      authorAvatar: SAMPLE_AVATARS[1],
+      id: generateId(), authorId: 'user_2', authorName: 'Dr. Sarah Chen', authorUsername: 'schen',
+      authorRole: 'faculty', authorAvatar: SAMPLE_AVATARS[1],
       content: 'Excited to announce our new research lab in quantum computing opens next semester. Looking for motivated students to join the team!',
-      category: 'academic',
-      likesCount: 42,
-      commentsCount: 2,
-      isLiked: false,
-      isSaved: false,
+      category: 'academic', likesCount: 42, commentsCount: 3, isLiked: false, isSaved: false,
       createdAt: new Date(now - 3600000).toISOString(),
       comments: [
-        { id: generateId(), authorId: 'user_3', authorName: 'Marcus Johnson', authorAvatar: SAMPLE_AVATARS[2], authorRole: 'student', content: 'This is incredible! Where do I sign up?', createdAt: new Date(now - 3000000).toISOString() },
-        { id: generateId(), authorId: 'user_5', authorName: 'James Park', authorAvatar: SAMPLE_AVATARS[4], authorRole: 'student', content: 'Count me in! Quantum computing has always fascinated me.', createdAt: new Date(now - 2400000).toISOString() },
+        { id: generateId(), authorId: 'user_3', authorName: 'Alex Rivera', authorAvatar: SAMPLE_AVATARS[2], authorRole: 'student', content: 'This is amazing! I would love to apply.', createdAt: new Date(now - 3000000).toISOString() },
+        { id: generateId(), authorId: 'user_4', authorName: 'Priya Sharma', authorAvatar: SAMPLE_AVATARS[3], authorRole: 'student', content: 'What prerequisites do we need?', createdAt: new Date(now - 2400000).toISOString() },
+        { id: generateId(), authorId: 'user_2', authorName: 'Dr. Sarah Chen', authorAvatar: SAMPLE_AVATARS[1], authorRole: 'faculty', content: 'Linear algebra and intro to quantum mechanics are recommended!', createdAt: new Date(now - 1800000).toISOString() },
       ],
     },
     {
-      id: generateId(),
-      authorId: 'user_3',
-      authorName: 'Marcus Johnson',
-      authorUsername: 'mjohnson',
-      authorRole: 'student',
-      authorAvatar: SAMPLE_AVATARS[2],
-      content: 'Just wrapped up an amazing hackathon weekend! Our team built an AI-powered campus navigation app. Shoutout to everyone who participated.',
-      category: 'social',
-      likesCount: 89,
-      commentsCount: 1,
-      isLiked: true,
-      isSaved: false,
+      id: generateId(), authorId: 'user_3', authorName: 'Alex Rivera', authorUsername: 'arivera',
+      authorRole: 'student', authorAvatar: SAMPLE_AVATARS[2],
+      content: 'Just finished my final presentation on machine learning applications in healthcare. Huge thanks to my advisor and peers who helped along the way!',
+      category: 'academic', likesCount: 28, commentsCount: 1, isLiked: true, isSaved: false,
       createdAt: new Date(now - 7200000).toISOString(),
       comments: [
-        { id: generateId(), authorId: 'user_7', authorName: 'Alex Kim', authorAvatar: SAMPLE_AVATARS[6], authorRole: 'alumni', content: 'Love seeing this energy! The hackathon tradition lives on.', createdAt: new Date(now - 6000000).toISOString() },
+        { id: generateId(), authorId: 'user_5', authorName: 'Jordan Lee', authorAvatar: SAMPLE_AVATARS[4], authorRole: 'student', content: 'Congrats! Your work was inspiring.', createdAt: new Date(now - 6600000).toISOString() },
       ],
     },
     {
-      id: generateId(),
-      authorId: 'user_4',
-      authorName: 'Priya Patel',
-      authorUsername: 'ppatel',
-      authorRole: 'alumni',
-      authorAvatar: SAMPLE_AVATARS[3],
-      content: 'Hiring for summer internships at our startup! We are looking for CS and Design students. DM me for details.',
-      category: 'career',
-      likesCount: 156,
-      commentsCount: 0,
-      isLiked: false,
-      isSaved: false,
+      id: generateId(), authorId: 'user_6', authorName: 'Maria Gonzalez', authorUsername: 'mgonzalez',
+      authorRole: 'alumni', authorAvatar: SAMPLE_AVATARS[5],
+      content: 'Looking to mentor current students in product management. I have 5+ years at top tech companies. DM me if interested!',
+      category: 'career', likesCount: 67, commentsCount: 2, isLiked: false, isSaved: true,
       createdAt: new Date(now - 14400000).toISOString(),
-      comments: [],
+      comments: [
+        { id: generateId(), authorId: 'user_3', authorName: 'Alex Rivera', authorAvatar: SAMPLE_AVATARS[2], authorRole: 'student', content: 'This is a great opportunity!', createdAt: new Date(now - 13800000).toISOString() },
+        { id: generateId(), authorId: 'user_7', authorName: 'David Kim', authorAvatar: SAMPLE_AVATARS[6], authorRole: 'student', content: 'Just sent you a message!', createdAt: new Date(now - 13200000).toISOString() },
+      ],
     },
     {
-      id: generateId(),
-      authorId: 'user_5',
-      authorName: 'James Park',
-      authorUsername: 'jpark',
-      authorRole: 'student',
-      authorAvatar: SAMPLE_AVATARS[4],
-      content: 'The spring career fair is next Thursday in the Student Union. Make sure to bring your resume and dress professionally!',
-      category: 'events',
-      likesCount: 67,
-      commentsCount: 0,
-      isLiked: false,
-      isSaved: false,
-      createdAt: new Date(now - 28800000).toISOString(),
-      comments: [],
+      id: generateId(), authorId: 'user_8', authorName: 'Prof. James Wilson', authorUsername: 'jwilson',
+      authorRole: 'faculty', authorAvatar: SAMPLE_AVATARS[7],
+      content: 'Reminder: The annual tech symposium is this Friday at the main auditorium. All departments welcome. Free pizza!',
+      category: 'events', likesCount: 93, commentsCount: 0, isLiked: false, isSaved: false,
+      createdAt: new Date(now - 28800000).toISOString(), comments: [],
     },
     {
-      id: generateId(),
-      authorId: 'user_6',
-      authorName: 'Dr. Emily Rodriguez',
-      authorUsername: 'erodriguez',
-      authorRole: 'faculty',
-      authorAvatar: SAMPLE_AVATARS[5],
-      content: 'Reminder: Final project proposals are due this Friday. Office hours are extended this week - feel free to stop by.',
-      category: 'academic',
-      likesCount: 31,
-      commentsCount: 0,
-      isLiked: false,
-      isSaved: false,
+      id: generateId(), authorId: 'user_5', authorName: 'Jordan Lee', authorUsername: 'jlee',
+      authorRole: 'student', authorAvatar: SAMPLE_AVATARS[4],
+      content: 'Anyone interested in forming a study group for Advanced Algorithms? Meeting at the library every Tuesday at 6pm.',
+      category: 'social', likesCount: 15, commentsCount: 1, isLiked: false, isSaved: false,
       createdAt: new Date(now - 43200000).toISOString(),
-      comments: [],
+      comments: [
+        { id: generateId(), authorId: 'user_9', authorName: 'Emma Thompson', authorAvatar: SAMPLE_AVATARS[8], authorRole: 'student', content: 'Count me in!', createdAt: new Date(now - 42600000).toISOString() },
+      ],
     },
     {
-      id: generateId(),
-      authorId: 'user_7',
-      authorName: 'Alex Kim',
-      authorUsername: 'akim',
-      authorRole: 'alumni',
-      authorAvatar: SAMPLE_AVATARS[6],
-      content: 'Just got promoted to Senior Engineer at a major tech company! Grateful for everything I learned during my time at university. Happy to mentor current students.',
-      category: 'general',
-      likesCount: 203,
-      commentsCount: 0,
-      isLiked: true,
-      isSaved: false,
-      createdAt: new Date(now - 86400000).toISOString(),
-      comments: [],
+      id: generateId(), authorId: 'user_10', authorName: 'Robert Chen', authorUsername: 'rchen',
+      authorRole: 'alumni', authorAvatar: SAMPLE_AVATARS[9],
+      content: 'Just published my first paper since graduating! Research in sustainable energy systems. Grateful for the foundation this university gave me.',
+      category: 'general', likesCount: 54, commentsCount: 0, isLiked: false, isSaved: false,
+      createdAt: new Date(now - 86400000).toISOString(), comments: [],
+    },
+    {
+      id: generateId(), authorId: 'user_4', authorName: 'Priya Sharma', authorUsername: 'psharma',
+      authorRole: 'student', authorAvatar: SAMPLE_AVATARS[3],
+      content: 'Hiring interns at my startup this summer! We are building tools for climate research. DM for details.',
+      category: 'career', likesCount: 38, commentsCount: 2, isLiked: false, isSaved: false,
+      createdAt: new Date(now - 172800000).toISOString(),
+      comments: [
+        { id: generateId(), authorId: 'user_7', authorName: 'David Kim', authorAvatar: SAMPLE_AVATARS[6], authorRole: 'student', content: 'What tech stack are you using?', createdAt: new Date(now - 172200000).toISOString() },
+        { id: generateId(), authorId: 'user_4', authorName: 'Priya Sharma', authorAvatar: SAMPLE_AVATARS[3], authorRole: 'student', content: 'Python, React, and AWS mainly.', createdAt: new Date(now - 171600000).toISOString() },
+      ],
     },
   ];
 }
 
 function seedConnections(): Connection[] {
   return [
-    { id: 'user_2', name: 'Dr. Sarah Chen', username: 'schen', role: 'faculty', department: 'Computer Science', bio: 'Quantum computing researcher and CS professor. Passionate about mentoring the next generation.', avatarUrl: SAMPLE_AVATARS[1], status: 'connected', mutualConnections: 12, postsCount: 8, connectionsCount: 45 },
-    { id: 'user_3', name: 'Marcus Johnson', username: 'mjohnson', role: 'student', department: 'Computer Science', bio: 'CS junior, hackathon enthusiast, building cool stuff with AI.', avatarUrl: SAMPLE_AVATARS[2], status: 'connected', mutualConnections: 8, postsCount: 15, connectionsCount: 67 },
-    { id: 'user_4', name: 'Priya Patel', username: 'ppatel', role: 'alumni', department: 'Business', bio: 'Startup founder, Class of 2022. Hiring interns!', avatarUrl: SAMPLE_AVATARS[3], status: 'pending', mutualConnections: 5, postsCount: 12, connectionsCount: 120 },
-    { id: 'user_5', name: 'James Park', username: 'jpark', role: 'student', department: 'Engineering', bio: 'Mechanical engineering student, career fair organizer.', avatarUrl: SAMPLE_AVATARS[4], status: 'suggested', mutualConnections: 15, postsCount: 6, connectionsCount: 34 },
-    { id: 'user_6', name: 'Dr. Emily Rodriguez', username: 'erodriguez', role: 'faculty', department: 'Mathematics', bio: 'Mathematics professor specializing in applied statistics.', avatarUrl: SAMPLE_AVATARS[5], status: 'suggested', mutualConnections: 3, postsCount: 4, connectionsCount: 28 },
-    { id: 'user_7', name: 'Alex Kim', username: 'akim', role: 'alumni', department: 'Computer Science', bio: 'Senior Engineer, Class of 2020. Open to mentoring!', avatarUrl: SAMPLE_AVATARS[6], status: 'connected', mutualConnections: 20, postsCount: 22, connectionsCount: 200 },
-    { id: 'user_8', name: 'Sofia Martinez', username: 'smartinez', role: 'student', department: 'Design', bio: 'UX/UI designer, creative technologist, coffee addict.', avatarUrl: SAMPLE_AVATARS[7], status: 'suggested', mutualConnections: 7, postsCount: 9, connectionsCount: 55 },
-    { id: 'user_9', name: 'David Lee', username: 'dlee', role: 'student', department: 'Data Science', bio: 'Data science enthusiast, Kaggle competitor, ML researcher.', avatarUrl: SAMPLE_AVATARS[8], status: 'pending', mutualConnections: 11, postsCount: 3, connectionsCount: 42 },
+    { id: 'user_2', name: 'Dr. Sarah Chen', username: 'schen', role: 'faculty', department: 'Computer Science', avatarUrl: SAMPLE_AVATARS[1], bio: 'Quantum computing researcher', status: 'connected', mutualConnections: 12, postsCount: 24, connectionsCount: 156 },
+    { id: 'user_3', name: 'Alex Rivera', username: 'arivera', role: 'student', department: 'Computer Science', avatarUrl: SAMPLE_AVATARS[2], bio: 'ML enthusiast, final year CS student', status: 'connected', mutualConnections: 8, postsCount: 15, connectionsCount: 89 },
+    { id: 'user_4', name: 'Priya Sharma', username: 'psharma', role: 'student', department: 'Engineering', avatarUrl: SAMPLE_AVATARS[3], bio: 'Climate tech founder', status: 'pending', mutualConnections: 5, postsCount: 10, connectionsCount: 67 },
+    { id: 'user_5', name: 'Jordan Lee', username: 'jlee', role: 'student', department: 'Mathematics', avatarUrl: SAMPLE_AVATARS[4], bio: 'Math nerd, loves algorithms', status: 'connected', mutualConnections: 3, postsCount: 7, connectionsCount: 45 },
+    { id: 'user_6', name: 'Maria Gonzalez', username: 'mgonzalez', role: 'alumni', department: 'Business', avatarUrl: SAMPLE_AVATARS[5], bio: 'PM at BigTech, class of 2019', status: 'suggested', mutualConnections: 15, postsCount: 31, connectionsCount: 234 },
+    { id: 'user_7', name: 'David Kim', username: 'dkim', role: 'student', department: 'Design', avatarUrl: SAMPLE_AVATARS[6], bio: 'UI/UX designer and developer', status: 'suggested', mutualConnections: 7, postsCount: 9, connectionsCount: 52 },
+    { id: 'user_8', name: 'Prof. James Wilson', username: 'jwilson', role: 'faculty', department: 'Physics', avatarUrl: SAMPLE_AVATARS[7], bio: 'Theoretical physicist, department head', status: 'pending', mutualConnections: 4, postsCount: 18, connectionsCount: 198 },
+    { id: 'user_9', name: 'Emma Thompson', username: 'ethompson', role: 'student', department: 'Biology', avatarUrl: SAMPLE_AVATARS[8], bio: 'Pre-med student, research assistant', status: 'suggested', mutualConnections: 2, postsCount: 5, connectionsCount: 34 },
+    { id: 'user_10', name: 'Robert Chen', username: 'rchen', role: 'alumni', department: 'Engineering', avatarUrl: SAMPLE_AVATARS[9], bio: 'Sustainable energy researcher, class of 2020', status: 'connected', mutualConnections: 9, postsCount: 22, connectionsCount: 178 },
   ];
 }
 
 function seedConversations(): Conversation[] {
   const now = Date.now();
   return [
-    { id: 'conv_1', participantId: 'user_3', participantName: 'Marcus Johnson', participantAvatar: SAMPLE_AVATARS[2], participantRole: 'student', lastMessage: 'Hey, are you going to the hackathon?', lastMessageAt: new Date(now - 1800000).toISOString(), unreadCount: 2 },
-    { id: 'conv_2', participantId: 'user_4', participantName: 'Priya Patel', participantAvatar: SAMPLE_AVATARS[3], participantRole: 'alumni', lastMessage: 'Thanks for reaching out about the internship!', lastMessageAt: new Date(now - 7200000).toISOString(), unreadCount: 0 },
-    { id: 'conv_3', participantId: 'user_2', participantName: 'Dr. Sarah Chen', participantAvatar: SAMPLE_AVATARS[1], participantRole: 'faculty', lastMessage: 'Your research proposal looks great.', lastMessageAt: new Date(now - 86400000).toISOString(), unreadCount: 1 },
+    { id: 'conv_1', participantId: 'user_2', participantName: 'Dr. Sarah Chen', participantAvatar: SAMPLE_AVATARS[1], participantRole: 'faculty', lastMessage: 'I will send you the research papers by tonight.', lastMessageAt: new Date(now - 1800000).toISOString(), unreadCount: 2 },
+    { id: 'conv_2', participantId: 'user_3', participantName: 'Alex Rivera', participantAvatar: SAMPLE_AVATARS[2], participantRole: 'student', lastMessage: 'Are you going to the hackathon this weekend?', lastMessageAt: new Date(now - 7200000).toISOString(), unreadCount: 0 },
+    { id: 'conv_3', participantId: 'user_6', participantName: 'Maria Gonzalez', participantAvatar: SAMPLE_AVATARS[5], participantRole: 'alumni', lastMessage: 'Thanks for the mentoring session today!', lastMessageAt: new Date(now - 86400000).toISOString(), unreadCount: 1 },
+    { id: 'conv_4', participantId: 'user_5', participantName: 'Jordan Lee', participantAvatar: SAMPLE_AVATARS[4], participantRole: 'student', lastMessage: 'See you at the study group Tuesday!', lastMessageAt: new Date(now - 172800000).toISOString(), unreadCount: 0 },
   ];
 }
 
-function seedMessages(): Record<string, Message[]> {
+function seedMessages(conversationId: string): Message[] {
   const now = Date.now();
-  return {
-    conv_1: [
-      { id: generateId(), conversationId: 'conv_1', senderId: 'user_3', content: 'Hey! How is the semester going?', createdAt: new Date(now - 86400000).toISOString() },
-      { id: generateId(), conversationId: 'conv_1', senderId: 'self', content: 'Going well! Busy with projects though.', createdAt: new Date(now - 82800000).toISOString() },
-      { id: generateId(), conversationId: 'conv_1', senderId: 'user_3', content: 'Same here. Are you going to the hackathon this weekend?', createdAt: new Date(now - 3600000).toISOString() },
-      { id: generateId(), conversationId: 'conv_1', senderId: 'user_3', content: 'Hey, are you going to the hackathon?', createdAt: new Date(now - 1800000).toISOString() },
-    ],
-    conv_2: [
-      { id: generateId(), conversationId: 'conv_2', senderId: 'self', content: 'Hi Priya! I saw your post about summer internships. I would love to learn more.', createdAt: new Date(now - 14400000).toISOString() },
-      { id: generateId(), conversationId: 'conv_2', senderId: 'user_4', content: 'Thanks for reaching out about the internship!', createdAt: new Date(now - 7200000).toISOString() },
-    ],
-    conv_3: [
-      { id: generateId(), conversationId: 'conv_3', senderId: 'self', content: 'Dr. Chen, I submitted my research proposal. Could you review it?', createdAt: new Date(now - 172800000).toISOString() },
-      { id: generateId(), conversationId: 'conv_3', senderId: 'user_2', content: 'Your research proposal looks great.', createdAt: new Date(now - 86400000).toISOString() },
-    ],
-  };
+  if (conversationId === 'conv_1') {
+    return [
+      { id: generateId(), conversationId, senderId: 'self', content: 'Hi Dr. Chen, I wanted to ask about the quantum computing research opportunity.', createdAt: new Date(now - 7200000).toISOString() },
+      { id: generateId(), conversationId, senderId: 'user_2', content: 'Of course! We are looking for students with a strong math background.', createdAt: new Date(now - 6600000).toISOString() },
+      { id: generateId(), conversationId, senderId: 'self', content: 'I have completed linear algebra and intro to quantum mechanics.', createdAt: new Date(now - 5400000).toISOString() },
+      { id: generateId(), conversationId, senderId: 'user_2', content: 'Perfect! That is exactly what we need.', createdAt: new Date(now - 3600000).toISOString() },
+      { id: generateId(), conversationId, senderId: 'user_2', content: 'I will send you the research papers by tonight.', createdAt: new Date(now - 1800000).toISOString() },
+    ];
+  }
+  if (conversationId === 'conv_2') {
+    return [
+      { id: generateId(), conversationId, senderId: 'user_3', content: 'Hey! Are you going to the hackathon this weekend?', createdAt: new Date(now - 14400000).toISOString() },
+      { id: generateId(), conversationId, senderId: 'self', content: 'Yes! I am teaming up with Jordan.', createdAt: new Date(now - 10800000).toISOString() },
+      { id: generateId(), conversationId, senderId: 'user_3', content: 'Are you going to the hackathon this weekend?', createdAt: new Date(now - 7200000).toISOString() },
+    ];
+  }
+  return [
+    { id: generateId(), conversationId, senderId: 'self', content: 'Hello!', createdAt: new Date(now - 172800000).toISOString() },
+    { id: generateId(), conversationId, senderId: conversationId.replace('conv_', 'user_'), content: 'Hey there!', createdAt: new Date(now - 172200000).toISOString() },
+  ];
 }
 
 function seedNotifications(): Notification[] {
   const now = Date.now();
   return [
-    { id: generateId(), type: 'like', actorName: 'Marcus Johnson', actorAvatar: SAMPLE_AVATARS[2], message: 'liked your post', read: false, createdAt: new Date(now - 1800000).toISOString() },
-    { id: generateId(), type: 'connection', actorName: 'Priya Patel', actorAvatar: SAMPLE_AVATARS[3], message: 'sent you a connection request', read: false, createdAt: new Date(now - 7200000).toISOString() },
-    { id: generateId(), type: 'comment', actorName: 'Dr. Sarah Chen', actorAvatar: SAMPLE_AVATARS[1], message: 'commented on your post', read: true, createdAt: new Date(now - 14400000).toISOString() },
-    { id: generateId(), type: 'event', actorName: 'Campus Events', actorAvatar: SAMPLE_AVATARS[9], message: 'Spring Career Fair is tomorrow', read: true, createdAt: new Date(now - 86400000).toISOString() },
+    { id: generateId(), type: 'like', actorName: 'Dr. Sarah Chen', actorAvatar: SAMPLE_AVATARS[1], message: 'liked your post', read: false, createdAt: new Date(now - 1800000).toISOString() },
+    { id: generateId(), type: 'comment', actorName: 'Alex Rivera', actorAvatar: SAMPLE_AVATARS[2], message: 'commented on your post', read: false, createdAt: new Date(now - 3600000).toISOString() },
+    { id: generateId(), type: 'connection', actorName: 'Maria Gonzalez', actorAvatar: SAMPLE_AVATARS[5], message: 'accepted your connection request', read: true, createdAt: new Date(now - 7200000).toISOString() },
+    { id: generateId(), type: 'mention', actorName: 'Jordan Lee', actorAvatar: SAMPLE_AVATARS[4], message: 'mentioned you in a post', read: false, createdAt: new Date(now - 14400000).toISOString() },
+    { id: generateId(), type: 'event', actorName: 'Prof. James Wilson', actorAvatar: SAMPLE_AVATARS[7], message: 'invited you to Tech Symposium', read: true, createdAt: new Date(now - 28800000).toISOString() },
+    { id: generateId(), type: 'like', actorName: 'Emma Thompson', actorAvatar: SAMPLE_AVATARS[8], message: 'liked your comment', read: true, createdAt: new Date(now - 43200000).toISOString() },
+    { id: generateId(), type: 'connection', actorName: 'David Kim', actorAvatar: SAMPLE_AVATARS[6], message: 'wants to connect with you', read: false, createdAt: new Date(now - 86400000).toISOString() },
   ];
 }
 
 function seedEvents(): Event[] {
   const now = Date.now();
+  const day = 86400000;
   return [
     {
-      id: generateId(), title: 'Spring Career Fair', description: 'Meet top employers from tech, finance, and consulting. Bring your resume and dress professionally. Over 50 companies will be present.', location: 'Student Union Grand Hall',
-      date: new Date(now + 86400000).toISOString(), time: '10:00 AM - 4:00 PM', category: 'career',
-      organizerName: 'Career Services', organizerRole: 'faculty', organizerAvatar: SAMPLE_AVATARS[5],
-      attendeesCount: 234, maxAttendees: 500, isRsvped: false,
+      id: generateId(), title: 'Annual Tech Symposium', description: 'Join us for the biggest tech event on campus. Featuring talks from industry leaders, project demos, and networking opportunities. All departments welcome!',
+      location: 'Main Auditorium, Building A', date: new Date(now + 2 * day).toISOString(), time: '10:00 AM - 5:00 PM',
+      category: 'academic', organizerName: 'Prof. James Wilson', organizerRole: 'faculty', organizerAvatar: SAMPLE_AVATARS[7],
+      attendeesCount: 156, maxAttendees: 300, isRsvped: false,
     },
     {
-      id: generateId(), title: 'AI/ML Research Symposium', description: 'Presenting cutting-edge research in artificial intelligence and machine learning from faculty and graduate students. Keynote by a leading AI researcher.', location: 'Engineering Building, Room 301',
-      date: new Date(now + 172800000).toISOString(), time: '2:00 PM - 6:00 PM', category: 'academic',
-      organizerName: 'Dr. Sarah Chen', organizerRole: 'faculty', organizerAvatar: SAMPLE_AVATARS[1],
-      attendeesCount: 89, maxAttendees: 150, isRsvped: true,
+      id: generateId(), title: 'Startup Pitch Night', description: 'Student entrepreneurs pitch their ideas to a panel of investors and mentors. Great networking opportunity!',
+      location: 'Innovation Hub', date: new Date(now + 5 * day).toISOString(), time: '6:00 PM - 9:00 PM',
+      category: 'career', organizerName: 'Maria Gonzalez', organizerRole: 'alumni', organizerAvatar: SAMPLE_AVATARS[5],
+      attendeesCount: 78, maxAttendees: 120, isRsvped: true,
     },
     {
-      id: generateId(), title: 'Weekend Hackathon', description: '48-hour hackathon! Build something amazing with your team. Prizes for top 3 teams. Food and drinks provided.', location: 'Innovation Lab',
-      date: new Date(now + 345600000).toISOString(), time: 'Fri 6PM - Sun 6PM', category: 'social',
-      organizerName: 'Marcus Johnson', organizerRole: 'student', organizerAvatar: SAMPLE_AVATARS[2],
-      attendeesCount: 45, maxAttendees: 100, isRsvped: false,
+      id: generateId(), title: 'Campus Volleyball Tournament', description: 'Annual inter-department volleyball tournament. Form teams of 6 and register by Friday!',
+      location: 'Sports Complex', date: new Date(now + 7 * day).toISOString(), time: '9:00 AM - 4:00 PM',
+      category: 'sports', organizerName: 'Jordan Lee', organizerRole: 'student', organizerAvatar: SAMPLE_AVATARS[4],
+      attendeesCount: 45, maxAttendees: 64, isRsvped: false,
     },
     {
-      id: generateId(), title: 'React Native Workshop', description: 'Hands-on workshop covering React Native fundamentals, navigation, and state management. Perfect for beginners and intermediate developers.', location: 'CS Lab 204',
-      date: new Date(now + 604800000).toISOString(), time: '1:00 PM - 4:00 PM', category: 'workshop',
-      organizerName: 'Alex Kim', organizerRole: 'alumni', organizerAvatar: SAMPLE_AVATARS[6],
+      id: generateId(), title: 'Python for Data Science Workshop', description: 'Hands-on workshop covering pandas, numpy, and visualization libraries. Laptops required.',
+      location: 'Computer Lab 201', date: new Date(now + 3 * day).toISOString(), time: '2:00 PM - 5:00 PM',
+      category: 'workshop', organizerName: 'Dr. Sarah Chen', organizerRole: 'faculty', organizerAvatar: SAMPLE_AVATARS[1],
       attendeesCount: 28, maxAttendees: 40, isRsvped: false,
     },
     {
-      id: generateId(), title: 'Intramural Basketball Tournament', description: 'Annual basketball tournament. Form teams of 5 and compete for the championship trophy!', location: 'University Gym',
-      date: new Date(now + 864000000).toISOString(), time: '3:00 PM - 8:00 PM', category: 'sports',
-      organizerName: 'Sports Club', organizerRole: 'student', organizerAvatar: SAMPLE_AVATARS[8],
-      attendeesCount: 64, maxAttendees: 80, isRsvped: false,
+      id: generateId(), title: 'Alumni Mixer & Networking', description: 'Connect with successful alumni from various industries. Refreshments provided.',
+      location: 'Student Center Lounge', date: new Date(now + 10 * day).toISOString(), time: '5:00 PM - 8:00 PM',
+      category: 'social', organizerName: 'Robert Chen', organizerRole: 'alumni', organizerAvatar: SAMPLE_AVATARS[9],
+      attendeesCount: 92, maxAttendees: 150, isRsvped: true,
     },
   ];
 }
@@ -349,19 +326,15 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
 }
 
 export async function createUserProfile(data: { name: string; role: UserRole; department: string; bio?: string; graduationYear?: string }): Promise<UserProfile> {
+  const id = generateId();
+  const username = data.name.toLowerCase().replace(/\s+/g, '').slice(0, 12) + Math.floor(Math.random() * 100);
   const profile: UserProfile = {
-    id: 'self',
-    name: data.name,
-    username: data.name.toLowerCase().replace(/\s+/g, ''),
-    email: `${data.name.toLowerCase().replace(/\s+/g, '.')}@university.edu`,
-    role: data.role,
-    department: data.department,
-    bio: data.bio || '',
-    avatarUrl: SAMPLE_AVATARS[0],
-    graduationYear: data.graduationYear,
-    joinedAt: new Date().toISOString(),
-    connectionsCount: 3,
-    postsCount: 0,
+    id, name: data.name, username,
+    email: `${username}@campus.edu`, role: data.role,
+    department: data.department, bio: data.bio || '',
+    avatarUrl: SAMPLE_AVATARS[Math.floor(Math.random() * SAMPLE_AVATARS.length)],
+    graduationYear: data.graduationYear, joinedAt: new Date().toISOString(),
+    connectionsCount: 0, postsCount: 0,
   };
   await saveUserProfile(profile);
   return profile;
@@ -380,21 +353,15 @@ export async function getPostById(id: string): Promise<Post | null> {
   return posts.find(p => p.id === id) || null;
 }
 
-export async function addPost(post: Omit<Post, 'id' | 'createdAt' | 'likesCount' | 'commentsCount' | 'isLiked' | 'isSaved' | 'comments'>): Promise<Post> {
+export async function addPost(data: Omit<Post, 'id' | 'likesCount' | 'commentsCount' | 'isLiked' | 'isSaved' | 'createdAt' | 'comments'>): Promise<Post[]> {
   const posts = await getPosts();
   const newPost: Post = {
-    ...post,
-    id: generateId(),
-    likesCount: 0,
-    commentsCount: 0,
-    isLiked: false,
-    isSaved: false,
-    createdAt: new Date().toISOString(),
-    comments: [],
+    ...data, id: generateId(), likesCount: 0, commentsCount: 0,
+    isLiked: false, isSaved: false, createdAt: new Date().toISOString(), comments: [],
   };
-  posts.unshift(newPost);
-  await AsyncStorage.setItem(KEYS.POSTS, JSON.stringify(posts));
-  return newPost;
+  const updated = [newPost, ...posts];
+  await AsyncStorage.setItem(KEYS.POSTS, JSON.stringify(updated));
+  return updated;
 }
 
 export async function toggleLikePost(postId: string): Promise<Post[]> {
@@ -418,13 +385,13 @@ export async function toggleSavePost(postId: string): Promise<Post[]> {
   return posts;
 }
 
-export async function addComment(postId: string, comment: Omit<Comment, 'id' | 'createdAt'>): Promise<Post[]> {
+export async function addComment(postId: string, data: Omit<Comment, 'id' | 'createdAt'>): Promise<Post[]> {
   const posts = await getPosts();
   const idx = posts.findIndex(p => p.id === postId);
   if (idx !== -1) {
-    const newComment: Comment = { ...comment, id: generateId(), createdAt: new Date().toISOString() };
-    posts[idx].comments.push(newComment);
-    posts[idx].commentsCount++;
+    const comment: Comment = { ...data, id: generateId(), createdAt: new Date().toISOString() };
+    posts[idx].comments.push(comment);
+    posts[idx].commentsCount = posts[idx].comments.length;
   }
   await AsyncStorage.setItem(KEYS.POSTS, JSON.stringify(posts));
   return posts;
@@ -446,9 +413,7 @@ export async function getConnectionById(id: string): Promise<Connection | null> 
 export async function updateConnectionStatus(id: string, status: Connection['status']): Promise<Connection[]> {
   const connections = await getConnections();
   const idx = connections.findIndex(c => c.id === id);
-  if (idx !== -1) {
-    connections[idx].status = status;
-  }
+  if (idx !== -1) connections[idx].status = status;
   await AsyncStorage.setItem(KEYS.CONNECTIONS, JSON.stringify(connections));
   return connections;
 }
@@ -456,36 +421,28 @@ export async function updateConnectionStatus(id: string, status: Connection['sta
 export async function getConversations(): Promise<Conversation[]> {
   const data = await AsyncStorage.getItem(KEYS.CONVERSATIONS);
   if (data) return JSON.parse(data);
-  const conversations = seedConversations();
-  await AsyncStorage.setItem(KEYS.CONVERSATIONS, JSON.stringify(conversations));
-  return conversations;
+  const convs = seedConversations();
+  await AsyncStorage.setItem(KEYS.CONVERSATIONS, JSON.stringify(convs));
+  return convs;
 }
 
 export async function getMessages(conversationId: string): Promise<Message[]> {
-  const data = await AsyncStorage.getItem(KEYS.MESSAGES);
-  const allMessages: Record<string, Message[]> = data ? JSON.parse(data) : seedMessages();
-  if (!data) {
-    await AsyncStorage.setItem(KEYS.MESSAGES, JSON.stringify(allMessages));
-  }
-  return allMessages[conversationId] || [];
+  const key = `${KEYS.MESSAGES}_${conversationId}`;
+  const data = await AsyncStorage.getItem(key);
+  if (data) return JSON.parse(data);
+  const messages = seedMessages(conversationId);
+  await AsyncStorage.setItem(key, JSON.stringify(messages));
+  return messages;
 }
 
 export async function sendMessage(conversationId: string, content: string): Promise<Message> {
-  const data = await AsyncStorage.getItem(KEYS.MESSAGES);
-  const allMessages: Record<string, Message[]> = data ? JSON.parse(data) : seedMessages();
-  const msg: Message = {
-    id: generateId(),
-    conversationId,
-    senderId: 'self',
-    content,
-    createdAt: new Date().toISOString(),
-  };
-  if (!allMessages[conversationId]) allMessages[conversationId] = [];
-  allMessages[conversationId].push(msg);
-  await AsyncStorage.setItem(KEYS.MESSAGES, JSON.stringify(allMessages));
+  const key = `${KEYS.MESSAGES}_${conversationId}`;
+  const messages = await getMessages(conversationId);
+  const msg: Message = { id: generateId(), conversationId, senderId: 'self', content, createdAt: new Date().toISOString() };
+  messages.push(msg);
+  await AsyncStorage.setItem(key, JSON.stringify(messages));
 
-  const convData = await AsyncStorage.getItem(KEYS.CONVERSATIONS);
-  const convs: Conversation[] = convData ? JSON.parse(convData) : seedConversations();
+  const convs = await getConversations();
   const convIdx = convs.findIndex(c => c.id === conversationId);
   if (convIdx !== -1) {
     convs[convIdx].lastMessage = content;

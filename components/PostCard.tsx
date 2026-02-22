@@ -65,115 +65,45 @@ export const PostCard = React.memo(function PostCard({ post, onLike, onPress, on
 
       <Text style={[styles.content, { color: colors.text }]}>{post.content}</Text>
 
-      <View style={[styles.categoryTag, { backgroundColor: cat.color + '15' }]}>
-        <Ionicons name={cat.name} size={13} color={cat.color} />
-        <Text style={[styles.categoryText, { color: cat.color }]}>{post.category}</Text>
-      </View>
-
-      <View style={[styles.actions, { borderTopColor: colors.border }]}>
-        <Pressable onPress={handleLike} style={styles.actionBtn} hitSlop={8}>
-          <Ionicons
-            name={post.isLiked ? 'heart' : 'heart-outline'}
-            size={20}
-            color={post.isLiked ? colors.danger : colors.textTertiary}
-          />
-          <Text style={[styles.actionText, { color: post.isLiked ? colors.danger : colors.textTertiary }]}>
-            {post.likesCount}
-          </Text>
-        </Pressable>
-        <View style={styles.actionBtn}>
-          <Ionicons name="chatbubble-outline" size={18} color={colors.textTertiary} />
-          <Text style={[styles.actionText, { color: colors.textTertiary }]}>{post.commentsCount}</Text>
+      <View style={styles.footer}>
+        <View style={[styles.categoryTag, { backgroundColor: cat.color + '12' }]}>
+          <Ionicons name={cat.name} size={12} color={cat.color} />
+          <Text style={[styles.categoryText, { color: cat.color }]}>{post.category}</Text>
         </View>
-        <Pressable style={styles.actionBtn} hitSlop={8}>
-          <Ionicons name="share-outline" size={18} color={colors.textTertiary} />
-        </Pressable>
+
+        <View style={styles.actions}>
+          <Pressable onPress={handleLike} style={styles.actionBtn} hitSlop={8}>
+            <Ionicons name={post.isLiked ? 'heart' : 'heart-outline'} size={18} color={post.isLiked ? colors.danger : colors.textTertiary} />
+            <Text style={[styles.actionCount, { color: post.isLiked ? colors.danger : colors.textTertiary }]}>{post.likesCount}</Text>
+          </Pressable>
+          <View style={styles.actionBtn}>
+            <Ionicons name="chatbubble-outline" size={16} color={colors.textTertiary} />
+            <Text style={[styles.actionCount, { color: colors.textTertiary }]}>{post.commentsCount}</Text>
+          </View>
+          {post.isSaved && (
+            <Ionicons name="bookmark" size={14} color={colors.warning} style={{ marginLeft: 4 }} />
+          )}
+        </View>
       </View>
     </Pressable>
   );
 });
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    paddingBottom: 0,
-  },
-  headerInfo: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  name: {
-    fontSize: 15,
-    fontWeight: '700',
-    flexShrink: 1,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  username: {
-    fontSize: 13,
-  },
-  dot: {
-    marginHorizontal: 4,
-    fontSize: 13,
-  },
-  time: {
-    fontSize: 13,
-  },
-  content: {
-    fontSize: 15,
-    lineHeight: 22,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
-  categoryTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginLeft: 14,
-    marginBottom: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  categoryText: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    gap: 24,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  actionText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
+  card: { marginHorizontal: 16, marginBottom: 12, borderRadius: 16, borderWidth: 1, padding: 14 },
+  header: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  headerInfo: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  name: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold', flexShrink: 1 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  username: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  dot: { fontSize: 13 },
+  time: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  content: { fontSize: 15, lineHeight: 22, fontFamily: 'Inter_400Regular', marginBottom: 12 },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  categoryTag: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4 },
+  categoryText: { fontSize: 11, fontWeight: '600', textTransform: 'capitalize', fontFamily: 'Inter_600SemiBold' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  actionCount: { fontSize: 13, fontWeight: '500', fontFamily: 'Inter_500Medium' },
 });
