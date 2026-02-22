@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { getEvents, toggleEventRegistration, type Event } from '@/lib/api';
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 
 const CATEGORIES = ['All', 'Academic', 'Career', 'Social', 'Workshop', 'Sports'];
 
@@ -103,6 +104,9 @@ export default function EventsScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
+  // Phase 4 — Role-based permissions
+  const { canCreateEvents } = useFeatureAccess();
+
   const { data: events = [], isLoading } = useQuery({
     queryKey: QUERY_KEYS.events,
     queryFn: getEvents,
@@ -143,7 +147,18 @@ export default function EventsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Events</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.text }]}>Events</Text>
+          {canCreateEvents && (
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); /* TODO: navigate to create event */ }}
+              style={[styles.createEventBtn, { backgroundColor: colors.tint }]}
+              hitSlop={8}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </Pressable>
+          )}
+        </View>
         <View style={styles.statsRow}>
           <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
             <Text style={[styles.statNum, { color: colors.tint }]}>{upcomingCount}</Text>
@@ -207,7 +222,9 @@ export default function EventsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { borderBottomWidth: 1, paddingBottom: 0 },
-  title: { fontSize: 28, fontWeight: '800', paddingHorizontal: 16, marginBottom: 12, fontFamily: 'Inter_800ExtraBold' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12 },
+  title: { fontSize: 28, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
+  createEventBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   statsRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 12 },
   statBox: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   statNum: { fontSize: 22, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },

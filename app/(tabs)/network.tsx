@@ -11,6 +11,7 @@ import { useThemeColors } from '@/constants/colors';
 import ConnectionCard from '@/components/ConnectionCard';
 import { useAuth } from '@/lib/auth-context';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
 import {
   getConnections,
   getConnectionRequests,
@@ -33,6 +34,9 @@ export default function NetworkScreen() {
   const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState('All');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+
+  // Phase 4 — Role-based permissions
+  const { canSendConnectionRequests, canMessage } = useRolePermissions();
 
   const { data: connections = [], isLoading: loadingConnections } = useQuery({
     queryKey: QUERY_KEYS.network,

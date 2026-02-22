@@ -19,6 +19,7 @@ import { useThemeColors } from '@/constants/colors';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import PostCard from '@/components/PostCard';
 import { useFeedSubscription } from '@/lib/hooks/useFeedSubscription';
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import {
   getPosts,
   toggleReaction,
@@ -35,6 +36,9 @@ export default function FeedScreen() {
 
   // Phase 3.2 — Realtime feed subscription
   const { hasNewPosts, dismissNewPosts } = useFeedSubscription();
+
+  // Phase 4 — Role-based permissions
+  const { canCreatePost } = useFeatureAccess();
 
   const { data: posts = [], isLoading, isFetching } = useQuery({
     queryKey: QUERY_KEYS.feed,
@@ -115,13 +119,15 @@ export default function FeedScreen() {
         ]}
       >
         <Text style={[styles.title, { color: colors.text }]}>Feed</Text>
-        <Pressable
-          onPress={() => router.push('/create-post')}
-          style={[styles.composeBtn, { backgroundColor: colors.primary }]}
-          hitSlop={8}
-        >
-          <Ionicons name="create-outline" size={20} color="#fff" />
-        </Pressable>
+        {canCreatePost && (
+          <Pressable
+            onPress={() => router.push('/create-post')}
+            style={[styles.composeBtn, { backgroundColor: colors.primary }]}
+            hitSlop={8}
+          >
+            <Ionicons name="create-outline" size={20} color="#fff" />
+          </Pressable>
+        )}
       </View>
 
       {/* Phase 3.2 — "New posts" banner */}
