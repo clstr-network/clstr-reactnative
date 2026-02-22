@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuth } from '@/lib/auth-context';
@@ -23,7 +23,8 @@ export default function Index() {
     return <Redirect href="/(auth)/onboarding" />;
   }
 
-  return <Redirect href="/(main)/(tabs)" />;
+  // Phase 5 — Route to (tabs) which uses live Supabase screens (not legacy (main)/(tabs))
+  return <Redirect href="/(tabs)" />;
 }
 
 const styles = StyleSheet.create({

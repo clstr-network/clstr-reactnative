@@ -90,6 +90,19 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.headerBg, { backgroundColor: badgeColor + '15', paddingTop: insets.top + webTopInset }]}>
+        {/* Phase 5 — Header actions: settings + notifications */}
+        <View style={styles.headerBar}>
+          <View style={{ width: 38 }} />
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+          <View style={styles.headerActions}>
+            <Pressable onPress={() => router.push('/settings')} style={styles.headerIconBtn} hitSlop={8}>
+              <Ionicons name="settings-outline" size={22} color={colors.text} />
+            </Pressable>
+            <Pressable onPress={() => router.push('/notifications')} style={styles.headerIconBtn} hitSlop={8}>
+              <Ionicons name="notifications-outline" size={22} color={colors.text} />
+            </Pressable>
+          </View>
+        </View>
         <View style={styles.profileSection}>
           <Avatar uri={profile.avatar_url} name={profile.full_name ?? 'User'} size={80} showBorder />
           <Text style={[styles.name, { color: colors.text }]}>{profile.full_name ?? 'User'}</Text>
@@ -157,7 +170,18 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerBg: { paddingBottom: 24 },
-  profileSection: { alignItems: 'center', paddingTop: 24, gap: 6 },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  headerTitle: { fontSize: 18, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  headerIconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  profileSection: { alignItems: 'center', paddingTop: 12, gap: 6 },
   name: { fontSize: 24, fontWeight: '800', marginTop: 8, fontFamily: 'Inter_800ExtraBold' },
   username: { fontSize: 15, fontFamily: 'Inter_400Regular' },
   bio: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40, marginTop: 4, lineHeight: 20, fontFamily: 'Inter_400Regular' },

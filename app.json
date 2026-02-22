@@ -15,7 +15,11 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.clstr.app"
+      "bundleIdentifier": "com.clstr.app",
+      "associatedDomains": [
+        "applinks:clstr.network",
+        "applinks:www.clstr.network"
+      ]
     },
     "android": {
       "package": "com.clstr.app",
@@ -24,7 +28,41 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      }
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "clstr.network",
+              "pathPrefix": "/post/"
+            },
+            {
+              "scheme": "https",
+              "host": "clstr.network",
+              "pathPrefix": "/profile/"
+            },
+            {
+              "scheme": "https",
+              "host": "clstr.network",
+              "pathPrefix": "/events/"
+            },
+            {
+              "scheme": "https",
+              "host": "clstr.network",
+              "pathPrefix": "/messaging"
+            },
+            {
+              "scheme": "https",
+              "host": "clstr.network",
+              "pathPrefix": "/auth/callback"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -33,7 +71,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://clstr.network"
         }
       ],
       "expo-font",

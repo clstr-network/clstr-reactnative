@@ -119,15 +119,31 @@ export default function FeedScreen() {
         ]}
       >
         <Text style={[styles.title, { color: colors.text }]}>Feed</Text>
-        {canCreatePost && (
+        <View style={styles.headerActions}>
           <Pressable
-            onPress={() => router.push('/create-post')}
-            style={[styles.composeBtn, { backgroundColor: colors.primary }]}
+            onPress={() => router.push('/(tabs)/events')}
+            style={styles.headerIconBtn}
             hitSlop={8}
           >
-            <Ionicons name="create-outline" size={20} color="#fff" />
+            <Ionicons name="calendar-outline" size={22} color={colors.text} />
           </Pressable>
-        )}
+          <Pressable
+            onPress={() => router.push('/notifications')}
+            style={styles.headerIconBtn}
+            hitSlop={8}
+          >
+            <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          </Pressable>
+          {canCreatePost && (
+            <Pressable
+              onPress={() => router.push('/create-post')}
+              style={[styles.composeBtn, { backgroundColor: colors.primary }]}
+              hitSlop={8}
+            >
+              <Ionicons name="create-outline" size={20} color="#fff" />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {/* Phase 3.2 — "New posts" banner */}
@@ -188,6 +204,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 28,

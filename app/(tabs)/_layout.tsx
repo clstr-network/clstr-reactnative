@@ -1,16 +1,63 @@
-// template
+/**
+ * Tab Layout — Phase 5.1 restructured.
+ *
+ * Visible tabs: Home · Network · Create(+) · Messages · Profile
+ * Hidden tabs (accessible via navigation): Events, Notifications, More
+ *
+ * Notifications are accessed via header bell icon on each tab.
+ * Events are accessed via navigation from Feed or other screens.
+ * Create tab intercepts press to open create-post modal.
+ */
 import { isLiquidGlassAvailable } from "expo-glass-effect";
-import { Tabs } from "expo-router";
+import { Tabs, router } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { SymbolView } from "expo-symbols";
-import { Platform, StyleSheet, useColorScheme } from "react-native";
+import { Platform, StyleSheet, useColorScheme, View, Pressable, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 
-import Colors from "@/constants/colors";
+import { useThemeColors } from "@/constants/colors";
 import { useNotificationSubscription } from "@/lib/hooks/useNotificationSubscription";
 
-//IMPORTANT: iOS 26 Exists, feel free to use NativeTabs for native tabs with liquid glass support.
+// -----------------------------------------------------------------------
+// Shared notification bell header button (wired into each visible tab)
+// -----------------------------------------------------------------------
+function NotificationBell({ tint, unreadCount }: { tint: string; unreadCount: number }) {
+  return (
+    <Pressable
+      onPress={() => router.push("/notifications")}
+      style={styles.headerBell}
+      hitSlop={8}
+    >
+      <Ionicons name="notifications-outline" size={22} color={tint} />
+      {unreadCount > 0 && (
+        <View style={[styles.bellBadge, { backgroundColor: "#EF4444" }]}>
+          <Text style={styles.bellBadgeText}>
+            {unreadCount > 99 ? "99+" : String(unreadCount)}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+// -----------------------------------------------------------------------
+// Custom Create (+) tab bar button
+// -----------------------------------------------------------------------
+function CreateTabButton({ color }: { color: string }) {
+  return (
+    <View style={styles.createIconContainer}>
+      <View style={[styles.createIconCircle, { backgroundColor: color }]}>
+        <Ionicons name="add" size={26} color="#fff" />
+      </View>
+    </View>
+  );
+}
+
+// -----------------------------------------------------------------------
+// iOS 26+ native tab layout with liquid glass
+// -----------------------------------------------------------------------
 function NativeTabLayout() {
   return (
     <NativeTabs>
@@ -18,26 +65,46 @@ function NativeTabLayout() {
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="network">
+        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
+        <Label>Network</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="create">
+        <Icon sf={{ default: "plus.circle.fill", selected: "plus.circle.fill" }} />
+        <Label>Create</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="messages">
+        <Icon sf={{ default: "message", selected: "message.fill" }} />
+        <Label>Messages</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <Icon sf={{ default: "person.circle", selected: "person.circle.fill" }} />
+        <Label>Profile</Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
 
+// -----------------------------------------------------------------------
+// Classic cross-platform tab layout
+// -----------------------------------------------------------------------
 function ClassicTabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const colors = useThemeColors();
   const { unreadCount } = useNotificationSubscription();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.tint,
-        tabBarInactiveTintColor: Colors.light.tabIconDefault,
-        headerShown: true,
+        tabBarActiveTintColor: colors.tint,
+        tabBarInactiveTintColor: colors.tabIconDefault,
+        headerShown: false,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: Platform.select({
             ios: "transparent",
-            android: isDark ? "#000" : "#fff",
+            android: isDark ? "#0F172A" : "#F8FAFC",
           }),
           borderTopWidth: 0,
           elevation: 0,
@@ -50,34 +117,155 @@ function ClassicTabLayout() {
               style={StyleSheet.absoluteFill}
             />
           ) : null,
+        tabBarLabelStyle: {
+          fontFamily: "Inter_500Medium",
+          fontSize: 10,
+        },
       }}
     >
+      {/* ── Visible tabs ── */}
       <Tabs.Screen
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <SymbolView name="house" tintColor={color} size={24} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={22}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
-        name="notifications"
+        name="network"
         options={{
-          title: "Notifications",
-          tabBarIcon: ({ color }) => (
-            <SymbolView name="bell" tintColor={color} size={24} />
+          title: "Network",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "people" : "people-outline"}
+              size={22}
+              color={color}
+            />
           ),
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
+      />
+      <Tabs.Screen
+        name="create"
+        options={{
+          title: "",
+          tabBarIcon: ({ color }) => <CreateTabButton color={colors.tint} />,
+          tabBarLabel: () => null,
+          headerShown: false,
+        }}
+        listeners={{
+          tabPress: (e) => {
+            // Prevent navigating to the stub screen
+            e.preventDefault();
+            // Open create-post modal
+            router.push("/create-post");
+          },
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: "Messages",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "chatbubbles" : "chatbubbles-outline"}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "person-circle" : "person-circle-outline"}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* ── Hidden tabs (accessible via navigation, not shown in tab bar) ── */}
+      <Tabs.Screen
+        name="events"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{ href: null }}
       />
     </Tabs>
   );
 }
 
+// -----------------------------------------------------------------------
+// Export
+// -----------------------------------------------------------------------
 export default function TabLayout() {
   if (isLiquidGlassAvailable()) {
     return <NativeTabLayout />;
   }
   return <ClassicTabLayout />;
 }
+
+const styles = StyleSheet.create({
+  headerBell: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 4,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  bellBadge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  createIconContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -8,
+  },
+  createIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+});
+
