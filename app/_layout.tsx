@@ -21,6 +21,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { queryClient } from '@/lib/query-client';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { IdentityProvider, useIdentityContext } from '@/lib/contexts/IdentityProvider';
+import { useAppStateRealtimeLifecycle } from '@/lib/app-state';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -64,6 +65,9 @@ function useProtectedRoute() {
 
 function RootLayoutNav() {
   useProtectedRoute();
+
+  // Phase 3.5 — AppState lifecycle: session refresh + realtime reconnect on foreground
+  useAppStateRealtimeLifecycle();
 
   return (
     <Stack screenOptions={{ headerShown: false, headerBackTitle: 'Back' }}>

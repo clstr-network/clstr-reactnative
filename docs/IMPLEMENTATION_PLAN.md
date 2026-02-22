@@ -97,7 +97,7 @@
 | 20 | Post report/hide | ❌ Missing | Low | |
 | 21 | Repost | ❌ Missing | Medium | |
 | 22 | College-domain feed isolation | ❌ Missing | Critical | |
-| 23 | Feed realtime updates | ❌ Missing | High | |
+| 23 | Feed realtime updates | ✅ Done | High | `useFeedSubscription()` — "New posts" banner, Phase 3.2 |
 | **Profile** |
 | 24 | Own profile view | ✅ Done | Critical | `getProfileById(user.id)` from `lib/api/profile.ts`, `QUERY_KEYS.profile` |
 | 25 | Other user profile | ✅ Done | High | `getProfileById()` + `checkConnectionStatus()` + `countMutualConnections()` |
@@ -124,7 +124,7 @@
 | 44 | Send message | ✅ Done | Critical | `sendMessage()` via `useMutation` |
 | 45 | Mark messages read | ✅ Done | High | `markMessagesAsRead(partnerId)` called on chat open |
 | 46 | Messaging eligibility check | ❌ Missing | Critical | Web has connection gate |
-| 47 | Message realtime subscription | ❌ Missing | Critical | |
+| 47 | Message realtime subscription | ✅ Done | Critical | `useMessageSubscription()` — invalidates conversations/chat, Phase 3.1 |
 | 48 | Last seen / online status | ❌ Missing | Medium | |
 | 49 | New conversation from connections | ❌ Missing | High | |
 | **Events** |
@@ -137,7 +137,7 @@
 | **Notifications** |
 | 56 | Notifications list | ✅ Done | High | `getNotifications()` from `lib/api/notifications.ts`, `QUERY_KEYS.notifications` |
 | 57 | Mark read | ✅ Done | High | `markNotificationRead()` + `markAllNotificationsRead()` via `useMutation` |
-| 58 | Notification realtime | ❌ Missing | High | |
+| 58 | Notification realtime | ✅ Done | High | `useNotificationSubscription()` — badge count on tab bar, Phase 3.3 |
 | 59 | Push notifications | ❌ Missing | High | Web has `usePushNotifications` |
 | **Search** |
 | 60 | Typeahead search | ❌ Missing | High | Web has `useTypeaheadSearch` |
@@ -161,16 +161,16 @@
 | 75 | Deep linking (`post/:id`, `profile/:id`, etc.) | 🟡 Partial | Critical | Routes exist, scheme configured in `app.json` |
 | 76 | Auth callback deep link | ✅ Done | Critical | `app/auth/callback.tsx` + `+native-intent.tsx` |
 | 77 | Cold start deep link queue | 🟡 Partial | High | `+native-intent.tsx` routes `auth/callback`, others still `/` |
-| 78 | Background → foreground resume | 🟡 Partial | High | `useAppStateLifecycle` exists |
+| 78 | Background → foreground resume | ✅ Done | High | `useAppStateRealtimeLifecycle` — session refresh, cache invalidation, realtime reconnect, Phase 3.5 |
 | **Performance** |
 | 79 | React.memo on heavy components | 🟡 Partial | High | EventCard has it, others don't |
 | 80 | Stable query keys from `@clstr/core` | ✅ Done | Critical | `lib/query-keys.ts` re-exports `QUERY_KEYS` from `@clstr/core` |
-| 81 | Subscription cleanup on unmount | 🟡 Partial | High | No realtime subscriptions to clean |
+| 81 | Subscription cleanup on unmount | ✅ Done | High | SubscriptionManager + useRealtimeSubscription auto-cleanup, Phase 3.6 |
 
 **Summary:**
-- ❌ Missing: **25 features**
-- 🟡 Partial: **6 features** (UI shell exists, partial integration)
-- ✅ Complete: **30 features** (Phase 0, 1, & 2 with live Supabase integration)
+- ❌ Missing: **21 features**
+- 🟡 Partial: **4 features** (UI shell exists, partial integration)
+- ✅ Complete: **36 features** (Phase 0, 1, 2 & 3 with live Supabase integration + realtime)
 
 ---
 
@@ -197,8 +197,8 @@
 ### 3.3 Lifecycle Risks
 | Risk | Severity | Description |
 |------|----------|-------------|
-| No realtime cleanup | 🟡 Medium | Identity realtime subscription in `useIdentity.ts` properly cleans up. Feed/messaging channels still needed (Phase 3). |
-| No AppState handling for auth | 🟡 High | Token refresh on foreground resume not yet implemented. Auth state changes trigger identity invalidation. (Phase 3.5) |
+| No realtime cleanup | ✅ Resolved | Phase 3.6 — `SubscriptionManager` centrally tracks all channels; `useRealtimeSubscription` hook auto-cleans on unmount. |
+| No AppState handling for auth | ✅ Resolved | Phase 3.5 — `useAppStateRealtimeLifecycle` refreshes session, invalidates stale queries, and reconnects all realtime channels on foreground resume. |
 | No deep link queue | 🟡 High | `+native-intent.tsx` now routes `auth/callback` correctly. Other deep links still return `/`. (Phase 5.4) |
 | No SecureStore session recovery | ✅ Resolved | ~~`lib/supabase.ts` configured SecureStore but unused.~~ `lib/adapters/core-client.ts` uses SecureStore, session auto-restored by Supabase client. |
 
@@ -393,61 +393,66 @@ Rewrite `(tabs)/notifications.tsx`:
 
 ---
 
-### Phase 3: Realtime & Lifecycle (Week 5) — HIGH
+### Phase 3: Realtime & Lifecycle (Week 5) — ✅ DONE
 
-#### 3.1 — Realtime Message Subscription
-```ts
-supabase.channel(CHANNELS.social.messagesUser(userId))
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' })
-  .subscribe()
-```
-- Invalidate `QUERY_KEYS.conversations` and `QUERY_KEYS.chat(partnerId)` on new message
-- Clean up channel on unmount
+#### 3.1 — Realtime Message Subscription ✅
+Created `lib/hooks/useMessageSubscription.ts`:
+- Subscribes to `CHANNELS.social.messagesReceiver(userId)` for INSERT on `messages` table
+- Invalidates `QUERY_KEYS.conversations`, `QUERY_KEYS.unreadMessages`, and `QUERY_KEYS.chat(activePartnerId)`
+- Auto-marks messages as read when `activePartnerId` is provided
+- Wired into `app/(tabs)/messages.tsx` (conversation list) and `app/chat/[id].tsx` (active chat)
 
-#### 3.2 — Realtime Feed Subscription
-```ts
-supabase.channel(CHANNELS.feed.homeFeedUser(userId))
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' })
-  .subscribe()
-```
-- Show "New posts" banner when new posts arrive
-- Invalidate feed query on tap
+#### 3.2 — Realtime Feed Subscription ✅
+Created `lib/hooks/useFeedSubscription.ts`:
+- Subscribes to `CHANNELS.feed.homeFeedUser(userId)` watching `posts` (INSERT), `post_likes` (*), `comments` (INSERT)
+- Returns `{ hasNewPosts, dismissNewPosts, reconnect }`
+- Own posts refresh silently; other users' posts trigger "New posts available" banner
+- Wired into `app/(tabs)/index.tsx` with animated banner above FlatList
 
-#### 3.3 — Realtime Notifications
-```ts
-supabase.channel(CHANNELS.social.notificationsRealtime(userId))
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' })
-  .subscribe()
-```
-- Update badge count on tab bar
-- Invalidate notifications query
+#### 3.3 — Realtime Notifications ✅
+Created `lib/hooks/useNotificationSubscription.ts`:
+- Subscribes to `CHANNELS.social.notificationsRealtime(userId)` for INSERT on `notifications` table
+- Returns `{ unreadCount, resetUnreadCount, reconnect }`
+- Wired into `app/(tabs)/notifications.tsx` (resets on view) and `app/(tabs)/_layout.tsx` (tab bar badge)
 
-#### 3.4 — Realtime Identity
-Port the identity realtime subscription from `useIdentity.ts`:
-- Watch `profiles` table for changes to current user's row
-- Invalidate identity cache when role/email/domain changes
+#### 3.4 — Realtime Identity ✅ (Pre-existing)
+- Already implemented in `lib/hooks/useIdentity.ts` from Phase 1
+- Watches `profiles` table for changes to current user's row
+- Invalidates identity cache when role/email/domain changes
 
-#### 3.5 — AppState Lifecycle
-Enhance `useAppStateLifecycle`:
-```ts
-onForeground:
-  ← supabase.auth.refreshSession()
-  ← invalidateQueries(QUERY_KEYS.conversations)
-  ← invalidateQueries(QUERY_KEYS.notifications)
-  ← reconnect realtime channels
+#### 3.5 — AppState Lifecycle ✅
+Enhanced `lib/app-state.ts` with `useAppStateRealtimeLifecycle()`:
+- On foreground: validates session, proactive token refresh if <5min to expiry
+- Invalidates `QUERY_KEYS.conversations`, `QUERY_KEYS.notifications`, `QUERY_KEYS.unreadMessages`
+- Calls `subscriptionManager.reconnectAll()` to recreate all channels
+- Debounced at 2000ms to prevent rapid bg→fg cascades
+- Wired into `app/_layout.tsx` (`RootLayoutNav` component)
 
-onBackground:
-  ← pause non-essential subscriptions
-```
+#### 3.6 — Subscription Manager ✅
+Created `lib/realtime/subscription-manager.ts`:
+- `SubscriptionManager` class with `subscribe()`, `unsubscribe()`, `reconnectAll()`, `unsubscribeAll()`
+- Factory-based reconnection: stores channel factory functions for reliable recreation
+- Prevents duplicate subscriptions via name-based registry
+- Singleton `subscriptionManager` export
+- Base hook `lib/hooks/useRealtimeSubscription.ts` integrates with manager automatically
 
-#### 3.6 — Subscription Manager
-Create `lib/realtime/subscription-manager.ts`:
-- Central registry of active channels
-- Auto-cleanup on unmount
-- Reconnect on foreground
-- Prevent duplicate subscriptions
+**Files Created:**
+- `lib/realtime/subscription-manager.ts` — Central channel registry
+- `lib/hooks/useRealtimeSubscription.ts` — Base hook + multi-table variant
+- `lib/hooks/useMessageSubscription.ts` — Message realtime
+- `lib/hooks/useFeedSubscription.ts` — Feed realtime with new-posts banner
+- `lib/hooks/useNotificationSubscription.ts` — Notification realtime with badge count
 
-**Deliverable:** Live updates across all screens. No stale data after background/foreground cycle.
+**Files Modified:**
+- `lib/app-state.ts` — Added `useAppStateRealtimeLifecycle()` hook
+- `app/(tabs)/index.tsx` — Wired `useFeedSubscription`, added "New posts" banner
+- `app/(tabs)/messages.tsx` — Wired `useMessageSubscription`
+- `app/chat/[id].tsx` — Wired `useMessageSubscription({ activePartnerId })`
+- `app/(tabs)/notifications.tsx` — Wired `useNotificationSubscription`, reset on view
+- `app/_layout.tsx` — Wired `useAppStateRealtimeLifecycle` in `RootLayoutNav`
+- `app/(tabs)/_layout.tsx` — Added notification badge count to tab bar
+
+**Deliverable:** ✅ Live updates across all screens. No stale data after background/foreground cycle.
 
 ---
 
@@ -666,8 +671,8 @@ Priority order:
 | Auth flow → real Supabase auth | 🔴 Critical | 1 | Medium | ✅ Done |
 | Migrate query keys to `QUERY_KEYS` | 🔴 Critical | 0 | Small | ✅ Done |
 | Delete duplicate type definitions | 🔴 Critical | 0 | Small | ✅ Done (deprecated) |
-| Implement feed screen | 🔴 Critical | 2 | Medium | ❌ Next |
-| Add realtime message subscription | 🟠 High | 3 | Medium | ❌ |
+| Implement feed screen | 🔴 Critical | 2 | Medium | ✅ Done |
+| Add realtime message subscription | 🟠 High | 3 | Medium | ✅ Done |
 | Port `useFeatureAccess` | 🟠 High | 4 | Medium | ❌ |
 | Deep link configuration | 🟠 High | 5 | Medium | 🟡 Partial (auth callback done) |
 | Onboarding parity (multi-step) | 🟠 High | 1 | Large | ✅ Done |
@@ -700,13 +705,14 @@ lib/
     useIdentity.ts          ✅ CREATED — Identity resolution via RPC
     useFeatureAccess.ts     ← Phase 4
     useRolePermissions.ts   ← Phase 4
-    useRealtimeSubscription.ts ← Phase 3
-    useMessageSubscription.ts  ← Phase 3
-    useFeedSubscription.ts     ← Phase 3
+    useRealtimeSubscription.ts ✅ CREATED — Base realtime hook + multi-table variant (Phase 3)
+    useMessageSubscription.ts  ✅ CREATED — Message realtime subscription (Phase 3.1)
+    useFeedSubscription.ts     ✅ CREATED — Feed realtime with new-posts banner (Phase 3.2)
+    useNotificationSubscription.ts ✅ CREATED — Notification realtime with badge count (Phase 3.3)
   contexts/
     IdentityProvider.tsx    ✅ CREATED — Identity context wrapper
   realtime/
-    subscription-manager.ts ← Phase 3
+    subscription-manager.ts ✅ CREATED — Central channel registry (Phase 3.6)
 
 app/
   auth/
@@ -740,18 +746,18 @@ lib/auth-context.tsx        ✅ REWRITTEN — Real Supabase auth + completeOnboa
 lib/query-client.ts         ✅ REWRITTEN — Clean QueryClient (removed mock API fetch pattern)
 constants/colors.ts         ✅ ENHANCED — Added colors export, inputBackground, inputBorder
 
-app/(tabs)/_layout.tsx      ← Phase 5 — Final 5-tab structure
-app/(tabs)/index.tsx        ← Phase 2 — Real feed screen
-app/(tabs)/messages.tsx     ← Phase 2 — Live Supabase conversations
-app/(tabs)/network.tsx      ← Phase 2 — Live Supabase connections
-app/(tabs)/events.tsx       ← Phase 2 — Live Supabase events
-app/(tabs)/profile.tsx      ← Phase 2 — Live Supabase profile
-app/(tabs)/notifications.tsx ← Phase 2 — Live Supabase notifications
+app/(tabs)/_layout.tsx      ✅ MODIFIED (Phase 3) — Notification badge count wired
+app/(tabs)/index.tsx        ✅ REWRITTEN (Phase 2) + MODIFIED (Phase 3) — Feed + realtime new-posts banner
+app/(tabs)/messages.tsx     ✅ REWRITTEN (Phase 2) + MODIFIED (Phase 3) — Conversations + message subscription
+app/(tabs)/network.tsx      ✅ REWRITTEN (Phase 2) — Live Supabase connections
+app/(tabs)/events.tsx       ✅ REWRITTEN (Phase 2) — Live Supabase events
+app/(tabs)/profile.tsx      ✅ REWRITTEN (Phase 2) — Live Supabase profile
+app/(tabs)/notifications.tsx ✅ REWRITTEN (Phase 2) + MODIFIED (Phase 3) — Notifications + realtime badge reset
 app/(auth)/signup.tsx       ← Phase 2 — Already uses real Supabase (no rewrite needed, just colors fix)
-app/chat/[id].tsx           ← Phase 2 — Live Supabase chat
-app/post/[id].tsx           ← Phase 2 — Live Supabase post detail
-app/event/[id].tsx          ← Phase 2 — Live Supabase event detail
-app/user/[id].tsx           ← Phase 2 — Live Supabase user profile
+app/chat/[id].tsx           ✅ REWRITTEN (Phase 2) + MODIFIED (Phase 3) — Chat + active partner subscription
+app/post/[id].tsx           ✅ REWRITTEN (Phase 2) — Live Supabase post detail
+app/event/[id].tsx          ✅ REWRITTEN (Phase 2) — Live Supabase event detail
+app/user/[id].tsx           ✅ REWRITTEN (Phase 2) — Live Supabase user profile
 ```
 
 ---
@@ -762,8 +768,8 @@ app/user/[id].tsx           ← Phase 2 — Live Supabase user profile
 |------|-------|-------------|--------|
 | 1 | **Phase 0: Foundation** | Shared core wired, mock layer deprecated, API adapters built | ✅ Done |
 | 2 | **Phase 1: Auth** | Login, signup, onboarding, session persistence, identity resolution | ✅ Done |
-| 3–4 | **Phase 2: Core Screens** | Feed, Messages, Network, Events, Profile, Notifications — all live | ❌ Next |
-| 5 | **Phase 3: Realtime** | Live message delivery, feed updates, notification badges | ❌ |
+| 3–4 | **Phase 2: Core Screens** | Feed, Messages, Network, Events, Profile, Notifications — all live | ✅ Done |
+| 5 | **Phase 3: Realtime** | Live message delivery, feed updates, notification badges | ✅ Done |
 | 5–6 | **Phase 4: Roles** | Feature access matches web per role | ❌ |
 | 6 | **Phase 5: Navigation** | Deep links, tab restructure, cold start handling | ❌ |
 | 7 | **Phase 6: UI Polish** | Design token alignment, component polish, theme support | ❌ |
@@ -775,12 +781,12 @@ app/user/[id].tsx           ← Phase 2 — Live Supabase user profile
 
 ## 11. CURRENT STATE ASSESSMENT (Updated after Phase 0 & 1)
 
-**The mobile app now has a real authentication foundation connected to Supabase.** Phase 0 wired `@clstr/core` into mobile via adapter layers, and Phase 1 delivered full auth parity — login, signup, password reset, magic link, email verification, 4-step onboarding, session persistence, and identity resolution all work against real Supabase. The legacy mock layer is deprecated but retained for backward compatibility while screens are migrated.
+**The mobile app now has real authentication, live data, and realtime updates.** Phases 0–3 have delivered a fully functional mobile experience: `@clstr/core` wired via adapters, full auth parity, all core screens displaying live Supabase data, and realtime subscriptions for messages, feed, and notifications. The app stays in sync across background/foreground cycles.
 
-**What's working (Phase 0 + 1 deliverables):**
+**What's working (Phase 0 + 1 + 2 + 3 deliverables):**
 - ✅ `@clstr/core` Supabase client factory wired via `lib/adapters/core-client.ts`
 - ✅ `withClient()` adapter pre-binds all API functions — same pattern as web
-- ✅ 8 API adapter modules (`social`, `messages`, `events`, `profile`, `account`, `search`, `permissions`, `index`)
+- ✅ 9 API adapter modules (`social`, `messages`, `events`, `profile`, `account`, `search`, `permissions`, `notifications`, `index`)
 - ✅ `QUERY_KEYS` and `CHANNELS` re-exported from `@clstr/core`
 - ✅ Full auth flow: signIn, signUp, signOut, signInWithOtp, completeOnboarding
 - ✅ `useIdentity` hook resolves identity via `get_identity_context()` RPC with caching
@@ -790,20 +796,28 @@ app/user/[id].tsx           ← Phase 2 — Live Supabase user profile
 - ✅ Forgot password, verify email, magic link sent screens
 - ✅ Deep link auth callback (`clstr://auth/callback`) handles hash fragments & PKCE
 - ✅ Color system enhanced with `inputBackground`, `inputBorder`, and named `colors` export
+- ✅ All core screens (Feed, Messages, Chat, Network, Events, Profile, Notifications) display live Supabase data
+- ✅ Realtime message subscription — invalidates conversations/chat on new message
+- ✅ Realtime feed subscription — "New posts" banner instead of auto-refresh
+- ✅ Realtime notification subscription — badge count on tab bar
+- ✅ `SubscriptionManager` singleton — central registry, factory reconnect, dedup
+- ✅ `useAppStateRealtimeLifecycle` — session refresh + cache invalidation + realtime reconnect on foreground
 
-**What still needs work (Phase 2+):**
-- ❌ All tab screens still use mock data (feed, messages, network, events, profile, notifications)
-- ❌ No realtime subscriptions (messages, feed updates, notifications)
+**What still needs work (Phase 4+):**
 - ❌ No RBAC enforcement (`useFeatureAccess`, `useRolePermissions`)
 - ❌ Deep linking beyond auth callback not yet configured
 - ❌ Push notifications not implemented
 - ❌ Advanced features (jobs, mentorship, clubs, marketplace) not started
+- ❌ React.memo not applied to all list item components
+- ❌ Search, saved items, settings enhancements not started
 
 **Architecture quality:**
 - Expo Router v6 navigation structure is solid
 - Component architecture (Avatar, Badge, etc.) is clean and reusable
-- `useAppStateLifecycle` hook is useful
+- `useAppStateRealtimeLifecycle` handles bg→fg token refresh and realtime reconnection
+- `SubscriptionManager` prevents duplicate subscriptions and supports factory-based reconnect
 - Color system now aligns with web patterns
 - API adapter layer mirrors web's `src/adapters/bind.ts` pattern exactly
+- Realtime hooks follow consistent patterns: base hook + domain-specific hooks + screen wiring
 
-**Estimated remaining effort to production parity:** 8–12 weeks for a single developer, 4–6 weeks for a team of 2–3. Phase 0 & 1 removed the hardest integration work — the remaining phases are primarily screen-by-screen migration using the established adapter pattern.
+**Estimated remaining effort to production parity:** 6–10 weeks for a single developer, 3–5 weeks for a team of 2–3. Phases 0–3 removed the hardest integration work — the remaining phases are role enforcement, navigation polish, performance tuning, and additional features.

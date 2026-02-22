@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { useNotificationSubscription } from '@/lib/hooks/useNotificationSubscription';
 import { getNotifications, markNotificationRead, markAllNotificationsRead, type Notification } from '@/lib/api/notifications';
 import { NotificationItem } from '@/components/NotificationItem';
 
@@ -13,6 +14,14 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const queryClient = useQueryClient();
+
+  // Phase 3.3 — Realtime notification subscription
+  const { resetUnreadCount } = useNotificationSubscription();
+
+  // Reset badge when user views notifications screen
+  useEffect(() => {
+    resetUnreadCount();
+  }, [resetUnreadCount]);
 
   const { data: notifications = [], isLoading, refetch, isRefetching } = useQuery<Notification[]>({
     queryKey: QUERY_KEYS.notifications,

@@ -12,6 +12,7 @@ import { useThemeColors } from '@/constants/colors';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { useMessageSubscription } from '@/lib/hooks/useMessageSubscription';
 import {
   getMessages,
   sendMessage,
@@ -28,6 +29,9 @@ export default function ChatScreen() {
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = useState('');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+
+  // Phase 3.1 — Realtime message subscription (active partner level)
+  useMessageSubscription({ activePartnerId: partnerId });
 
   const { data } = useQuery({
     queryKey: QUERY_KEYS.chat(partnerId!),

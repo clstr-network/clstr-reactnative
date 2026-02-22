@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import PostCard from '@/components/PostCard';
+import { useFeedSubscription } from '@/lib/hooks/useFeedSubscription';
 import {
   getPosts,
   toggleReaction,
@@ -31,6 +32,9 @@ export default function FeedScreen() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+
+  // Phase 3.2 — Realtime feed subscription
+  const { hasNewPosts, dismissNewPosts } = useFeedSubscription();
 
   const { data: posts = [], isLoading, isFetching } = useQuery({
     queryKey: QUERY_KEYS.feed,
@@ -120,6 +124,20 @@ export default function FeedScreen() {
         </Pressable>
       </View>
 
+      {/* Phase 3.2 — "New posts" banner */}
+      {hasNewPosts && (
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            dismissNewPosts();
+          }}
+          style={[styles.newPostsBanner, { backgroundColor: colors.tint }]}
+        >
+          <Ionicons name="arrow-up" size={16} color="#fff" />
+          <Text style={styles.newPostsText}>New posts available</Text>
+        </Pressable>
+      )}
+
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.tint} />
@@ -176,6 +194,22 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  newPostsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 20,
+  },
+  newPostsText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
   listContent: { paddingTop: 8, paddingBottom: 100 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },

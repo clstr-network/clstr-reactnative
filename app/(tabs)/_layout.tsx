@@ -8,6 +8,7 @@ import { Platform, StyleSheet, useColorScheme } from "react-native";
 import React from "react";
 
 import Colors from "@/constants/colors";
+import { useNotificationSubscription } from "@/lib/hooks/useNotificationSubscription";
 
 //IMPORTANT: iOS 26 Exists, feel free to use NativeTabs for native tabs with liquid glass support.
 function NativeTabLayout() {
@@ -24,6 +25,7 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { unreadCount } = useNotificationSubscription();
 
   return (
     <Tabs
@@ -57,6 +59,16 @@ function ClassicTabLayout() {
           tabBarIcon: ({ color }) => (
             <SymbolView name="house" tintColor={color} size={24} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Notifications",
+          tabBarIcon: ({ color }) => (
+            <SymbolView name="bell" tintColor={color} size={24} />
+          ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
     </Tabs>

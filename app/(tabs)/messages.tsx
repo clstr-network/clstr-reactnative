@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import { useThemeColors } from '@/constants/colors';
 import ConversationItem from '@/components/ConversationItem';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { useMessageSubscription } from '@/lib/hooks/useMessageSubscription';
 import { getConversations, type Conversation } from '@/lib/api';
 
 export default function MessagesScreen() {
@@ -16,6 +17,9 @@ export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+
+  // Phase 3.1 — Realtime message subscription (conversation list level)
+  useMessageSubscription();
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: QUERY_KEYS.conversations,
