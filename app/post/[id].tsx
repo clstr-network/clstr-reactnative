@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, Pressable, useColorScheme, Platform
 } from 'react-native';
@@ -33,22 +33,26 @@ export default function PostDetailScreen() {
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   const { data: post } = useQuery({
-    queryKey: ['post', id],
+    queryKey: QUERY_KEYS.post ? QUERY_KEYS.post(id!) : ['post', id],
     queryFn: () => getPostById(id!),
     enabled: !!id,
+    staleTime: 30_000,       // 30s
+    gcTime: 5 * 60 * 1000,   // 5min
   });
 
   const { data: comments = [] } = useQuery({
-    queryKey: ['comments', id],
+    queryKey: QUERY_KEYS.comments ? QUERY_KEYS.comments(id!) : ['comments', id],
     queryFn: () => getComments(id!),
     enabled: !!id,
+    staleTime: 15_000,       // 15s — comments update moderately
+    gcTime: 5 * 60 * 1000,
   });
 
   const reactionMutation = useMutation({
     mutationFn: ({ postId, type }: { postId: string; type: ReactionType }) =>
       toggleReaction(postId, type),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post ? QUERY_KEYS.post(id!) : ['post', id] });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
@@ -57,8 +61,8 @@ export default function PostDetailScreen() {
     mutationFn: (content: string) => addComment(id!, content),
     onSuccess: () => {
       setCommentText('');
-      queryClient.invalidateQueries({ queryKey: ['comments', id] });
-      queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.comments ? QUERY_KEYS.comments(id!) : ['comments', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post ? QUERY_KEYS.post(id!) : ['post', id] });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
@@ -96,7 +100,7 @@ export default function PostDetailScreen() {
   const userReaction = post.user_reaction;
   const hasReacted = !!userReaction;
 
-  const renderComment = ({ item }: { item: Comment }) => (
+  const renderComment = useCallback(({ item }: { item: Comment }) => (
     <View style={[styles.commentRow, { borderTopColor: colors.border }]}>
       <Avatar uri={item.profile?.avatar_url} name={item.profile?.full_name} size={32} />
       <View style={styles.commentInfo}>
@@ -108,12 +112,14 @@ export default function PostDetailScreen() {
         <Text style={[styles.commentContent, { color: colors.text }]}>{item.content}</Text>
       </View>
     </View>
-  );
+  ), [colors]);
+
+  const keyExtractor = useCallback((item: Comment) => item.id, []);
 
   const reactionsSummary = post.reactions_summary ?? {};
   const totalReactions = Object.values(reactionsSummary).reduce((s, c) => s + c, 0);
 
-  const ListHeader = () => (
+  const listHeader = useMemo(() => (
     <View style={styles.postSection}>
       <View style={styles.authorRow}>
         <Pressable onPress={() => router.push({ pathname: '/user/[id]', params: { id: post.user_id } })} style={styles.authorInfo}>
@@ -165,7 +171,7 @@ export default function PostDetailScreen() {
         <Text style={[styles.commentsTitle, { color: colors.text }]}>Comments ({comments.length})</Text>
       )}
     </View>
-  );
+  ), [post, profile, colors, comments.length, totalReactions, reactionsSummary, hasReacted, userReaction, handleReaction]);
 
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior="padding" keyboardVerticalOffset={0}>
@@ -178,12 +184,16 @@ export default function PostDetailScreen() {
       </View>
 
       <FlatList
-        ListHeaderComponent={ListHeader}
+        ListHeaderComponent={listHeader}
         data={comments}
         renderItem={renderComment}
-        keyExtractor={item => item.id}
+        keyExtractor={keyExtractor}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={10}
+        removeClippedSubviews={Platform.OS === 'android'}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
       />

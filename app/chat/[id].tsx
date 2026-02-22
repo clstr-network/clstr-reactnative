@@ -37,6 +37,8 @@ export default function ChatScreen() {
     queryKey: QUERY_KEYS.chat(partnerId!),
     queryFn: () => getMessages(partnerId!),
     enabled: !!partnerId,
+    staleTime: 10_000,       // 10s — realtime handles live message delivery
+    gcTime: 5 * 60 * 1000,   // 5min
   });
 
   const messages = data?.messages ?? [];
@@ -85,6 +87,8 @@ export default function ChatScreen() {
     );
   }, [colors, partner, user?.id]);
 
+  const keyExtractor = useCallback((item: Message) => item.id, []);
+
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior="padding" keyboardVerticalOffset={0}>
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -102,10 +106,13 @@ export default function ChatScreen() {
       <FlatList
         data={reversedMessages}
         renderItem={renderMessage}
-        keyExtractor={item => item.id}
+        keyExtractor={keyExtractor}
         inverted
         contentContainerStyle={styles.msgList}
         showsVerticalScrollIndicator={false}
+        maxToRenderPerBatch={15}
+        windowSize={7}
+        initialNumToRender={20}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
       />

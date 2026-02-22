@@ -10,6 +10,11 @@ import { useThemeColors } from '@/constants/colors';
 import { NotificationItem } from '@/components/NotificationItem';
 import { getNotifications, markNotificationRead, type Notification } from '@/lib/storage';
 
+/** Stable separator — avoids inline arrow that creates a new component every render */
+const NotifSeparator = React.memo(function NotifSeparator({ color }: { color: string }) {
+  return <View style={[styles.separator, { backgroundColor: color }]} />;
+});
+
 export default function NotificationsScreen() {
   const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
@@ -36,6 +41,12 @@ export default function NotificationsScreen() {
     <NotificationItem notification={item} onPress={handlePress} />
   ), [handlePress]);
 
+  const keyExtractor = useCallback((item: Notification) => item.id, []);
+
+  const renderSeparator = useCallback(() => (
+    <NotifSeparator color={colors.border} />
+  ), [colors.border]);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, borderBottomColor: colors.border }]}>
@@ -56,15 +67,17 @@ export default function NotificationsScreen() {
       <FlatList
         data={notifications}
         renderItem={renderItem}
-        keyExtractor={item => item.id}
+        keyExtractor={keyExtractor}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        initialNumToRender={15}
+        removeClippedSubviews={Platform.OS === 'android'}
         refreshControl={
           <RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={colors.tint} />
         }
-        ItemSeparatorComponent={() => (
-          <View style={[styles.separator, { backgroundColor: colors.border }]} />
-        )}
+        ItemSeparatorComponent={renderSeparator}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="notifications-off-outline" size={48} color={colors.textTertiary} />

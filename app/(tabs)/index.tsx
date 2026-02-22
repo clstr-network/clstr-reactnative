@@ -43,6 +43,8 @@ export default function FeedScreen() {
   const { data: posts = [], isLoading, isFetching } = useQuery({
     queryKey: QUERY_KEYS.feed,
     queryFn: () => getPosts({ page: 0, limit: 20 }),
+    staleTime: 30_000,       // 30s — feed refreshes frequently via realtime
+    gcTime: 5 * 60 * 1000,   // 5min
   });
 
   const reactionMutation = useMutation({
@@ -171,6 +173,10 @@ export default function FeedScreen() {
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          initialNumToRender={10}
+          removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={
             <RefreshControl
               refreshing={isFetching && !isLoading}

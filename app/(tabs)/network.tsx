@@ -41,11 +41,15 @@ export default function NetworkScreen() {
   const { data: connections = [], isLoading: loadingConnections } = useQuery({
     queryKey: QUERY_KEYS.network,
     queryFn: getConnections,
+    staleTime: 30_000,       // 30s
+    gcTime: 5 * 60 * 1000,   // 5min
   });
 
   const { data: pendingRequests = [], isLoading: loadingPending } = useQuery({
     queryKey: ['connection-requests'],
     queryFn: getConnectionRequests,
+    staleTime: 10_000,       // 10s — pending requests change more frequently
+    gcTime: 5 * 60 * 1000,
   });
 
   const isLoading = loadingConnections || loadingPending;
@@ -159,6 +163,10 @@ export default function NetworkScreen() {
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          initialNumToRender={10}
+          removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={
             <RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={colors.tint} />
           }

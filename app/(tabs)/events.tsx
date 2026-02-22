@@ -110,6 +110,8 @@ export default function EventsScreen() {
   const { data: events = [], isLoading } = useQuery({
     queryKey: QUERY_KEYS.events,
     queryFn: getEvents,
+    staleTime: 60_000,       // 1min — events change less frequently
+    gcTime: 10 * 60 * 1000,  // 10min
   });
 
   const filtered = activeCategory === 'All'
@@ -206,6 +208,10 @@ export default function EventsScreen() {
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          initialNumToRender={8}
+          removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={colors.tint} />}
           ListEmptyComponent={
             <View style={styles.emptyState}>

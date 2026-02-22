@@ -26,6 +26,8 @@ export default function NotificationsScreen() {
   const { data: notifications = [], isLoading, refetch, isRefetching } = useQuery<Notification[]>({
     queryKey: QUERY_KEYS.notifications,
     queryFn: getNotifications,
+    staleTime: 15_000,       // 15s — realtime handles live badge updates
+    gcTime: 5 * 60 * 1000,   // 5min
   });
 
   const unreadCount = useMemo(
@@ -98,6 +100,10 @@ export default function NotificationsScreen() {
           contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 }}
           showsVerticalScrollIndicator={false}
           scrollEnabled={!!notifications.length}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          initialNumToRender={15}
+          removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.tint} />
           }

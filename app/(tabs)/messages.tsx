@@ -12,6 +12,11 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 import { useMessageSubscription } from '@/lib/hooks/useMessageSubscription';
 import { getConversations, type Conversation } from '@/lib/api';
 
+/** Stable separator — avoids inline arrow that creates a new component every render */
+const ItemSeparator = React.memo(function ItemSeparator({ color }: { color: string }) {
+  return <View style={[styles.separator, { backgroundColor: color }]} />;
+});
+
 export default function MessagesScreen() {
   const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
@@ -24,6 +29,8 @@ export default function MessagesScreen() {
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: QUERY_KEYS.conversations,
     queryFn: getConversations,
+    staleTime: 30_000,       // 30s — realtime handles live updates
+    gcTime: 5 * 60 * 1000,   // 5min
   });
 
   const handlePress = useCallback((partnerId: string) => {
@@ -39,6 +46,10 @@ export default function MessagesScreen() {
   ), [handlePress]);
 
   const keyExtractor = useCallback((item: Conversation) => item.partner_id, []);
+
+  const renderSeparator = useCallback(() => (
+    <ItemSeparator color={colors.border} />
+  ), [colors.border]);
 
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0);
 
@@ -66,12 +77,14 @@ export default function MessagesScreen() {
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          initialNumToRender={15}
+          removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={
             <RefreshControl refreshing={false} onRefresh={handleRefresh} tintColor={colors.tint} />
           }
-          ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: colors.border }]} />
-          )}
+          ItemSeparatorComponent={renderSeparator}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="chatbubbles-outline" size={48} color={colors.textTertiary} />
