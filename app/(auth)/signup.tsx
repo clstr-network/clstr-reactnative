@@ -7,33 +7,65 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '@/lib/auth-context';
-import { colors } from '@/constants/colors';
+
+// ---------------------------------------------------------------------------
+// Google "G" icon — matches web exactly
+// ---------------------------------------------------------------------------
+function GoogleIcon({ size = 18 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+      <Path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <Path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+      <Path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </Svg>
+  );
+}
 
 export default function SignupScreen() {
   const insets = useSafeAreaInsets();
-  const { signup } = useAuth();
+  const { signInWithGoogle, signInWithOtp } = useAuth();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingMethod, setSubmittingMethod] = useState<'google' | 'magic' | null>(null);
   const [error, setError] = useState('');
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
-  const isValid = email.includes('@') && password.length >= 6 && password === confirmPassword;
+  const isValidEmail = email.includes('@') && email.includes('.');
 
-  async function handleSignup() {
-    if (!isValid || isSubmitting) return;
+  async function handleGoogleSignup() {
+    if (isSubmitting) return;
     setError('');
     setIsSubmitting(true);
+    setSubmittingMethod('google');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      await signup(email, password);
-      router.replace('/(auth)/onboarding');
+      await signInWithGoogle();
     } catch (e: any) {
-      setError(e.message || 'Signup failed');
+      setError(e.message || 'Google sign-up failed');
     } finally {
       setIsSubmitting(false);
+      setSubmittingMethod(null);
+    }
+  }
+
+  async function handleMagicLink() {
+    if (!isValidEmail || isSubmitting) return;
+    setError('');
+    setIsSubmitting(true);
+    setSubmittingMethod('magic');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const { error: otpError } = await signInWithOtp(email.trim().toLowerCase());
+      if (otpError) throw otpError;
+      setMagicLinkSent(true);
+    } catch (e: any) {
+      setError(e.message || 'Failed to send magic link');
+    } finally {
+      setIsSubmitting(false);
+      setSubmittingMethod(null);
     }
   }
 
@@ -44,100 +76,114 @@ export default function SignupScreen() {
       keyboardVerticalOffset={90}
     >
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 40) }]}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 60) }]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
-          </Pressable>
-        </View>
+        {/* Back button */}
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color="rgba(255,255,255,0.7)" />
+        </Pressable>
 
-        <View style={styles.logoContainer}>
-          <View style={styles.logoIcon}>
-            <Ionicons name="git-network-outline" size={32} color={colors.primary} />
-          </View>
-          <Text style={styles.title}>Join clstr</Text>
-          <Text style={styles.subtitle}>Sign up with your college email to join your campus network</Text>
-        </View>
+        {/* Card */}
+        <View style={styles.card}>
+          {/* Header */}
+          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.subtitle}>
+            Use your college email to join your campus network.
+          </Text>
 
-        <View style={styles.form}>
           {!!error && (
             <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={16} color={colors.error} />
+              <Ionicons name="alert-circle" size={16} color="#EF4444" />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={18} color={colors.textTertiary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="College email (e.g., you@college.edu)"
-              placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={18} color={colors.textTertiary} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.input, styles.passwordInput]}
-              placeholder="Password (min 6 characters)"
-              placeholderTextColor={colors.textTertiary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-            />
-            <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textTertiary} />
-            </Pressable>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Ionicons name="shield-checkmark-outline" size={18} color={colors.textTertiary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm password"
-              placeholderTextColor={colors.textTertiary}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-            />
-          </View>
-
-          {password.length > 0 && confirmPassword.length > 0 && password !== confirmPassword && (
-            <Text style={styles.mismatchText}>Passwords do not match</Text>
-          )}
-
+          {/* Google sign-up button */}
           <Pressable
             style={({ pressed }) => [
-              styles.signupButton,
-              !isValid && styles.signupButtonDisabled,
-              pressed && isValid && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+              styles.googleButton,
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
             ]}
-            onPress={handleSignup}
-            disabled={!isValid || isSubmitting}
+            onPress={handleGoogleSignup}
+            disabled={isSubmitting}
           >
-            {isSubmitting ? (
+            {submittingMethod === 'google' ? (
               <ActivityIndicator color="#FFF" size="small" />
             ) : (
-              <Text style={styles.signupButtonText}>Create Account</Text>
+              <View style={styles.googleButtonInner}>
+                <GoogleIcon size={18} />
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </View>
             )}
           </Pressable>
-        </View>
 
-        <View style={[styles.footer, { paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 20) }]}>
-          <Text style={styles.footerText}>Already have an account?</Text>
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.footerLink}> Sign in</Text>
-          </Pressable>
+          {/* Separator */}
+          <View style={styles.separatorRow}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>or use a magic link</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          {magicLinkSent ? (
+            /* Success state */
+            <View style={styles.successContainer}>
+              <Ionicons name="mail-open-outline" size={32} color="rgba(255,255,255,0.6)" />
+              <Text style={styles.successTitle}>Check your inbox</Text>
+              <Text style={styles.successBody}>
+                We sent a magic link to {email}. Click the link in the email to sign in.
+              </Text>
+              <Pressable
+                style={styles.resendButton}
+                onPress={() => { setMagicLinkSent(false); }}
+              >
+                <Text style={styles.resendText}>Use a different email</Text>
+              </Pressable>
+            </View>
+          ) : (
+            /* Magic link form */
+            <View style={styles.magicForm}>
+              <Text style={styles.inputLabel}>College email</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="mail-outline" size={16} color="rgba(255,255,255,0.40)" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="you@university.edu"
+                  placeholderTextColor="rgba(255,255,255,0.30)"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  editable={!isSubmitting}
+                />
+              </View>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.magicButton,
+                  !isValidEmail && styles.magicButtonDisabled,
+                  pressed && isValidEmail && { opacity: 0.9 },
+                ]}
+                onPress={handleMagicLink}
+                disabled={!isValidEmail || isSubmitting}
+              >
+                {submittingMethod === 'magic' ? (
+                  <ActivityIndicator color="rgba(255,255,255,0.7)" size="small" />
+                ) : (
+                  <Text style={styles.magicButtonText}>Send magic link</Text>
+                )}
+              </Pressable>
+            </View>
+          )}
+
+          {/* Footer link */}
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>Already have an account?</Text>
+            <Pressable onPress={() => router.back()}>
+              <Text style={styles.footerLink}> Sign in</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -145,48 +191,38 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1, backgroundColor: '#000000' },
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
-  },
-  header: {
-    marginBottom: 16,
+    justifyContent: 'center',
   },
   backButton: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logoIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 12,
+  },
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderRadius: 24,
+    padding: 28,
+    gap: 14,
   },
   title: {
     fontSize: 24,
     fontFamily: 'Inter_700Bold',
-    color: colors.text,
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.60)',
     textAlign: 'center',
-    marginTop: 6,
-    paddingHorizontal: 20,
-  },
-  form: {
-    gap: 14,
   },
   errorContainer: {
     flexDirection: 'row',
@@ -199,72 +235,128 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     fontFamily: 'Inter_500Medium',
-    color: colors.error,
+    color: '#EF4444',
     flex: 1,
+  },
+  googleButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  googleButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#FFFFFF',
+  },
+  separatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 2,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  separatorText: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: 'rgba(255, 255, 255, 0.60)',
+  },
+  magicForm: {
+    gap: 10,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    color: '#FFFFFF',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.inputBackground,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.inputBorder,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   inputIcon: {
-    paddingLeft: 14,
+    paddingLeft: 12,
   },
   input: {
     flex: 1,
-    paddingVertical: 15,
-    paddingHorizontal: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 10,
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
-    color: colors.text,
+    color: '#FFFFFF',
   },
-  passwordInput: {
-    paddingRight: 44,
-  },
-  eyeButton: {
-    position: 'absolute',
-    right: 14,
-    padding: 4,
-  },
-  mismatchText: {
-    fontSize: 12,
-    fontFamily: 'Inter_500Medium',
-    color: colors.error,
-    marginTop: -6,
-  },
-  signupButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
+  magicButton: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 13,
+    borderRadius: 10,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 2,
   },
-  signupButtonDisabled: {
+  magicButtonDisabled: {
     opacity: 0.4,
   },
-  signupButtonText: {
-    fontSize: 16,
+  magicButtonText: {
+    fontSize: 15,
+    fontFamily: 'Inter_500Medium',
+    color: 'rgba(255, 255, 255, 0.80)',
+  },
+  successContainer: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+  },
+  successTitle: {
+    fontSize: 17,
     fontFamily: 'Inter_600SemiBold',
     color: '#FFFFFF',
   },
-  footer: {
+  successBody: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    color: 'rgba(255, 255, 255, 0.60)',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  resendButton: {
+    marginTop: 4,
+  },
+  resendText: {
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    color: 'rgba(255, 255, 255, 0.60)',
+    textDecorationLine: 'underline',
+  },
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 'auto',
-    paddingTop: 24,
+    marginTop: 4,
   },
   footerText: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.60)',
   },
   footerLink: {
     fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: colors.primary,
+    fontFamily: 'Inter_500Medium',
+    color: 'rgba(255, 255, 255, 0.60)',
+    textDecorationLine: 'underline',
   },
 });
