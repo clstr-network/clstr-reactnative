@@ -42,11 +42,14 @@ export interface Post {
   college_domain: string | null;
   likes_count: number;
   comments_count: number;
+  shares_count?: number;
+  reposts_count?: number;
   created_at: string;
   updated_at?: string;
   profile?: Profile;
   user_reaction?: ReactionType | null;
   is_saved?: boolean;
+  reposted?: boolean;
   reactions_summary?: Record<ReactionType, number>;
 }
 
@@ -188,7 +191,7 @@ export async function getPosts(params?: { page?: number; limit?: number; categor
 
     const postIds = posts.map((p: any) => p.id);
 
-    const [likesResult, savedResult] = await Promise.all([
+    const [likesResult, savedResult, repostResult] = await Promise.all([
       supabase
         .from('post_likes')
         .select('post_id, reaction_type')
@@ -199,6 +202,11 @@ export async function getPosts(params?: { page?: number; limit?: number; categor
         .select('post_id')
         .eq('user_id', user.id)
         .in('post_id', postIds),
+      supabase
+        .from('reposts')
+        .select('original_post_id')
+        .eq('user_id', user.id)
+        .in('original_post_id', postIds),
     ]);
 
     const userReactions = new Map<string, ReactionType>();
@@ -215,10 +223,18 @@ export async function getPosts(params?: { page?: number; limit?: number; categor
       }
     }
 
+    const repostedPostIds = new Set<string>();
+    if (repostResult.data) {
+      for (const item of repostResult.data as any[]) {
+        repostedPostIds.add(item.original_post_id);
+      }
+    }
+
     return posts.map((post: any) => ({
       ...post,
       user_reaction: userReactions.get(post.id) ?? null,
       is_saved: savedPostIds.has(post.id),
+      reposted: repostedPostIds.has(post.id),
     })) as Post[];
   } catch (error) {
     console.error('getPosts error:', error);
@@ -340,6 +356,47 @@ export async function toggleReaction(postId: string, reactionType: ReactionType)
     }
   } catch (error) {
     console.error('toggleReaction error:', error);
+    throw error;
+  }
+}
+
+// ─── Reposts ──────────────────────────────────────────────────
+
+export async function createRepost(originalPostId: string, commentary?: string) {
+  try {
+    const { data, error } = await (supabase.rpc as any)('create_repost', {
+      p_original_post_id: originalPostId,
+      p_commentary_text: commentary || null,
+    });
+
+    if (error) {
+      if (error.message?.includes('already reposted')) {
+        throw new Error('You have already reposted this post');
+      }
+      throw error;
+    }
+
+    return {
+      success: data?.success ?? true,
+      repostId: data?.repost_id ?? '',
+      hasCommentary: data?.has_commentary ?? false,
+    };
+  } catch (error) {
+    console.error('createRepost error:', error);
+    throw error;
+  }
+}
+
+export async function deleteRepost(originalPostId: string) {
+  try {
+    const { data, error } = await (supabase.rpc as any)('delete_repost', {
+      p_original_post_id: originalPostId,
+    });
+
+    if (error) throw error;
+    return data?.success ?? true;
+  } catch (error) {
+    console.error('deleteRepost error:', error);
     throw error;
   }
 }

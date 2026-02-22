@@ -34,8 +34,12 @@ interface Post {
   user?: PostUser;
   likes_count?: number;
   comments_count?: number;
+  shares_count?: number;
+  reposts_count?: number;
   created_at?: string;
   liked?: boolean;
+  saved?: boolean;
+  reposted?: boolean;
   userReaction?: string | null;
   topReactions?: TopReaction[];
 }
@@ -46,14 +50,17 @@ interface PostCardProps {
   onReact?: () => void;
   onComment?: () => void;
   onShare?: () => void;
+  onRepost?: () => void;
 }
 
-function PostCard({ post, onPress, onReact, onComment, onShare }: PostCardProps) {
+function PostCard({ post, onPress, onReact, onComment, onShare, onRepost }: PostCardProps) {
   const colors = useThemeColors();
   const user = post.user;
   const totalReactions = post.likes_count ?? 0;
   const topReactions = post.topReactions ?? [];
   const isLiked = !!post.liked || !!post.userReaction;
+  const isReposted = !!post.reposted;
+  const repostShareCount = (post.reposts_count ?? 0) + (post.shares_count ?? 0);
 
   return (
     <Pressable
@@ -100,6 +107,11 @@ function PostCard({ post, onPress, onReact, onComment, onShare }: PostCardProps)
               {post.comments_count} comment{post.comments_count !== 1 ? 's' : ''}
             </Text>
           ) : null}
+          {repostShareCount > 0 ? (
+            <Text style={[styles.repostCount, { color: colors.textSecondary }]}>
+              {repostShareCount} repost{repostShareCount !== 1 ? 's' : ''}
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -123,6 +135,22 @@ function PostCard({ post, onPress, onReact, onComment, onShare }: PostCardProps)
         <Pressable style={styles.actionButton} onPress={onComment}>
           <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
           <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Comment</Text>
+        </Pressable>
+
+        <Pressable style={styles.actionButton} onPress={onRepost}>
+          <Ionicons
+            name={isReposted ? 'repeat' : 'repeat-outline'}
+            size={20}
+            color={isReposted ? colors.success : colors.textSecondary}
+          />
+          <Text
+            style={[
+              styles.actionLabel,
+              { color: isReposted ? colors.success : colors.textSecondary },
+            ]}
+          >
+            {isReposted ? 'Reposted' : 'Repost'}
+          </Text>
         </Pressable>
 
         <Pressable style={styles.actionButton} onPress={onShare}>
@@ -201,6 +229,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.regular,
     marginLeft: 'auto',
+  },
+  repostCount: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.regular,
+    marginLeft: 8,
   },
   actionBar: {
     flexDirection: 'row',

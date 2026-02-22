@@ -23,6 +23,8 @@ import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import {
   getPosts,
   toggleReaction,
+  createRepost,
+  deleteRepost,
   type Post,
   type ReactionType,
 } from '@/lib/api';
@@ -92,6 +94,30 @@ export default function FeedScreen() {
     router.push({ pathname: '/post/[id]', params: { id: postId } });
   }, []);
 
+  const handleShare = useCallback((postId: string, isSaved: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: '/post-actions',
+      params: { id: postId, isSaved: isSaved ? 'true' : 'false' },
+    });
+  }, []);
+
+  const repostMutation = useMutation({
+    mutationFn: ({ postId, isReposted }: { postId: string; isReposted: boolean }) =>
+      isReposted ? deleteRepost(postId) : createRepost(postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
+    },
+  });
+
+  const handleRepost = useCallback(
+    (postId: string, isReposted: boolean) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      repostMutation.mutate({ postId, isReposted });
+    },
+    [repostMutation],
+  );
+
   const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -113,8 +139,12 @@ export default function FeedScreen() {
             : undefined,
           likes_count: item.likes_count,
           comments_count: item.comments_count,
+          shares_count: item.shares_count,
+          reposts_count: item.reposts_count,
           created_at: item.created_at,
-          userReaction: item.user_reaction,
+          saved: !!item.is_saved,
+          reposted: !!item.reposted,
+          userReaction: item.user_reaction ?? null,
           topReactions: item.reactions_summary
             ? Object.entries(item.reactions_summary)
                 .map(([type, count]) => ({ type, count }))
@@ -124,9 +154,11 @@ export default function FeedScreen() {
         onPress={() => handlePress(item.id)}
         onReact={() => handleReact(item.id)}
         onComment={() => handleComment(item.id)}
+        onShare={() => handleShare(item.id, !!item.is_saved)}
+        onRepost={() => handleRepost(item.id, !!item.reposted)}
       />
     ),
-    [handlePress, handleReact, handleComment],
+    [handlePress, handleReact, handleComment, handleShare, handleRepost],
   );
 
   const keyExtractor = useCallback((item: Post) => item.id, []);

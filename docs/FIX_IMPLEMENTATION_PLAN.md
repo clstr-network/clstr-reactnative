@@ -46,7 +46,7 @@ This plan is organized into **12 fix phases (F1–F12)**, ordered by severity. E
 | 19 | No `createEvent` function in `@clstr/core` or `lib/api/events.ts` | 🟠 High | F8 | `lib/api/events.ts` | ✅ Fixed |
 | 20 | Profile stats use `profile.connections?.length` instead of DB count | 🟡 Medium | F9 | `app/(tabs)/profile.tsx`, `app/user/[id].tsx` | ✅ Fixed |
 | 21 | Hardcoded query keys (`['connectionStatus', id]`, etc.) | 🟡 Medium | F9 | `app/user/[id].tsx` | ✅ Fixed |
-| 22 | Post share/repost not wired in Feed | 🟡 Medium | F10 | `app/(tabs)/index.tsx` | ⬜ Pending |
+| 22 | Post share/repost not wired in Feed | 🟡 Medium | F10 | `app/(tabs)/index.tsx` | ✅ Fixed |
 | 23 | `lib/api/mentorship.ts` uses raw Supabase (no `@clstr/core`) | 🟡 Medium | F11 | `lib/api/mentorship.ts` | ⬜ Deferred |
 | 24 | `lib/api/alumni.ts` uses raw Supabase RPC | 🟡 Medium | F11 | `lib/api/alumni.ts` | ⬜ Deferred |
 | 25 | No block-connection UI | 🔵 Low | F12 | NEW | ⬜ Pending |
@@ -1091,57 +1091,93 @@ Then replace all hardcoded key arrays in `app/user/[id].tsx`.
 
 ---
 
-## Phase F10 — Post Share/Repost in Feed
+## Phase F10 — Post Share/Repost in Feed ✅ DONE
 
 **Priority**: 🟡 MEDIUM — Share button missing from feed PostCard.
+**Status**: ✅ COMPLETED (2026-02-22)
 
 ### Problem
 
-`app/(tabs)/index.tsx` renders `PostCard` without passing an `onShare` callback. The `PostCard` component may have a share button that does nothing, or it may not render one at all.
+`app/(tabs)/index.tsx` renders `PostCard` without passing an `onShare` callback. The `PostCard` component has a share button that does nothing because no handler is passed. Additionally, the web app has a Repost button (LinkedIn-style) between Comment and Share — this was entirely missing on mobile.
 
 The API layer has `sharePost`, `sharePostToMultiple`, `createRepost`, `deleteRepost`, `hasUserReposted`, `getPostReposts` — all bound and ready.
 
-### Files to Change
+### Files Changed
 
-- `app/(tabs)/index.tsx`
-- `components/PostCard.tsx` (if share button is missing)
+- `app/(tabs)/index.tsx` — Added `handleShare` and `handleRepost` callbacks, wired to PostCard
+- `components/PostCard.tsx` — Extended Post interface, added Repost button, added repost/share count display
+- `lib/api.ts` — Extended `Post` type with `shares_count`, `reposts_count`, `reposted`; added `createRepost`/`deleteRepost` functions; added repost state fetch in `getPosts`
 
 ### Implementation Steps
 
-#### F10.1 — Add `onShare` to PostCard in Feed
+#### F10.1 — Wire `onShare` in Feed ✅
 
+Added `handleShare` callback that navigates to `post-actions` sheet with the post ID and saved state:
 ```tsx
-const handleShare = useCallback((postId: string) => {
-  router.push({ pathname: '/post-actions', params: { id: postId, isSaved: 'false' } });
+const handleShare = useCallback((postId: string, isSaved: boolean) => {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  router.push({
+    pathname: '/post-actions',
+    params: { id: postId, isSaved: isSaved ? 'true' : 'false' },
+  });
 }, []);
-
-// In renderItem, pass onShare:
-<PostCard
-  post={...}
-  onReact={() => handleReact(item.id)}
-  onPress={() => handlePress(item.id)}
-  onComment={() => handleComment(item.id)}
-  onShare={() => handleShare(item.id)}
-/>
 ```
 
-#### F10.2 — Add Repost Support (Optional Enhancement)
-
-If the web has repost functionality, add a repost button to PostCard:
+Passed `onShare` to PostCard in `renderItem`:
 ```tsx
-import { createRepost, deleteRepost, hasUserReposted } from '@/lib/api/social';
+onShare={() => handleShare(item.id, !!item.is_saved)}
 ```
+
+#### F10.2 — Add Repost Support (Web Parity) ✅
+
+**PostCard changes** (`components/PostCard.tsx`):
+- Extended `Post` interface with `shares_count`, `reposts_count`, `saved`, `reposted`
+- Added `onRepost` to `PostCardProps`
+- Added Repost button between Comment and Share (matching web's Like → Comment → Repost → Share layout)
+- Repost button shows `repeat` icon (filled green when reposted, outlined when not)
+- Added combined repost+share count in the stats row
+
+**Feed changes** (`app/(tabs)/index.tsx`):
+- Added `repostMutation` using `useMutation` with `createRepost`/`deleteRepost`
+- Added `handleRepost` callback with haptic feedback
+- Passes `reposted`, `shares_count`, `reposts_count` data and `onRepost` handler to PostCard
+
+**API changes** (`lib/api.ts`):
+- Extended `Post` type with `shares_count?: number`, `reposts_count?: number`, `reposted?: boolean`
+- Added `createRepost(originalPostId, commentary?)` function using Supabase RPC `create_repost`
+- Added `deleteRepost(originalPostId)` function using Supabase RPC `delete_repost`
+- Added repost state batch-fetch in `getPosts` — queries `reposts` table for current user's reposts, maps to `reposted: boolean` on each post
 
 ### Verification
 
-- [ ] PostCard in feed has a share/more button
-- [ ] Tapping share opens post-actions sheet (from F2)
-- [ ] Share, Copy Link, Report all work from feed context
+- [x] PostCard in feed has a Share button (wired via `handleShare`)
+- [x] PostCard in feed has a Repost button (web parity — Like, Comment, Repost, Share)
+- [x] Tapping Share opens post-actions sheet (from F2) with correct `id` and `isSaved` params
+- [x] Tapping Repost toggles repost state via `createRepost`/`deleteRepost` Supabase RPCs
+- [x] Repost button visual state: green `repeat` icon + "Reposted" label when reposted
+- [x] Combined repost+share count displayed in stats row
+- [x] Feed invalidates on repost mutation success
+- [x] `getPosts` batch-fetches repost state (same pattern as saved/liked state)
+- [x] Zero new TypeScript errors introduced
+- [x] Share, Copy Link, Report all work from feed context (via post-actions sheet from F2)
+
+### Resolution Summary
+
+Three files were modified to fully wire post share and repost functionality in the mobile feed:
+
+1. **`lib/api.ts`**: Extended `Post` interface with `shares_count`, `reposts_count`, `reposted`. Added `createRepost`/`deleteRepost` functions (Supabase RPCs). Enhanced `getPosts` to batch-fetch repost state per-user, matching the pattern used for `is_saved` and `user_reaction`.
+
+2. **`components/PostCard.tsx`**: Added Repost button between Comment and Share — matching the web's 4-button layout (Like, Comment, Repost, Share). Repost button shows active state (green icon + "Reposted" label). Combined repost+share count shown in stats row. Extended `Post` interface and `PostCardProps` with repost-related fields.
+
+3. **`app/(tabs)/index.tsx`**: Added `handleShare` (opens post-actions sheet with `id`/`isSaved` params), `repostMutation` (toggles repost via `createRepost`/`deleteRepost` with feed invalidation), and `handleRepost` (haptic + mutation trigger). All four callbacks wired to PostCard: `onPress`, `onReact`, `onComment`, `onShare`, `onRepost`.
 
 ### Deliverables
 
-- Share button wired in feed
-- Post actions accessible from feed
+- ✅ Share button wired in feed (opens post-actions sheet from F2)
+- ✅ Repost button added to PostCard (web parity)
+- ✅ Repost toggle via Supabase RPCs (`create_repost` / `delete_repost`)
+- ✅ Repost state batch-fetched in `getPosts` (same as saved/liked)
+- ✅ Post actions accessible from feed context
 
 ---
 
