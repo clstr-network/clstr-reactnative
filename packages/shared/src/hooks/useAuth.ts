@@ -3,12 +3,13 @@
  *
  * Listens to Supabase auth state changes and exposes:
  * - session, user, isLoading, isAuthenticated
- * - signIn(), signUp(), signOut()
+ * - signIn(), signUp(), signInWithGoogle(), signOut()
  *
  * R4: Module-level Supabase client import — never create a client
  * inside a component body.
  */
 import { useEffect, useState, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '../integrations/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 
@@ -42,6 +43,39 @@ export function useAuth() {
     return supabase.auth.signUp({ email, password });
   }, []);
 
+  /**
+   * Native Google Sign-In → Supabase signInWithIdToken.
+   * Uses @react-native-google-signin/google-signin on mobile.
+   */
+  const signInWithGoogle = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      // Web uses signInWithOAuth (handled in src/pages/Login.tsx)
+      return { error: new Error('Use web OAuth flow on web') };
+    }
+
+    try {
+      const { GoogleSignin } = await import(
+        '@react-native-google-signin/google-signin'
+      );
+
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+
+      if (!response.data?.idToken) {
+        return { error: new Error('Google Sign-In failed: no ID token returned') };
+      }
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: response.data.idToken,
+      });
+
+      return { data, error };
+    } catch (err: any) {
+      return { error: err };
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     return supabase.auth.signOut();
   }, []);
@@ -53,6 +87,7 @@ export function useAuth() {
     isAuthenticated: !!session?.user,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
   };
 }

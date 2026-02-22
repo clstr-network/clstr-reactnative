@@ -42,6 +42,17 @@ import type { MessagingStackScreens } from '../../packages/shared/src/navigation
 import type { EventsStackScreens } from '../../packages/shared/src/navigation/EventsStack';
 import type { NetworkStackScreens } from '../../packages/shared/src/navigation/NetworkStack';
 
+// ── Google Sign-In configuration (must run before any sign-in call) ──
+// Use dynamic import to avoid ESM resolution issues with bundler moduleResolution
+import('@react-native-google-signin/google-signin').then(({ GoogleSignin }) => {
+  GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    offlineAccess: true,
+  });
+}).catch(() => {
+  // Silently ignore on platforms where Google Sign-In is unavailable (e.g. web)
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
