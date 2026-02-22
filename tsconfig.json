@@ -15,6 +15,12 @@
       ],
       "@clstr/core/*": [
         "./packages/core/src/*"
+      ],
+      "@clstr/shared": [
+        "./packages/shared/src/index.ts"
+      ],
+      "@clstr/shared/*": [
+        "./packages/shared/src/*"
       ]
     }
   },

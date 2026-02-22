@@ -1,5 +1,5 @@
 /**
- * Native deep-link intent handler — Phase 5.4
+ * Native deep-link intent handler — Phase 5.4 + Phase 9
  *
  * Converts incoming deep-link paths into Expo Router paths.
  * Handles both custom scheme (`clstr://`) and universal links
@@ -15,6 +15,17 @@
  *   clstr://settings               → /settings
  *   clstr://search                 → /search
  *   clstr://saved                  → /saved
+ *   clstr://jobs                   → /jobs
+ *   clstr://jobs/:id               → /job/:id
+ *   clstr://mentorship             → /mentorship
+ *   clstr://clubs                  → /clubs
+ *   clstr://alumni                 → /alumni
+ *   clstr://projects               → /projects
+ *   clstr://projects/:id           → /project/:id
+ *   clstr://ecocampus              → /ecocampus
+ *   clstr://portfolio              → /portfolio
+ *   clstr://skill-analysis         → /skill-analysis
+ *   clstr://ai-chat                → /ai-chat
  *   clstr://feed                   → /
  *
  * Cold start:
@@ -102,6 +113,63 @@ export function redirectSystemPath({
   // Saved items (Phase 8)
   if (cleanPath.startsWith('/saved') || cleanPath.startsWith('/bookmarks')) {
     return '/saved';
+  }
+
+  // ── Phase 9 — Advanced Features ──
+
+  // Jobs: /jobs/:id
+  const jobMatch = cleanPath.match(/^\/jobs?\/([a-zA-Z0-9\-]+)/);
+  if (jobMatch) {
+    return `/job/${jobMatch[1]}`;
+  }
+  // Jobs list
+  if (cleanPath === '/jobs') {
+    return '/jobs';
+  }
+
+  // Mentorship
+  if (cleanPath.startsWith('/mentorship')) {
+    return '/mentorship';
+  }
+
+  // Clubs
+  if (cleanPath.startsWith('/clubs')) {
+    return '/clubs';
+  }
+
+  // Alumni
+  if (cleanPath.startsWith('/alumni')) {
+    return '/alumni';
+  }
+
+  // Projects / CollabHub: /projects/:id
+  const projectMatch = cleanPath.match(/^\/projects?\/([a-zA-Z0-9\-]+)/);
+  if (projectMatch) {
+    return `/project/${projectMatch[1]}`;
+  }
+  // Projects list
+  if (cleanPath === '/projects' || cleanPath === '/collabhub') {
+    return '/projects';
+  }
+
+  // EcoCampus
+  if (cleanPath.startsWith('/ecocampus') || cleanPath.startsWith('/eco-campus')) {
+    return '/ecocampus';
+  }
+
+  // Portfolio
+  if (cleanPath.startsWith('/portfolio')) {
+    return '/portfolio';
+  }
+
+  // Skill Analysis
+  if (cleanPath.startsWith('/skill-analysis') || cleanPath.startsWith('/skills')) {
+    return '/skill-analysis';
+  }
+
+  // AI Chat
+  if (cleanPath.startsWith('/ai-chat') || cleanPath.startsWith('/ai')) {
+    return '/ai-chat';
   }
 
   // Feed / home

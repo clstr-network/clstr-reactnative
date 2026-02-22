@@ -884,7 +884,7 @@ Priority order:
 | Stable callback refs (useCallback/useMemo) | 🟡 Medium | 7 | Small | ✅ Done (Phase 7.2) |
 | Pagination on all lists | 🟡 Medium | 8 | Medium | ❌ |
 | Push notifications | 🟡 Medium | 8 | Medium | ❌ |
-| Advanced features (Jobs, Mentorship, etc.) | 🟢 Low | 9 | Large | ❌ |
+| Advanced features (Jobs, Mentorship, etc.) | 🟢 Low | 9 | Large | ✅ Done |
 
 ---
 
@@ -903,9 +903,18 @@ lib/
     account.ts              ✅ CREATED — Account deletion, settings
     search.ts               ✅ CREATED — Typeahead search
     permissions.ts          ✅ CREATED — Feature permissions (re-exports)
-    index.ts                ✅ CREATED — Barrel export
+    index.ts                ✅ CREATED — Barrel export (updated Phase 9)
     network.ts              ← NOT CREATED (covered by social.ts connections)
     notifications.ts        ← NOT YET CREATED (Phase 2)
+    jobs.ts                 ✅ CREATED (Phase 9.1) — Jobs browse/save/apply via withClient
+    clubs.ts                ✅ CREATED (Phase 9.3) — Clubs follow/unfollow via withClient
+    projects.ts             ✅ CREATED (Phase 9.5) — CollabHub projects via withClient
+    ecocampus.ts            ✅ CREATED (Phase 9.6) — EcoCampus marketplace via withClient (19 functions)
+    portfolio.ts            ✅ CREATED (Phase 9.7) — Portfolio settings via withClient
+    skill-analysis.ts       ✅ CREATED (Phase 9.8) — Skill analysis via withClient + pure re-exports
+    ai-chat.ts              ✅ CREATED (Phase 9.9) — AI chat sessions/messages via withClient
+    mentorship.ts           ✅ CREATED (Phase 9.2) — Direct Supabase queries (~340 lines, no @clstr/core module)
+    alumni.ts               ✅ CREATED (Phase 9.4) — Direct Supabase RPC (get_alumni_by_domain)
   hooks/
     useIdentity.ts          ✅ CREATED — Identity resolution via RPC
     useFeatureAccess.ts     ✅ CREATED — Feature-level RBAC hook (Phase 4.1)
@@ -972,6 +981,20 @@ app/(tabs)/_layout.tsx      ✅ REWRITTEN (Phase 5.1) — 5-tab layout (Home, Ne
 app/(tabs)/index.tsx        ✅ MODIFIED (Phase 5) — Added events/notifications header icons
 app/(tabs)/profile.tsx      ✅ MODIFIED (Phase 5) — Added settings + notifications header bar
 app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, Android intentFilters, expo-router origin
+
+app/jobs.tsx                ✅ CREATED (Phase 9.1) — Jobs browse/saved screen with search, tabs, save toggle
+app/job/[id].tsx            ✅ CREATED (Phase 9.1) — Job detail with apply/save actions, requirements tags
+app/mentorship.tsx          ✅ CREATED (Phase 9.2) — Mentorship hub: Mentors/My Requests/Incoming/Active tabs
+app/clubs.tsx               ✅ CREATED (Phase 9.3) — Clubs browse with follow/unfollow
+app/alumni.tsx              ✅ CREATED (Phase 9.4) — Alumni directory with search + mentor filter
+app/projects.tsx            ✅ CREATED (Phase 9.5) — CollabHub: Explore/My Projects tabs, tech stack tags
+app/project/[id].tsx        ✅ CREATED (Phase 9.5) — Project detail with open roles + apply
+app/ecocampus.tsx           ✅ CREATED (Phase 9.6) — EcoCampus: Items/Requests/My Listings tabs
+app/portfolio.tsx           ✅ CREATED (Phase 9.7) — Portfolio settings: slug, toggles, activate
+app/skill-analysis.tsx      ✅ CREATED (Phase 9.8) — Skill analysis: score, distribution, skill bars
+app/ai-chat.tsx             ✅ CREATED (Phase 9.9) — AI chat: sessions list + chat view with bubbles
+app/_layout.tsx             ✅ MODIFIED (Phase 9) — Added 11 Stack.Screen entries for all Phase 9 routes
+app/+native-intent.tsx      ✅ MODIFIED (Phase 9) — Added deep link routes for all Phase 9 screens
 ```
 
 ---
@@ -989,18 +1012,18 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 | 7 | **Phase 6: UI Polish** | Design token alignment, component polish, theme support, Inter font loading | ✅ Done |
 | 7–8 | **Phase 7: Performance** | Memo, pagination, query optimization, subscription dedup | ✅ Done |
 | 8–10 | **Phase 8: Additional** | Search, saved items, settings, push notifications | ✅ Done |
-| 10–14 | **Phase 9: Advanced** | Jobs, mentorship, clubs, alumni, marketplace, portfolio | ❌ |
+| 10–14 | **Phase 9: Advanced** | Jobs, mentorship, clubs, alumni, marketplace, portfolio | ✅ Done |
 
 ---
 
-## 11. CURRENT STATE ASSESSMENT (Updated after Phase 8)
+## 11. CURRENT STATE ASSESSMENT (Updated after Phase 9)
 
-**The mobile app now has real authentication, live data, realtime updates, full RBAC enforcement, a restructured tab bar, comprehensive deep linking, full visual design parity with the web, production-grade list performance, typeahead search, saved items, enhanced settings, and push notifications.** Phases 0–8 have delivered a feature-complete core mobile experience: everything from Phases 0–7, plus a full typeahead search screen, saved items with Posts/Projects/Clubs tabbed interface, a completely rewritten settings screen with theme toggle/notification preferences/privacy controls/account deletion, and push notification support via `expo-notifications` with token lifecycle management.
+**The mobile app now has complete feature parity with the web application.** All 9 phases are complete: authentication, live data, realtime updates, RBAC enforcement, deep linking, visual design parity, performance optimization, search/saved/settings/push, and all advanced features (jobs, mentorship, clubs, alumni directory, CollabHub projects, EcoCampus marketplace, portfolio, skill analysis, AI chat).
 
-**What's working (Phase 0 + 1 + 2 + 3 + 4 + 5 + 6 + 7 deliverables):**
+**What's working (Phase 0–9 deliverables):**
 - ✅ `@clstr/core` Supabase client factory wired via `lib/adapters/core-client.ts`
 - ✅ `withClient()` adapter pre-binds all API functions — same pattern as web
-- ✅ 11 API adapter modules (`social`, `messages`, `events`, `profile`, `account`, `search`, `permissions`, `notifications`, `settings`, `saved`, `index`)
+- ✅ 20 API adapter modules: `social`, `messages`, `events`, `profile`, `account`, `search`, `permissions`, `notifications`, `settings`, `saved`, `jobs`, `clubs`, `projects`, `ecocampus`, `portfolio`, `skill-analysis`, `ai-chat`, `mentorship`, `alumni`, `index`
 - ✅ `QUERY_KEYS` and `CHANNELS` re-exported from `@clstr/core`
 - ✅ Full auth flow: signIn, signUp, signOut, signInWithOtp, completeOnboarding
 - ✅ `useIdentity` hook resolves identity via `get_identity_context()` RPC with caching
@@ -1023,11 +1046,11 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 - ✅ Network permissions resolved for connection/messaging gating
 - ✅ 5-tab bar: Home, Network, Create+, Messages, Profile — with hidden Events, Notifications, More tabs
 - ✅ Create tab intercepted → pushes `/create-post` modal (slide from bottom)
-- ✅ Stack navigation: `post/[id]`, `chat/[id]`, `event/[id]`, `user/[id]`, `create-post`, `notifications`, `settings`, `search`, `saved` — with per-route animations
+- ✅ Stack navigation: `post/[id]`, `chat/[id]`, `event/[id]`, `user/[id]`, `create-post`, `notifications`, `settings`, `search`, `saved`, `jobs`, `job/[id]`, `mentorship`, `clubs`, `alumni`, `projects`, `project/[id]`, `ecocampus`, `portfolio`, `skill-analysis`, `ai-chat` — with per-route animations
 - ✅ Events + Notifications accessible via header icons on Feed and Profile screens
 - ✅ iOS universal links (`applinks:clstr.network`) + Android intent filters (5 path patterns, `autoVerify: true`)
 - ✅ Custom scheme `clstr://` deep links supported
-- ✅ Full deep link router: posts, profiles, events, chat, notifications, settings, feed, network — with regex-based path matching
+- ✅ Full deep link router: posts, profiles, events, chat, notifications, settings, feed, network, jobs, mentorship, clubs, alumni, projects, ecocampus, portfolio, skill-analysis, ai-chat — with regex-based path matching
 - ✅ Cold start + background resume deep link handling
 - ✅ Root redirect fixed: `/(tabs)` (live Supabase screens) instead of legacy `/(main)/(tabs)` (mock data)
 - ✅ **Design Token System** — `constants/colors.ts` rewritten: surface tiers, badge variants, AVATAR_SIZES, spacing, radius, `useThemeColors()` / `useSurfaceTiers()` / `getRoleBadgeColor()` hooks
@@ -1035,18 +1058,25 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 - ✅ **Component Polish** — All 11 shared components use design/typography tokens + React.memo: Avatar, RoleBadge, Badge, PostCard, EventCard, ConnectionCard, ConversationItem, NotificationItem, MessageBubble, UserCard, GlassContainer, SettingsRow
 - ✅ **Font Loading** — 5 Inter weights loaded via `useFonts()` in `_layout.tsx`, splash held until fonts ready
 - ✅ **Theme Support** — All components use `useThemeColors()` hook; no hardcoded `Colors.dark.*` references remain
-- ✅ **FlatList Performance** — All 8 FlatList instances tuned with `maxToRenderPerBatch`, `windowSize`, `initialNumToRender`, `removeClippedSubviews` (Phase 7.3)
-- ✅ **Stable References** — All `renderItem`, `keyExtractor`, `ItemSeparator`, `ListHeader` wrapped in `useCallback`/`useMemo`/`React.memo` — zero inline closures in FlatList props (Phase 7.2)
-- ✅ **Per-Query Cache Tuning** — `staleTime`/`gcTime` set per query by update frequency: feed 30s, messages 30s, chat 10s, events 60s, notifications 15s, connections 30s, pending requests 10s, post 30s, comments 15s (Phase 7.4)
-- ✅ **Realtime Dedup Verified** — `SubscriptionManager` singleton confirmed: name-based registry prevents duplicate channels, factory-based reconnect, auto-cleanup on unmount (Phase 7.5)
-- ✅ **Typeahead Search** — `app/search.tsx` with debounced input, People + Events sections, FlatList perf props, deep link navigation (Phase 8.1)
-- ✅ **Saved Items** — `app/saved.tsx` with Posts/Projects/Clubs tabs, `getSavedItems()` from `@clstr/core`, pull-to-refresh (Phase 8.2)
-- ✅ **Enhanced Settings** — `app/settings.tsx` fully rewritten: theme toggle (Light/Dark/System), 4 notification preference switches, privacy visibility selector, account deletion with double-confirmation, support links, sign out (Phase 8.3)
-- ✅ **Push Notifications** — `lib/hooks/usePushNotifications.ts`: expo-notifications, permission request, token registration/deactivation via Supabase RPC, foreground handler, auto-re-register on login, wired into root layout (Phase 8.4)
-- ✅ **Search + Saved Deep Links** — `+native-intent.tsx` updated with `/search`, `/saved`, `/bookmarks` routes; Stack.Screen entries added in `_layout.tsx` (Phase 8.5)
-
-**What still needs work (Phase 9):**
-- ❌ Advanced features (jobs, mentorship, clubs, marketplace) not started (Phase 9)
+- ✅ **FlatList Performance** — All FlatList instances tuned with `maxToRenderPerBatch`, `windowSize`, `initialNumToRender`, `removeClippedSubviews`
+- ✅ **Stable References** — All `renderItem`, `keyExtractor`, `ItemSeparator`, `ListHeader` wrapped in `useCallback`/`useMemo`/`React.memo` — zero inline closures in FlatList props
+- ✅ **Per-Query Cache Tuning** — `staleTime`/`gcTime` set per query by update frequency
+- ✅ **Realtime Dedup Verified** — `SubscriptionManager` singleton confirmed: name-based registry prevents duplicate channels
+- ✅ **Typeahead Search** — `app/search.tsx` with debounced input, People + Events sections
+- ✅ **Saved Items** — `app/saved.tsx` with Posts/Projects/Clubs tabs
+- ✅ **Enhanced Settings** — `app/settings.tsx` with theme toggle, notification prefs, privacy, delete account
+- ✅ **Push Notifications** — `lib/hooks/usePushNotifications.ts` with expo-notifications, token lifecycle
+- ✅ **Phase 9.1: Jobs** — `app/jobs.tsx` (browse/saved tabs with search), `app/job/[id].tsx` (detail + apply/save), 10 API functions from `@clstr/core/api/jobs-api`
+- ✅ **Phase 9.2: Mentorship** — `app/mentorship.tsx` (Mentors/My Requests/Incoming/Active tabs), `lib/api/mentorship.ts` (12 direct Supabase query functions — no @clstr/core module exists)
+- ✅ **Phase 9.3: Clubs** — `app/clubs.tsx` (browse with follow/unfollow), 3 API functions from `@clstr/core/api/clubs-api`
+- ✅ **Phase 9.4: Alumni Directory** — `app/alumni.tsx` (search + mentor filter), `lib/api/alumni.ts` (direct Supabase RPC `get_alumni_by_domain`)
+- ✅ **Phase 9.5: Projects / CollabHub** — `app/projects.tsx` (Explore/My Projects tabs), `app/project/[id].tsx` (detail + roles + apply), 10 API functions from `@clstr/core/api/projects-api`
+- ✅ **Phase 9.6: EcoCampus** — `app/ecocampus.tsx` (Items/Requests/My Listings tabs), 19 API functions from `@clstr/core/api/ecocampus-api`
+- ✅ **Phase 9.7: Portfolio** — `app/portfolio.tsx` (settings form with slug, section toggles, activate), 4 API functions from `@clstr/core/api/portfolio-api`
+- ✅ **Phase 9.8: Skill Analysis** — `app/skill-analysis.tsx` (score card, distribution, skill bars), 4 bound + 4 pure re-exported functions from `@clstr/core/api/skill-analysis-api`
+- ✅ **Phase 9.9: AI Chat** — `app/ai-chat.tsx` (sessions list + chat view with bubbles + send), 7 API functions from `@clstr/core/api/ai-service`
+- ✅ **Navigation Wired** — All 11 Phase 9 screens registered in `_layout.tsx` Stack.Screen entries
+- ✅ **Deep Links Wired** — All Phase 9 routes added to `+native-intent.tsx` with regex path matching
 
 **Architecture quality:**
 - Expo Router v6 navigation structure is solid — file-based tabs + stack overlays
@@ -1060,5 +1090,6 @@ app.json                    ✅ MODIFIED (Phase 5.3) — iOS associatedDomains, 
 - API adapter layer mirrors web's `src/adapters/bind.ts` pattern exactly
 - Realtime hooks follow consistent patterns: base hook + domain-specific hooks + screen wiring
 - RBAC system uses 100% pure permission functions from `@clstr/core` — zero mobile-specific permission logic
+- Phase 9 screens follow production patterns: React.memo cards, FlatList perf props, RefreshControl, proper loading/empty/error states, Haptics feedback, useFeatureAccess RBAC gating
 
-**Estimated remaining effort to production parity:** 1–3 weeks for a single developer, 1 week for a team of 2–3. Phases 0–8 completed all core integration, navigation, visual design parity, performance enforcement, search, saved items, settings, and push notifications — the remaining phase is advanced feature screens (Phase 9: jobs, mentorship, clubs, alumni, marketplace, portfolio, skill analysis, AI chat).
+**All phases complete — mobile app at full feature parity with web.**
