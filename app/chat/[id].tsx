@@ -5,49 +5,70 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
-import { Avatar } from '@/components/Avatar';
-import { getMessages, getConversations, sendMessage, type Message, type Conversation } from '@/lib/storage';
+import Avatar from '@/components/Avatar';
+import { useAuth } from '@/lib/auth-context';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import {
+  getMessages,
+  sendMessage,
+  markMessagesAsRead,
+  type Message,
+} from '@/lib/api';
 
 export default function ChatScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: partnerId } = useLocalSearchParams<{ id: string }>();
   const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = useState('');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
-  const { data: conversations = [] } = useQuery({ queryKey: ['conversations'], queryFn: getConversations });
-  const conversation = conversations.find(c => c.id === id);
-
-  const { data: messages = [] } = useQuery({
-    queryKey: ['messages', id],
-    queryFn: () => getMessages(id!),
-    enabled: !!id,
+  const { data } = useQuery({
+    queryKey: QUERY_KEYS.chat(partnerId!),
+    queryFn: () => getMessages(partnerId!),
+    enabled: !!partnerId,
   });
 
+  const messages = data?.messages ?? [];
+  const partner = data?.partner;
   const reversedMessages = [...messages].reverse();
 
-  const handleSend = useCallback(async () => {
-    if (!text.trim() || !id) return;
+  // Mark messages as read on mount
+  useEffect(() => {
+    if (partnerId) {
+      markMessagesAsRead(partnerId).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations });
+    }
+  }, [partnerId, queryClient]);
+
+  const sendMutation = useMutation({
+    mutationFn: (content: string) => sendMessage(partnerId!, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chat(partnerId!) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations });
+    },
+  });
+
+  const handleSend = useCallback(() => {
+    if (!text.trim() || !partnerId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const content = text.trim();
     setText('');
-    await sendMessage(id, content);
-    queryClient.invalidateQueries({ queryKey: ['messages', id] });
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    sendMutation.mutate(content);
     inputRef.current?.focus();
-  }, [text, id, queryClient]);
+  }, [text, partnerId, sendMutation]);
 
   const renderMessage = useCallback(({ item }: { item: Message }) => {
-    const isSelf = item.senderId === 'self';
+    const isSelf = item.sender_id === user?.id;
     return (
       <View style={[styles.msgRow, isSelf && styles.msgRowSelf]}>
-        {!isSelf && <Avatar uri={conversation?.participantAvatar} size={30} />}
+        {!isSelf && <Avatar uri={partner?.avatar_url} name={partner?.full_name} size={30} />}
         <View style={[
           styles.msgBubble,
           isSelf
@@ -58,7 +79,7 @@ export default function ChatScreen() {
         </View>
       </View>
     );
-  }, [colors, conversation]);
+  }, [colors, partner, user?.id]);
 
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior="padding" keyboardVerticalOffset={0}>
@@ -66,10 +87,10 @@ export default function ChatScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Avatar uri={conversation?.participantAvatar} name={conversation?.participantName} size={36} />
+        <Avatar uri={partner?.avatar_url} name={partner?.full_name} size={36} />
         <View style={styles.headerInfo}>
           <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>
-            {conversation?.participantName || 'Chat'}
+            {partner?.full_name || 'Chat'}
           </Text>
         </View>
       </View>
@@ -101,7 +122,7 @@ export default function ChatScreen() {
         />
         <Pressable
           onPress={handleSend}
-          disabled={!text.trim()}
+          disabled={!text.trim() || sendMutation.isPending}
           style={({ pressed }) => [
             styles.sendBtn,
             { backgroundColor: text.trim() ? colors.tint : colors.surfaceElevated },

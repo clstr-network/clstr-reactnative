@@ -9,6 +9,12 @@
       ],
       "@shared/*": [
         "./shared/*"
+      ],
+      "@clstr/core": [
+        "./packages/core/src/index.ts"
+      ],
+      "@clstr/core/*": [
+        "./packages/core/src/*"
       ]
     }
   },

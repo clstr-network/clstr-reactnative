@@ -12,3 +12,4 @@ export * from './profile';
 export * from './account';
 export * from './search';
 export * from './permissions';
+export * from './notifications';

@@ -1,55 +1,108 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, useColorScheme, Platform, RefreshControl, ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
-import { ConnectionCard } from '@/components/ConnectionCard';
-import { getConnections, updateConnectionStatus, type Connection } from '@/lib/storage';
+import ConnectionCard from '@/components/ConnectionCard';
+import { useAuth } from '@/lib/auth-context';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import {
+  getConnections,
+  getConnectionRequests,
+  acceptConnectionRequest,
+  rejectConnectionRequest,
+} from '@/lib/api';
 
-const FILTERS = ['All', 'Connected', 'Pending', 'Suggested'];
+const FILTERS = ['All', 'Connected', 'Pending'];
+
+interface CardItem {
+  id: string;
+  user?: { id?: string; full_name?: string; avatar_url?: string | null; role?: string; headline?: string | null };
+  isPending: boolean;
+}
 
 export default function NetworkScreen() {
   const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState('All');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
-  const { data: connections = [], isLoading } = useQuery({
-    queryKey: ['connections'],
+  const { data: connections = [], isLoading: loadingConnections } = useQuery({
+    queryKey: QUERY_KEYS.network,
     queryFn: getConnections,
   });
 
-  const filtered = activeFilter === 'All'
-    ? connections
-    : connections.filter(c => c.status === activeFilter.toLowerCase());
+  const { data: pendingRequests = [], isLoading: loadingPending } = useQuery({
+    queryKey: ['connection-requests'],
+    queryFn: getConnectionRequests,
+  });
 
-  const handleConnect = useCallback(async (id: string) => {
-    const updated = await updateConnectionStatus(id, 'connected');
-    queryClient.setQueryData(['connections'], updated);
-  }, [queryClient]);
+  const isLoading = loadingConnections || loadingPending;
 
-  const handleAccept = useCallback(async (id: string) => {
-    const updated = await updateConnectionStatus(id, 'connected');
-    queryClient.setQueryData(['connections'], updated);
-  }, [queryClient]);
+  const acceptMutation = useMutation({
+    mutationFn: (connectionId: string) => acceptConnectionRequest(connectionId),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
+      queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (connectionId: string) => rejectConnectionRequest(connectionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
+    },
+  });
+
+  // Transform accepted connections into card items
+  const connectedItems: CardItem[] = useMemo(() =>
+    connections.map((c: any) => {
+      const otherUser = c.requester_id === user?.id ? c.receiver : c.requester;
+      return { id: c.id, user: otherUser, isPending: false };
+    }),
+  [connections, user?.id]);
+
+  // Transform pending requests into card items
+  const pendingItems: CardItem[] = useMemo(() =>
+    pendingRequests.map((r: any) => ({
+      id: r.id,
+      user: r.requester,
+      isPending: true,
+    })),
+  [pendingRequests]);
+
+  const allItems = useMemo(() => {
+    if (activeFilter === 'Connected') return connectedItems;
+    if (activeFilter === 'Pending') return pendingItems;
+    return [...pendingItems, ...connectedItems];
+  }, [activeFilter, connectedItems, pendingItems]);
 
   const handleRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ['connections'] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network }),
+      queryClient.invalidateQueries({ queryKey: ['connection-requests'] }),
+    ]);
   }, [queryClient]);
 
-  const renderItem = useCallback(({ item }: { item: Connection }) => (
-    <ConnectionCard connection={item} onConnect={handleConnect} onAccept={handleAccept} />
-  ), [handleConnect, handleAccept]);
+  const renderItem = useCallback(({ item }: { item: CardItem }) => (
+    <ConnectionCard
+      connection={item}
+      isPending={item.isPending}
+      onAccept={() => acceptMutation.mutate(item.id as string)}
+      onReject={() => rejectMutation.mutate(item.id as string)}
+      onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.user?.id as string } })}
+    />
+  ), [acceptMutation, rejectMutation]);
 
-  const keyExtractor = useCallback((item: Connection) => item.id, []);
-
-  const connectedCount = connections.filter(c => c.status === 'connected').length;
-  const pendingCount = connections.filter(c => c.status === 'pending').length;
+  const keyExtractor = useCallback((item: CardItem) => String(item.id), []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -57,11 +110,11 @@ export default function NetworkScreen() {
         <Text style={[styles.title, { color: colors.text }]}>Network</Text>
         <View style={styles.statsRow}>
           <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
-            <Text style={[styles.statNum, { color: colors.tint }]}>{connectedCount}</Text>
+            <Text style={[styles.statNum, { color: colors.tint }]}>{connectedItems.length}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Connections</Text>
           </View>
           <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
-            <Text style={[styles.statNum, { color: colors.warning }]}>{pendingCount}</Text>
+            <Text style={[styles.statNum, { color: colors.warning }]}>{pendingItems.length}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Pending</Text>
           </View>
         </View>
@@ -97,7 +150,7 @@ export default function NetworkScreen() {
         </View>
       ) : (
         <FlatList
-          data={filtered}
+          data={allItems}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}

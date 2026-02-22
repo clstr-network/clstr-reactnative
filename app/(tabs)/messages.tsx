@@ -7,8 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useThemeColors } from '@/constants/colors';
-import { ConversationItem } from '@/components/ConversationItem';
-import { getConversations, type Conversation } from '@/lib/storage';
+import ConversationItem from '@/components/ConversationItem';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import { getConversations, type Conversation } from '@/lib/api';
 
 export default function MessagesScreen() {
   const colors = useThemeColors(useColorScheme());
@@ -17,25 +18,25 @@ export default function MessagesScreen() {
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   const { data: conversations = [], isLoading } = useQuery({
-    queryKey: ['conversations'],
+    queryKey: QUERY_KEYS.conversations,
     queryFn: getConversations,
   });
 
-  const handlePress = useCallback((id: string) => {
-    router.push({ pathname: '/chat/[id]', params: { id } });
+  const handlePress = useCallback((partnerId: string) => {
+    router.push({ pathname: '/chat/[id]', params: { id: partnerId } });
   }, []);
 
   const handleRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations });
   }, [queryClient]);
 
   const renderItem = useCallback(({ item }: { item: Conversation }) => (
-    <ConversationItem conversation={item} onPress={handlePress} />
+    <ConversationItem conversation={item} onPress={() => handlePress(item.partner_id)} />
   ), [handlePress]);
 
-  const keyExtractor = useCallback((item: Conversation) => item.id, []);
+  const keyExtractor = useCallback((item: Conversation) => item.partner_id, []);
 
-  const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

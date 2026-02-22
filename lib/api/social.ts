@@ -41,6 +41,14 @@ import {
   getTopComments as _getTopComments,
   countMutualConnections as _countMutualConnections,
   countMutualConnectionsBatch as _countMutualConnectionsBatch,
+  // Connection management
+  getConnections as _getConnections,
+  getConnectionRequests as _getConnectionRequests,
+  sendConnectionRequest as _sendConnectionRequest,
+  acceptConnectionRequest as _acceptConnectionRequest,
+  rejectConnectionRequest as _rejectConnectionRequest,
+  removeConnection as _removeConnection,
+  checkConnectionStatus as _checkConnectionStatus,
 } from '@clstr/core/api/social-api';
 
 // Re-export types for convenience
@@ -97,3 +105,12 @@ export const getTopCommentsBatch = withClient(_getTopCommentsBatch);
 export const getTopComments = withClient(_getTopComments);
 export const countMutualConnections = withClient(_countMutualConnections);
 export const countMutualConnectionsBatch = withClient(_countMutualConnectionsBatch);
+
+// Connection management
+export const getConnections = withClient(_getConnections);
+export const getConnectionRequests = withClient(_getConnectionRequests);
+export const sendConnectionRequest = withClient(_sendConnectionRequest);
+export const acceptConnectionRequest = withClient(_acceptConnectionRequest);
+export const rejectConnectionRequest = withClient(_rejectConnectionRequest);
+export const removeConnection = withClient(_removeConnection);
+export const checkConnectionStatus = withClient(_checkConnectionStatus);

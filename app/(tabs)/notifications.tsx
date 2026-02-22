@@ -1,64 +1,105 @@
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, Platform } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Colors from '@/constants/colors';
-import { useData } from '@/lib/data-context';
-import { NotificationItemComponent } from '@/components/NotificationItem';
-import { Notification } from '@/lib/types';
+import { useThemeColors } from '@/constants/colors';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import { getNotifications, markNotificationRead, markAllNotificationsRead, type Notification } from '@/lib/api/notifications';
+import { NotificationItem } from '@/components/NotificationItem';
 
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
-  const { notifications, unreadCount, markNotificationRead, markAllNotificationsRead } = useData();
+  const colors = useThemeColors();
+  const queryClient = useQueryClient();
+
+  const { data: notifications = [], isLoading, refetch, isRefetching } = useQuery<Notification[]>({
+    queryKey: QUERY_KEYS.notifications,
+    queryFn: getNotifications,
+  });
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.is_read).length,
+    [notifications],
+  );
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => markNotificationRead(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notifications }),
+  });
+
+  const markAllMutation = useMutation({
+    mutationFn: () => markAllNotificationsRead(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notifications }),
+  });
 
   const handleMarkAll = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    markAllNotificationsRead();
+    markAllMutation.mutate();
   };
 
+  const handlePress = useCallback((id: string) => {
+    markReadMutation.mutate(id);
+  }, [markReadMutation]);
+
   const renderNotification = useCallback(({ item }: { item: Notification }) => (
-    <NotificationItemComponent notification={item} onPress={markNotificationRead} />
-  ), [markNotificationRead]);
+    <NotificationItem notification={item} onPress={handlePress} />
+  ), [handlePress]);
 
   const keyExtractor = useCallback((item: Notification) => item.id, []);
 
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 8 }]}>
         <View>
-          <Text style={styles.title}>Notifications</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
           {unreadCount > 0 && (
-            <Text style={styles.unreadLabel}>{unreadCount} new</Text>
+            <Text style={[styles.unreadLabel, { color: colors.textSecondary }]}>{unreadCount} new</Text>
           )}
         </View>
         {unreadCount > 0 && (
           <Pressable
             onPress={handleMarkAll}
-            style={({ pressed }) => [styles.markAllBtn, pressed && { opacity: 0.7 }]}
+            disabled={markAllMutation.isPending}
+            style={({ pressed }) => [
+              styles.markAllBtn,
+              { backgroundColor: colors.surfaceElevated },
+              pressed && { opacity: 0.7 },
+              markAllMutation.isPending && { opacity: 0.5 },
+            ]}
             hitSlop={8}
           >
-            <Ionicons name="checkmark-done" size={18} color={Colors.dark.text} />
+            <Ionicons name="checkmark-done" size={18} color={colors.tint} />
           </Pressable>
         )}
       </View>
 
-      <FlatList
-        data={notifications}
-        renderItem={renderNotification}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 }}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={!!notifications.length}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="notifications-outline" size={40} color={Colors.dark.textMeta} />
-            <Text style={styles.emptyText}>No notifications</Text>
-          </View>
-        }
-      />
+      {isLoading ? (
+        <View style={styles.empty}>
+          <ActivityIndicator size="large" color={colors.tint} />
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          renderItem={renderNotification}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 }}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={!!notifications.length}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.tint} />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="notifications-outline" size={40} color={colors.textTertiary} />
+              <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No notifications</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -66,7 +107,6 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: Colors.dark.background,
   },
   header: {
     flexDirection: 'row',
@@ -76,21 +116,18 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: {
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 24,
-    color: Colors.dark.text,
   },
   unreadLabel: {
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
-    color: Colors.dark.textSecondary,
     marginTop: 2,
   },
   markAllBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.dark.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
@@ -102,8 +139,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyText: {
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 14,
-    color: Colors.dark.textMeta,
   },
 });

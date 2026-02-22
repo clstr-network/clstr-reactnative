@@ -4,13 +4,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
-import { Avatar } from '@/components/Avatar';
-import { getEvents, toggleRsvp, type Event } from '@/lib/storage';
-import { formatEventDate } from '@/lib/time';
+import { useThemeColors } from '@/constants/colors';
+import { QUERY_KEYS } from '@/lib/query-keys';
+import { getEvents, toggleEventRegistration, type Event } from '@/lib/api';
 
 const CATEGORIES = ['All', 'Academic', 'Career', 'Social', 'Workshop', 'Sports'];
 
@@ -18,12 +17,17 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   academic: 'school', career: 'briefcase', social: 'people', workshop: 'construct', sports: 'basketball',
 };
 
-const EventCard = React.memo(function EventCard({ event, colors, onRsvp, onPress }: {
+function formatDateBadge(dateStr?: string): { month: string; day: string } {
+  if (!dateStr) return { month: '---', day: '--' };
+  const d = new Date(dateStr);
+  return { month: d.toLocaleDateString('en', { month: 'short' }), day: String(d.getDate()) };
+}
+
+const InlineEventCard = React.memo(function InlineEventCard({ event, colors, onRsvp, onPress }: {
   event: Event; colors: any; onRsvp: (id: string) => void; onPress: (id: string) => void;
 }) {
-  const dateInfo = formatEventDate(event.date);
-  const spotsLeft = event.maxAttendees - event.attendeesCount;
-  const catIcon = CATEGORY_ICONS[event.category] || 'calendar';
+  const dateInfo = formatDateBadge(event.event_date);
+  const catIcon = CATEGORY_ICONS[(event.category ?? '').toLowerCase()] || 'calendar';
 
   return (
     <Pressable
@@ -38,39 +42,47 @@ const EventCard = React.memo(function EventCard({ event, colors, onRsvp, onPress
         <View style={styles.eventInfo}>
           <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>{event.title}</Text>
           <View style={styles.eventMeta}>
-            <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
-            <Text style={[styles.eventLocation, { color: colors.textTertiary }]} numberOfLines={1}>{event.location}</Text>
+            <Ionicons name={event.is_virtual ? 'videocam-outline' : 'location-outline'} size={13} color={colors.textTertiary} />
+            <Text style={[styles.eventLocation, { color: colors.textTertiary }]} numberOfLines={1}>
+              {event.is_virtual ? 'Virtual Event' : event.location ?? 'TBA'}
+            </Text>
           </View>
-          <View style={styles.eventMeta}>
-            <Ionicons name="time-outline" size={13} color={colors.textTertiary} />
-            <Text style={[styles.eventTime, { color: colors.textTertiary }]}>{event.time}</Text>
-          </View>
+          {event.event_time && (
+            <View style={styles.eventMeta}>
+              <Ionicons name="time-outline" size={13} color={colors.textTertiary} />
+              <Text style={[styles.eventTime, { color: colors.textTertiary }]}>{event.event_time}</Text>
+            </View>
+          )}
         </View>
       </View>
 
       <View style={[styles.eventBottom, { borderTopColor: colors.border }]}>
         <View style={styles.eventStats}>
-          <View style={styles.eventStat}>
-            <Ionicons name={catIcon} size={14} color={colors.textSecondary} />
-            <Text style={[styles.eventStatText, { color: colors.textSecondary }]}>{event.category}</Text>
-          </View>
+          {event.category && (
+            <View style={styles.eventStat}>
+              <Ionicons name={catIcon} size={14} color={colors.textSecondary} />
+              <Text style={[styles.eventStatText, { color: colors.textSecondary }]}>{event.category}</Text>
+            </View>
+          )}
           <View style={styles.eventStat}>
             <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
-            <Text style={[styles.eventStatText, { color: colors.textSecondary }]}>{event.attendeesCount}/{event.maxAttendees}</Text>
+            <Text style={[styles.eventStatText, { color: colors.textSecondary }]}>
+              {event.attendees_count ?? 0}{event.max_attendees ? `/${event.max_attendees}` : ''}
+            </Text>
           </View>
         </View>
         <Pressable
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onRsvp(event.id); }}
           style={({ pressed }) => [
             styles.rsvpBtn,
-            event.isRsvped
+            event.is_registered
               ? { backgroundColor: colors.success + '15', borderColor: colors.success + '40', borderWidth: 1 }
               : { backgroundColor: colors.tint },
             pressed && { opacity: 0.85 },
           ]}
           hitSlop={8}
         >
-          {event.isRsvped ? (
+          {event.is_registered ? (
             <>
               <Ionicons name="checkmark" size={14} color={colors.success} />
               <Text style={[styles.rsvpText, { color: colors.success }]}>Going</Text>
@@ -92,35 +104,41 @@ export default function EventsScreen() {
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ['events'],
+    queryKey: QUERY_KEYS.events,
     queryFn: getEvents,
   });
 
   const filtered = activeCategory === 'All'
     ? events
-    : events.filter(e => e.category === activeCategory.toLowerCase());
+    : events.filter((e: Event) => (e.category ?? '').toLowerCase() === activeCategory.toLowerCase());
 
-  const handleRsvp = useCallback(async (id: string) => {
-    const updated = await toggleRsvp(id);
-    queryClient.setQueryData(['events'], updated);
-  }, [queryClient]);
+  const rsvpMutation = useMutation({
+    mutationFn: (eventId: string) => toggleEventRegistration(eventId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events });
+    },
+  });
+
+  const handleRsvp = useCallback((id: string) => {
+    rsvpMutation.mutate(id);
+  }, [rsvpMutation]);
 
   const handlePress = useCallback((id: string) => {
     router.push({ pathname: '/event/[id]', params: { id } });
   }, []);
 
   const handleRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ['events'] });
+    await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events });
   }, [queryClient]);
 
   const renderItem = useCallback(({ item }: { item: Event }) => (
-    <EventCard event={item} colors={colors} onRsvp={handleRsvp} onPress={handlePress} />
+    <InlineEventCard event={item} colors={colors} onRsvp={handleRsvp} onPress={handlePress} />
   ), [colors, handleRsvp, handlePress]);
 
   const keyExtractor = useCallback((item: Event) => item.id, []);
 
   const upcomingCount = events.length;
-  const rsvpCount = events.filter(e => e.isRsvped).length;
+  const rsvpCount = events.filter((e: Event) => e.is_registered).length;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

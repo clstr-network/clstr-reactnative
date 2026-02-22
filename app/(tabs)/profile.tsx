@@ -1,24 +1,42 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, useColorScheme, Platform, Alert
+  View, Text, StyleSheet, ScrollView, Pressable, useColorScheme, Platform, Alert, ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
 import { Avatar } from '@/components/Avatar';
 import { RoleBadge } from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
-import { resetAllData } from '@/lib/storage';
+import { getProfileById, type UserProfile } from '@/lib/api';
+import { QUERY_KEYS } from '@/lib/query-keys';
 
 export default function ProfileScreen() {
   const colors = useThemeColors(useColorScheme());
   const insets = useSafeAreaInsets();
-  const { user, refresh } = useAuth();
+  const { user, signOut } = useAuth();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
-  if (!user) {
+  const { data: profile, isLoading } = useQuery({
+    queryKey: QUERY_KEYS.profile(user?.id ?? ''),
+    queryFn: () => getProfileById(user!.id),
+    enabled: !!user?.id,
+  });
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={colors.tint} />
+        </View>
+      </View>
+    );
+  }
+
+  if (!profile) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.emptyState}>
@@ -29,17 +47,18 @@ export default function ProfileScreen() {
     );
   }
 
-  const badgeColor = getRoleBadgeColor(user.role, colors);
+  const badgeColor = getRoleBadgeColor(profile.role ?? 'Student', colors);
+  const connectionsCount = profile.connections?.length ?? 0;
+  const postsCount = profile.posts?.length ?? 0;
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out? This will reset all data.', [
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          await resetAllData();
-          await refresh();
+          await signOut();
           router.replace('/onboarding');
         },
       },
@@ -47,7 +66,7 @@ export default function ProfileScreen() {
   };
 
   const MENU_ITEMS = [
-    { icon: 'person-outline' as const, label: 'Edit Profile', color: colors.accent, onPress: () => {} },
+    { icon: 'person-outline' as const, label: 'Edit Profile', color: colors.tint, onPress: () => {} },
     { icon: 'bookmark-outline' as const, label: 'Saved Posts', color: colors.warning, onPress: () => {} },
     { icon: 'settings-outline' as const, label: 'Settings', color: colors.textSecondary, onPress: () => router.push('/settings') },
     { icon: 'help-circle-outline' as const, label: 'Help & Support', color: colors.textSecondary, onPress: () => {} },
@@ -61,26 +80,28 @@ export default function ProfileScreen() {
     >
       <View style={[styles.headerBg, { backgroundColor: badgeColor + '15', paddingTop: insets.top + webTopInset }]}>
         <View style={styles.profileSection}>
-          <Avatar uri={user.avatarUrl} name={user.name} size={80} showBorder />
-          <Text style={[styles.name, { color: colors.text }]}>{user.name}</Text>
-          <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.username}</Text>
-          <RoleBadge role={user.role} size="medium" />
-          {!!user.bio && <Text style={[styles.bio, { color: colors.textSecondary }]}>{user.bio}</Text>}
+          <Avatar uri={profile.avatar_url} name={profile.full_name ?? 'User'} size={80} showBorder />
+          <Text style={[styles.name, { color: colors.text }]}>{profile.full_name ?? 'User'}</Text>
+          {profile.headline && (
+            <Text style={[styles.username, { color: colors.textSecondary }]}>{profile.headline}</Text>
+          )}
+          {profile.role && <RoleBadge role={profile.role} size="medium" />}
+          {!!profile.bio && <Text style={[styles.bio, { color: colors.textSecondary }]}>{profile.bio}</Text>}
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{user.connectionsCount}</Text>
+            <Text style={[styles.statNum, { color: colors.text }]}>{connectionsCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Connections</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{user.postsCount}</Text>
+            <Text style={[styles.statNum, { color: colors.text }]}>{postsCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Posts</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{user.department}</Text>
+            <Text style={[styles.statNum, { color: colors.text }]}>{profile.major ?? profile.university ?? '—'}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Department</Text>
           </View>
         </View>
@@ -108,14 +129,14 @@ export default function ProfileScreen() {
           style={({ pressed }) => [
             styles.menuItem,
             styles.logoutItem,
-            { backgroundColor: pressed ? colors.danger + '10' : 'transparent', borderColor: colors.border },
+            { backgroundColor: pressed ? colors.error + '10' : 'transparent', borderColor: colors.border },
           ]}
           onPress={handleLogout}
         >
-          <View style={[styles.menuIconBg, { backgroundColor: colors.danger + '15' }]}>
-            <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+          <View style={[styles.menuIconBg, { backgroundColor: colors.error + '15' }]}>
+            <Ionicons name="log-out-outline" size={20} color={colors.error} />
           </View>
-          <Text style={[styles.menuLabel, { color: colors.danger }]}>Sign Out</Text>
+          <Text style={[styles.menuLabel, { color: colors.error }]}>Sign Out</Text>
         </Pressable>
       </View>
     </ScrollView>

@@ -1,39 +1,107 @@
 import React, { useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, useColorScheme, Platform
+  View, Text, StyleSheet, ScrollView, Pressable, Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
-import { Avatar } from '@/components/Avatar';
-import { RoleBadge } from '@/components/RoleBadge';
-import { getConnectionById, updateConnectionStatus, type Connection } from '@/lib/storage';
+import Avatar from '@/components/Avatar';
+import RoleBadge from '@/components/RoleBadge';
+import { getProfileById } from '@/lib/api/profile';
+import type { UserProfile } from '@/lib/api/profile';
+import {
+  checkConnectionStatus,
+  sendConnectionRequest,
+  removeConnection,
+  countMutualConnections,
+  getUserPostsCount,
+} from '@/lib/api/social';
+import { QUERY_KEYS } from '@/lib/query-keys';
+
+import { useAuth } from '@/lib/auth-context';
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { user: authUser } = useAuth();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
-  const { data: user } = useQuery({
-    queryKey: ['connection', id],
-    queryFn: () => getConnectionById(id!),
+  const { data: profile, isLoading } = useQuery<UserProfile | null>({
+    queryKey: QUERY_KEYS.profile(id ?? ''),
+    queryFn: () => getProfileById(id!),
     enabled: !!id,
+  });
+
+  const { data: connectionStatus } = useQuery<string | null>({
+    queryKey: ['connectionStatus', id],
+    queryFn: () => checkConnectionStatus(id!),
+    enabled: !!id,
+  });
+
+  const { data: mutualCount } = useQuery<number>({
+    queryKey: ['mutualConnections', id],
+    queryFn: () => countMutualConnections(authUser!.id, id!),
+    enabled: !!id && !!authUser,
+  });
+
+  const { data: postsCount } = useQuery<number>({
+    queryKey: ['userPostsCount', id],
+    queryFn: () => getUserPostsCount(id!),
+    enabled: !!id,
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: () => sendConnectionRequest(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['connectionStatus', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
+    },
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: () => removeConnection(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['connectionStatus', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
+    },
   });
 
   const handleConnect = useCallback(async () => {
     if (!id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const updated = await updateConnectionStatus(id, 'connected');
-    queryClient.setQueryData(['connections'], updated);
-    queryClient.invalidateQueries({ queryKey: ['connection', id] });
-  }, [id, queryClient]);
+    connectMutation.mutate();
+  }, [id, connectMutation]);
 
-  if (!user) {
+  const handleDisconnect = useCallback(async () => {
+    if (!id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    disconnectMutation.mutate();
+  }, [id, disconnectMutation]);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, borderBottomColor: colors.border }]}>
+          <Pressable onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={colors.tint} />
+        </View>
+      </View>
+    );
+  }
+
+  if (!profile) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { paddingTop: insets.top + webTopInset + 8, borderBottomColor: colors.border }]}>
@@ -50,7 +118,10 @@ export default function UserProfileScreen() {
     );
   }
 
-  const badgeColor = getRoleBadgeColor(user.role, colors);
+  const badgeColor = getRoleBadgeColor(profile.role ?? '');
+  const isConnected = connectionStatus === 'connected';
+  const isPending = connectionStatus === 'pending';
+  const isBusy = connectMutation.isPending || disconnectMutation.isPending;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -63,51 +134,64 @@ export default function UserProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={[styles.profileBg, { backgroundColor: badgeColor + '12' }]}>
-          <Avatar uri={user.avatarUrl} name={user.name} size={88} showBorder />
-          <Text style={[styles.name, { color: colors.text }]}>{user.name}</Text>
-          <Text style={[styles.username, { color: colors.textSecondary }]}>@{user.username}</Text>
-          <RoleBadge role={user.role} size="medium" />
-          <Text style={[styles.dept, { color: colors.textSecondary }]}>{user.department}</Text>
-          {!!user.bio && <Text style={[styles.bio, { color: colors.textSecondary }]}>{user.bio}</Text>}
+        <View style={[styles.profileBg, { backgroundColor: badgeColor.bg + '20' }]}>
+          <Avatar uri={profile.avatar_url ?? undefined} name={profile.full_name ?? 'User'} size={88} />
+          <Text style={[styles.name, { color: colors.text }]}>{profile.full_name ?? 'Unknown'}</Text>
+          {!!profile.headline && (
+            <Text style={[styles.username, { color: colors.textSecondary }]}>{profile.headline}</Text>
+          )}
+          <RoleBadge role={profile.role ?? ''} />
+          <Text style={[styles.dept, { color: colors.textSecondary }]}>
+            {profile.major ?? profile.university ?? ''}
+          </Text>
+          {!!profile.bio && <Text style={[styles.bio, { color: colors.textSecondary }]}>{profile.bio}</Text>}
         </View>
 
         <View style={styles.statsRow}>
-          <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{user.connectionsCount}</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{profile.connections?.length ?? 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Connections</Text>
           </View>
-          <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{user.postsCount}</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{postsCount ?? 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Posts</Text>
           </View>
-          <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{user.mutualConnections}</Text>
+          <View style={[styles.statBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{mutualCount ?? 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Mutual</Text>
           </View>
         </View>
 
         <View style={styles.actionsRow}>
-          {user.status === 'connected' ? (
-            <View style={[styles.connectedBtn, { borderColor: colors.success + '40' }]}>
+          {isConnected ? (
+            <Pressable
+              onPress={handleDisconnect}
+              disabled={isBusy}
+              style={[styles.connectedBtn, { borderColor: colors.success + '40' }, isBusy && { opacity: 0.6 }]}
+            >
               <Ionicons name="checkmark-circle" size={18} color={colors.success} />
               <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
-            </View>
+            </Pressable>
           ) : (
             <Pressable
               onPress={handleConnect}
-              style={({ pressed }) => [styles.connectBtn, { backgroundColor: colors.tint }, pressed && { opacity: 0.85 }]}
+              disabled={isBusy || isPending}
+              style={({ pressed }) => [
+                styles.connectBtn,
+                { backgroundColor: isPending ? colors.surfaceSecondary : colors.tint },
+                pressed && { opacity: 0.85 },
+                (isBusy || isPending) && { opacity: 0.6 },
+              ]}
             >
-              <Ionicons name="person-add" size={18} color="#fff" />
-              <Text style={styles.connectBtnText}>
-                {user.status === 'pending' ? 'Accept' : 'Connect'}
+              <Ionicons name="person-add" size={18} color={isPending ? colors.textSecondary : '#fff'} />
+              <Text style={[styles.connectBtnText, isPending && { color: colors.textSecondary }]}>
+                {isPending ? 'Pending' : 'Connect'}
               </Text>
             </Pressable>
           )}
           <Pressable
             onPress={() => {
-              const convId = `conv_${id?.replace('user_', '')}`;
-              router.push({ pathname: '/chat/[id]', params: { id: convId } });
+              router.push({ pathname: '/chat/[id]', params: { id: id! } });
             }}
             style={({ pressed }) => [styles.msgBtn, { borderColor: colors.border }, pressed && { opacity: 0.85 }]}
           >

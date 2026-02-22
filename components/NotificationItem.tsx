@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/constants/colors';
-import { Avatar } from './Avatar';
+import Avatar from './Avatar';
 import { formatRelativeTime } from '@/lib/time';
-import type { Notification } from '@/lib/storage';
+import type { Notification } from '@/lib/api/notifications';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -20,32 +20,34 @@ const NOTIF_ICONS: Record<string, { name: keyof typeof Ionicons.glyphMap; color:
 };
 
 export const NotificationItem = React.memo(function NotificationItem({ notification, onPress }: NotificationItemProps) {
-  const colors = useThemeColors(useColorScheme());
+  const colors = useThemeColors();
   const icon = NOTIF_ICONS[notification.type] || NOTIF_ICONS.like;
+  const actorName = (notification.data as any)?.actor_name ?? '';
+  const actorAvatar = (notification.data as any)?.actor_avatar ?? undefined;
 
   return (
     <Pressable
       onPress={() => onPress(notification.id)}
       style={({ pressed }) => [
         styles.item,
-        !notification.read && { backgroundColor: colors.tint + '08' },
-        pressed && { backgroundColor: colors.surfaceElevated },
+        !notification.is_read && { backgroundColor: colors.tint + '08' },
+        pressed && { backgroundColor: colors.surface },
       ]}
     >
       <View style={styles.avatarWrap}>
-        <Avatar uri={notification.actorAvatar} name={notification.actorName} size={44} />
+        <Avatar uri={actorAvatar} name={actorName || notification.title} size={44} />
         <View style={[styles.iconBadge, { backgroundColor: icon.color }]}>
           <Ionicons name={icon.name} size={10} color="#fff" />
         </View>
       </View>
       <View style={styles.info}>
         <Text style={[styles.message, { color: colors.text }]}>
-          <Text style={styles.actorName}>{notification.actorName}</Text>{' '}
-          {notification.message}
+          {actorName ? <Text style={styles.actorName}>{actorName} </Text> : null}
+          {notification.body ?? notification.title}
         </Text>
-        <Text style={[styles.time, { color: colors.textTertiary }]}>{formatRelativeTime(notification.createdAt)}</Text>
+        <Text style={[styles.time, { color: colors.textTertiary }]}>{formatRelativeTime(notification.created_at)}</Text>
       </View>
-      {!notification.read && <View style={[styles.unreadDot, { backgroundColor: colors.tint }]} />}
+      {!notification.is_read && <View style={[styles.unreadDot, { backgroundColor: colors.tint }]} />}
     </Pressable>
   );
 });
