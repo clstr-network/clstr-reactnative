@@ -6,10 +6,13 @@ import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import Colors from "@/constants/colors";
+import { useData } from "@/lib/data-context";
 
 function NativeTabLayout() {
+  const { unreadCount } = useData();
+
   return (
-    <NativeTabs>
+    <NativeTabs screenOptions={{ headerShown: false }}>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Feed</Label>
@@ -22,12 +25,13 @@ function NativeTabLayout() {
         <Icon sf={{ default: "bubble.left.and.bubble.right", selected: "bubble.left.and.bubble.right.fill" }} />
         <Label>Messages</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="events">
-        <Icon sf={{ default: "calendar", selected: "calendar" }} />
-        <Label>Events</Label>
+      <NativeTabs.Trigger name="notifications">
+        <Icon sf={{ default: "bell", selected: "bell.fill" }} />
+        <Label>Alerts</Label>
+        {unreadCount > 0 && <Badge>{unreadCount}</Badge>}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person.circle", selected: "person.circle.fill" }} />
+        <Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} />
         <Label>Profile</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
@@ -35,7 +39,7 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const isDark = true;
+  const { unreadCount } = useData();
   const isWeb = Platform.OS === "web";
   const isIOS = Platform.OS === "ios";
 
@@ -43,28 +47,28 @@ function ClassicTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.dark.primary,
-        tabBarInactiveTintColor: Colors.dark.tabIconDefault,
+        tabBarActiveTintColor: Colors.dark.tabActive,
+        tabBarInactiveTintColor: Colors.dark.tabInactive,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : Colors.dark.surface,
+          backgroundColor: isIOS ? "transparent" : Colors.dark.background,
           borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: Colors.dark.border,
+          borderTopColor: Colors.dark.divider,
           elevation: 0,
           ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
-              intensity={100}
+              intensity={80}
               tint="dark"
               style={StyleSheet.absoluteFill}
             />
           ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.dark.surface }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.dark.background }]} />
           ) : null,
         tabBarLabelStyle: {
-          fontFamily: "Inter_500Medium",
+          fontFamily: "SpaceGrotesk_500Medium",
           fontSize: 10,
         },
       }}
@@ -73,8 +77,8 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Feed",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "newspaper" : "newspaper-outline"} size={22} color={color} />
           ),
         }}
       />
@@ -82,8 +86,8 @@ function ClassicTabLayout() {
         name="network"
         options={{
           title: "Network",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "people" : "people-outline"} size={22} color={color} />
           ),
         }}
       />
@@ -91,17 +95,19 @@ function ClassicTabLayout() {
         name="messages"
         options={{
           title: "Messages",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "chatbubbles" : "chatbubbles-outline"} size={22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="events"
+        name="notifications"
         options={{
-          title: "Events",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+          title: "Alerts",
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: Colors.dark.text, color: Colors.dark.background, fontSize: 10 },
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "notifications" : "notifications-outline"} size={22} color={color} />
           ),
         }}
       />
@@ -109,8 +115,8 @@ function ClassicTabLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "person-circle" : "person-circle-outline"} size={22} color={color} />
           ),
         }}
       />

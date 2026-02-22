@@ -1,0 +1,167 @@
+import { Post, Conversation, Message, Connection, Notification, UserProfile } from './types';
+
+export const currentUser: UserProfile = {
+  id: 'user-self',
+  name: 'Alex Chen',
+  handle: '@alexchen',
+  avatar: 'AC',
+  bio: 'Building the future of decentralized systems. Engineering lead.',
+  role: 'Engineering Lead',
+  connections: 284,
+  posts: 47,
+  joined: 'Jan 2024',
+  isOnline: true,
+};
+
+export const seedPosts: Post[] = [
+  {
+    id: 'post-1',
+    authorId: 'user-2',
+    authorName: 'Maya Rodriguez',
+    authorHandle: '@mayar',
+    authorAvatar: 'MR',
+    content: 'Just shipped the new authentication module. Zero-knowledge proofs are finally production-ready on our stack. Feels good.',
+    timestamp: '2m ago',
+    likes: 24,
+    comments: 8,
+    isLiked: false,
+    tag: 'Engineering',
+  },
+  {
+    id: 'post-2',
+    authorId: 'user-3',
+    authorName: 'James Park',
+    authorHandle: '@jpark',
+    authorAvatar: 'JP',
+    content: 'The network latency improvements from last sprint are showing real results. P99 dropped from 340ms to 89ms across all regions.',
+    timestamp: '18m ago',
+    likes: 41,
+    comments: 12,
+    isLiked: true,
+    tag: 'Performance',
+  },
+  {
+    id: 'post-3',
+    authorId: 'user-4',
+    authorName: 'Sarah Kim',
+    authorHandle: '@sarahk',
+    authorAvatar: 'SK',
+    content: 'Looking for feedback on our new onboarding flow. We reduced steps from 7 to 3 while maintaining data quality. Thread below.',
+    timestamp: '1h ago',
+    likes: 56,
+    comments: 23,
+    isLiked: false,
+    tag: 'Product',
+  },
+  {
+    id: 'post-4',
+    authorId: 'user-5',
+    authorName: 'David Liu',
+    authorHandle: '@dliu',
+    authorAvatar: 'DL',
+    content: 'Reminder: Architecture review tomorrow at 10am. We need to finalize the event sourcing strategy before Q3.',
+    timestamp: '3h ago',
+    likes: 12,
+    comments: 5,
+    isLiked: false,
+    tag: 'Team',
+  },
+  {
+    id: 'post-5',
+    authorId: 'user-6',
+    authorName: 'Emma Watson',
+    authorHandle: '@emmaw',
+    authorAvatar: 'EW',
+    content: 'Interesting pattern: teams that deploy more frequently have fewer incidents. Our data from 200+ teams confirms this. Smaller batches, lower risk.',
+    timestamp: '5h ago',
+    likes: 89,
+    comments: 31,
+    isLiked: true,
+    tag: 'Insights',
+  },
+];
+
+export const seedConversations: Conversation[] = [
+  {
+    id: 'conv-1',
+    participantName: 'Maya Rodriguez',
+    participantHandle: '@mayar',
+    participantAvatar: 'MR',
+    lastMessage: 'The PR looks good. Just left a few comments on the auth module.',
+    timestamp: '5m',
+    unread: 2,
+    isOnline: true,
+  },
+  {
+    id: 'conv-2',
+    participantName: 'James Park',
+    participantHandle: '@jpark',
+    participantAvatar: 'JP',
+    lastMessage: 'Can you review the latency benchmarks before standup?',
+    timestamp: '28m',
+    unread: 0,
+    isOnline: true,
+  },
+  {
+    id: 'conv-3',
+    participantName: 'Sarah Kim',
+    participantHandle: '@sarahk',
+    participantAvatar: 'SK',
+    lastMessage: 'The onboarding metrics are in. Conversion up 34%.',
+    timestamp: '2h',
+    unread: 1,
+    isOnline: false,
+  },
+  {
+    id: 'conv-4',
+    participantName: 'David Liu',
+    participantHandle: '@dliu',
+    participantAvatar: 'DL',
+    lastMessage: 'Let me know when you have time to sync on the architecture doc.',
+    timestamp: '1d',
+    unread: 0,
+    isOnline: false,
+  },
+];
+
+export const seedMessages: Record<string, Message[]> = {
+  'conv-1': [
+    { id: 'msg-1', conversationId: 'conv-1', senderId: 'user-2', text: 'Hey, I pushed the auth module updates', timestamp: '10:32 AM', isOwn: false },
+    { id: 'msg-2', conversationId: 'conv-1', senderId: 'user-self', text: 'Nice, I will take a look now', timestamp: '10:34 AM', isOwn: true },
+    { id: 'msg-3', conversationId: 'conv-1', senderId: 'user-2', text: 'Cool. Pay attention to the token refresh flow, I changed the retry logic', timestamp: '10:35 AM', isOwn: false },
+    { id: 'msg-4', conversationId: 'conv-1', senderId: 'user-self', text: 'Got it. The ZK proof integration looks solid from what I can see', timestamp: '10:41 AM', isOwn: true },
+    { id: 'msg-5', conversationId: 'conv-1', senderId: 'user-2', text: 'The PR looks good. Just left a few comments on the auth module.', timestamp: '10:45 AM', isOwn: false },
+  ],
+  'conv-2': [
+    { id: 'msg-6', conversationId: 'conv-2', senderId: 'user-3', text: 'The P99 numbers are looking amazing', timestamp: '9:15 AM', isOwn: false },
+    { id: 'msg-7', conversationId: 'conv-2', senderId: 'user-self', text: 'Yeah, the connection pooling changes really helped', timestamp: '9:18 AM', isOwn: true },
+    { id: 'msg-8', conversationId: 'conv-2', senderId: 'user-3', text: 'Can you review the latency benchmarks before standup?', timestamp: '9:22 AM', isOwn: false },
+  ],
+  'conv-3': [
+    { id: 'msg-9', conversationId: 'conv-3', senderId: 'user-4', text: 'The new onboarding flow is live', timestamp: 'Yesterday', isOwn: false },
+    { id: 'msg-10', conversationId: 'conv-3', senderId: 'user-self', text: 'How are the early numbers?', timestamp: 'Yesterday', isOwn: true },
+    { id: 'msg-11', conversationId: 'conv-3', senderId: 'user-4', text: 'The onboarding metrics are in. Conversion up 34%.', timestamp: '2h ago', isOwn: false },
+  ],
+  'conv-4': [
+    { id: 'msg-12', conversationId: 'conv-4', senderId: 'user-5', text: 'Let me know when you have time to sync on the architecture doc.', timestamp: 'Yesterday', isOwn: false },
+  ],
+};
+
+export const seedConnections: Connection[] = [
+  { id: 'user-2', name: 'Maya Rodriguez', handle: '@mayar', avatar: 'MR', role: 'Security Engineer', mutual: 12, status: 'connected', isOnline: true },
+  { id: 'user-3', name: 'James Park', handle: '@jpark', avatar: 'JP', role: 'Platform Engineer', mutual: 8, status: 'connected', isOnline: true },
+  { id: 'user-4', name: 'Sarah Kim', handle: '@sarahk', avatar: 'SK', role: 'Product Designer', mutual: 15, status: 'connected', isOnline: false },
+  { id: 'user-5', name: 'David Liu', handle: '@dliu', avatar: 'DL', role: 'Staff Architect', mutual: 6, status: 'connected', isOnline: false },
+  { id: 'user-6', name: 'Emma Watson', handle: '@emmaw', avatar: 'EW', role: 'VP Engineering', mutual: 22, status: 'connected', isOnline: true },
+  { id: 'user-7', name: 'Raj Patel', handle: '@rajp', avatar: 'RP', role: 'DevOps Lead', mutual: 4, status: 'pending', isOnline: false },
+  { id: 'user-8', name: 'Lisa Chen', handle: '@lisac', avatar: 'LC', role: 'Data Scientist', mutual: 9, status: 'none', isOnline: true },
+  { id: 'user-9', name: 'Tom Hughes', handle: '@tomh', avatar: 'TH', role: 'Frontend Lead', mutual: 11, status: 'none', isOnline: false },
+];
+
+export const seedNotifications: Notification[] = [
+  { id: 'notif-1', type: 'like', actorName: 'Maya Rodriguez', actorAvatar: 'MR', content: 'liked your post about auth patterns', timestamp: '5m ago', isRead: false },
+  { id: 'notif-2', type: 'connection', actorName: 'Raj Patel', actorAvatar: 'RP', content: 'sent you a connection request', timestamp: '1h ago', isRead: false },
+  { id: 'notif-3', type: 'comment', actorName: 'James Park', actorAvatar: 'JP', content: 'commented on your performance update', timestamp: '3h ago', isRead: true },
+  { id: 'notif-4', type: 'event', actorName: 'David Liu', actorAvatar: 'DL', content: 'invited you to Architecture Review', timestamp: '5h ago', isRead: true },
+  { id: 'notif-5', type: 'like', actorName: 'Emma Watson', actorAvatar: 'EW', content: 'liked your comment on deployment frequency', timestamp: '1d ago', isRead: true },
+];

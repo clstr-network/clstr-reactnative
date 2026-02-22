@@ -1,53 +1,46 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { Avatar } from './Avatar';
-import type { Conversation } from '@/lib/mock-data';
+import { Conversation } from '@/lib/types';
 
 interface ConversationItemProps {
   conversation: Conversation;
-  onPress?: () => void;
+  onPress: () => void;
 }
 
 export function ConversationItem({ conversation, onPress }: ConversationItemProps) {
-  const c = Colors.colors;
-  const hasUnread = conversation.unread > 0;
-
-  const getDaysAgo = () => {
-    const diff = Date.now() - conversation.timestamp.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    if (days === 0) return 'today';
-    if (days === 1) return '1 day';
-    return `${days} days`;
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
   };
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.container, { opacity: pressed ? 0.7 : 1, borderBottomColor: c.borderSubtle }]}
-      onPress={onPress}
+      onPress={handlePress}
+      style={({ pressed }) => [styles.container, pressed && { backgroundColor: Colors.dark.surfaceHover }]}
     >
-      <Avatar name={conversation.partner.name} size={46} />
+      <Avatar
+        initials={conversation.participantAvatar}
+        size={48}
+        isOnline={conversation.isOnline}
+      />
       <View style={styles.content}>
         <View style={styles.topRow}>
-          <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
-            {conversation.partner.name}
+          <Text style={styles.name} numberOfLines={1}>
+            {conversation.participantName}
           </Text>
-          <Text style={[styles.time, { color: c.textTertiary }]}>
-            {getDaysAgo()}
-          </Text>
+          <Text style={styles.time}>{conversation.timestamp}</Text>
         </View>
-        <Text
-          style={[styles.message, {
-            color: hasUnread ? c.text : c.textSecondary,
-            fontFamily: hasUnread ? 'Inter_500Medium' : 'Inter_400Regular',
-          }]}
-          numberOfLines={1}
-        >
+        <Text style={[styles.message, conversation.unread > 0 && styles.unreadMessage]} numberOfLines={1}>
           {conversation.lastMessage}
         </Text>
       </View>
-      {hasUnread && (
-        <View style={[styles.unreadDot, { backgroundColor: c.primary }]} />
+      {conversation.unread > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{conversation.unread}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -57,9 +50,10 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
+    borderBottomColor: Colors.dark.divider,
   },
   content: {
     flex: 1,
@@ -69,25 +63,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 3,
   },
   name: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontSize: 15,
+    color: Colors.dark.text,
     flex: 1,
-    marginRight: 8,
   },
   time: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'SpaceGrotesk_400Regular',
     fontSize: 12,
+    color: Colors.dark.textMeta,
+    marginLeft: 8,
   },
   message: {
+    fontFamily: 'SpaceGrotesk_400Regular',
     fontSize: 13,
-    marginTop: 3,
+    color: Colors.dark.textSecondary,
   },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  unreadMessage: {
+    color: Colors.dark.text,
+  },
+  badge: {
+    backgroundColor: Colors.dark.text,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: 8,
+  },
+  badgeText: {
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontSize: 11,
+    color: Colors.dark.background,
   },
 });

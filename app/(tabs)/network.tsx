@@ -1,362 +1,176 @@
-import React, { useState, useCallback, useMemo } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  FlatList,
-  Pressable,
-  Platform,
-  ActivityIndicator,
-  RefreshControl,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { useData, type Connection } from "@/lib/data-context";
-import Colors from "@/constants/colors";
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Colors from '@/constants/colors';
+import { useData } from '@/lib/data-context';
+import { ConnectionCard } from '@/components/ConnectionCard';
+import { Connection } from '@/lib/types';
 
-function Avatar({ name, size = 48 }: { name: string; size?: number }) {
-  const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2);
-  const colors = ["#6C5CE7", "#00CEC9", "#FF6B6B", "#FDCB6E", "#00B894", "#A29BFE"];
-  const colorIndex = name.length % colors.length;
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors[colorIndex], alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: size * 0.38 }}>{initials}</Text>
-    </View>
-  );
-}
-
-type Tab = "People" | "Requests";
-
-const ConnectionCard = React.memo(function ConnectionCard({
-  item,
-  onConnect,
-  onAccept,
-}: {
-  item: Connection;
-  onConnect: () => void;
-  onAccept: () => void;
-}) {
-  return (
-    <View style={styles.card}>
-      <Avatar name={item.name} />
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardName}>{item.name}</Text>
-        <Text style={styles.cardRole}>{item.role}</Text>
-        <Text style={styles.cardDept}>{item.department}</Text>
-      </View>
-      {item.status === "none" && (
-        <Pressable
-          style={styles.connectBtn}
-          hitSlop={4}
-          onPress={() => {
-            if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onConnect();
-          }}
-        >
-          <Ionicons name="person-add-outline" size={16} color={Colors.dark.primary} />
-          <Text style={styles.connectBtnText}>Connect</Text>
-        </Pressable>
-      )}
-      {item.status === "pending" && (
-        <View style={styles.pendingBadge}>
-          <Text style={styles.pendingText}>Pending</Text>
-        </View>
-      )}
-      {item.status === "connected" && (
-        <View style={styles.connectedBadge}>
-          <Ionicons name="checkmark-circle" size={16} color={Colors.dark.success} />
-          <Text style={styles.connectedText}>Connected</Text>
-        </View>
-      )}
-    </View>
-  );
-}, (prev, next) => prev.item.id === next.item.id && prev.item.status === next.item.status);
-
-const RequestCard = React.memo(function RequestCard({
-  item,
-  onAccept,
-}: {
-  item: Connection;
-  onAccept: () => void;
-}) {
-  return (
-    <View style={styles.card}>
-      <Avatar name={item.name} />
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardName}>{item.name}</Text>
-        <Text style={styles.cardRole}>{item.role}</Text>
-      </View>
-      <View style={styles.requestActions}>
-        <Pressable
-          style={styles.acceptBtn}
-          hitSlop={4}
-          onPress={() => {
-            if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            onAccept();
-          }}
-        >
-          <Text style={styles.acceptBtnText}>Accept</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}, (prev, next) => prev.item.id === next.item.id && prev.item.status === next.item.status);
+type Filter = 'all' | 'connected' | 'pending' | 'discover';
 
 export default function NetworkScreen() {
   const insets = useSafeAreaInsets();
-  const { connections, sendConnectionRequest, acceptConnection, isLoading } = useData();
-  const [activeTab, setActiveTab] = useState<Tab>("People");
-  const [refreshing, setRefreshing] = useState(false);
+  const { connections, updateConnectionStatus } = useData();
+  const [filter, setFilter] = useState<Filter>('all');
 
-  const people = useMemo(() =>
-    connections.filter(c => c.status !== "pending"),
-    [connections]
-  );
+  const filtered = connections.filter(c => {
+    if (filter === 'all') return true;
+    if (filter === 'connected') return c.status === 'connected';
+    if (filter === 'pending') return c.status === 'pending';
+    if (filter === 'discover') return c.status === 'none';
+    return true;
+  });
 
-  const requests = useMemo(() =>
-    connections.filter(c => c.status === "pending"),
-    [connections]
-  );
+  const stats = {
+    connected: connections.filter(c => c.status === 'connected').length,
+    pending: connections.filter(c => c.status === 'pending').length,
+  };
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+  const renderConnection = useCallback(({ item }: { item: Connection }) => (
+    <ConnectionCard connection={item} onAction={updateConnectionStatus} />
+  ), [updateConnectionStatus]);
 
-  const handleConnect = useCallback((id: string) => {
-    sendConnectionRequest(id);
-  }, [sendConnectionRequest]);
+  const keyExtractor = useCallback((item: Connection) => item.id, []);
 
-  const handleAccept = useCallback((id: string) => {
-    acceptConnection(id);
-  }, [acceptConnection]);
+  const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <ActivityIndicator size="large" color={Colors.dark.primary} style={{ marginTop: 40 }} />
-      </View>
-    );
-  }
+  const filters: { key: Filter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'connected', label: 'Connected' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'discover', label: 'Discover' },
+  ];
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <Text style={styles.headerTitle}>Network</Text>
+    <View style={styles.screen}>
+      <View style={[styles.header, { paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 8 }]}>
+        <Text style={styles.title}>Network</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.stat}>
+            <Text style={styles.statNum}>{stats.connected}</Text>
+            <Text style={styles.statLabel}>Connected</Text>
+          </View>
+          <View style={[styles.stat, styles.statBorder]}>
+            <Text style={[styles.statNum, { color: Colors.dark.warning }]}>{stats.pending}</Text>
+            <Text style={styles.statLabel}>Pending</Text>
+          </View>
+        </View>
       </View>
 
-      <View style={styles.tabRow}>
-        {(["People", "Requests"] as Tab[]).map(tab => (
+      <View style={styles.filterRow}>
+        {filters.map(f => (
           <Pressable
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
-            onPress={() => setActiveTab(tab)}
+            key={f.key}
+            onPress={() => setFilter(f.key)}
+            style={[styles.filterBtn, filter === f.key && styles.filterActive]}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab}
-              {tab === "Requests" && requests.length > 0 ? ` (${requests.length})` : ""}
+            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
+              {f.label}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      {activeTab === "People" ? (
-        <FlatList
-          data={people}
-          renderItem={({ item }) => (
-            <ConnectionCard
-              item={item}
-              onConnect={() => handleConnect(item.id)}
-              onAccept={() => handleAccept(item.id)}
-            />
-          )}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={!!people.length}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.primary} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={48} color={Colors.dark.textTertiary} />
-              <Text style={styles.emptyTitle}>No people found</Text>
-              <Text style={styles.emptySubtitle}>Check back later for new connections</Text>
-            </View>
-          }
-        />
-      ) : (
-        <FlatList
-          data={requests}
-          renderItem={({ item }) => (
-            <RequestCard item={item} onAccept={() => handleAccept(item.id)} />
-          )}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={!!requests.length}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.dark.primary} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Ionicons name="mail-outline" size={48} color={Colors.dark.textTertiary} />
-              <Text style={styles.emptyTitle}>No pending requests</Text>
-              <Text style={styles.emptySubtitle}>You have no incoming connection requests</Text>
-            </View>
-          }
-        />
-      )}
+      <FlatList
+        data={filtered}
+        renderItem={renderConnection}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 }]}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!!filtered.length}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Ionicons name="people-outline" size={40} color={Colors.dark.textMeta} />
+            <Text style={styles.emptyText}>No connections found</Text>
+          </View>
+        }
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: Colors.dark.background,
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 16,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
+  title: {
+    fontFamily: 'SpaceGrotesk_700Bold',
+    fontSize: 24,
     color: Colors.dark.text,
+    marginBottom: 14,
   },
-  tabRow: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 8,
-    marginBottom: 8,
-  },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: Colors.dark.surfaceElevated,
-    minHeight: 44,
-    justifyContent: "center",
-  },
-  tabActive: {
-    backgroundColor: Colors.dark.primary,
-  },
-  tabText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.dark.textSecondary,
-  },
-  tabTextActive: {
-    color: "#fff",
-  },
-  listContent: {
-    paddingBottom: 100,
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.dark.border,
-  },
-  cardInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  cardName: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.dark.text,
-  },
-  cardRole: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textSecondary,
-    marginTop: 2,
-  },
-  cardDept: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textTertiary,
-    marginTop: 1,
-  },
-  connectBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
+  statsRow: {
+    flexDirection: 'row',
+    backgroundColor: Colors.dark.surface,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.dark.primary,
-    minHeight: 44,
+    borderColor: Colors.dark.surfaceBorder,
+    overflow: 'hidden',
   },
-  connectBtnText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.dark.primary,
+  stat: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
   },
-  pendingBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: Colors.dark.surfaceElevated,
-    minHeight: 44,
-    justifyContent: "center",
+  statBorder: {
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.dark.divider,
   },
-  pendingText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.dark.textTertiary,
-  },
-  connectedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    minHeight: 44,
-  },
-  connectedText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
+  statNum: {
+    fontFamily: 'SpaceGrotesk_700Bold',
+    fontSize: 22,
     color: Colors.dark.success,
   },
-  requestActions: {
-    flexDirection: "row",
-    gap: 8,
+  statLabel: {
+    fontFamily: 'SpaceGrotesk_400Regular',
+    fontSize: 12,
+    color: Colors.dark.textMeta,
+    marginTop: 2,
   },
-  acceptBtn: {
+  filterRow: {
+    flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: Colors.dark.primary,
-    minHeight: 44,
-    justifyContent: "center",
-  },
-  acceptBtnText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: "#fff",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 80,
     gap: 8,
+    marginBottom: 14,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
+  filterBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    backgroundColor: Colors.dark.surface,
+    borderWidth: 1,
+    borderColor: Colors.dark.surfaceBorder,
+  },
+  filterActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: Colors.dark.surfaceBorderStrong,
+  },
+  filterText: {
+    fontFamily: 'SpaceGrotesk_500Medium',
+    fontSize: 13,
+    color: Colors.dark.textMeta,
+  },
+  filterTextActive: {
     color: Colors.dark.text,
-    marginTop: 8,
   },
-  emptySubtitle: {
+  list: {
+    paddingHorizontal: 16,
+  },
+  empty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+    gap: 12,
+  },
+  emptyText: {
+    fontFamily: 'SpaceGrotesk_400Regular',
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textSecondary,
+    color: Colors.dark.textMeta,
   },
 });

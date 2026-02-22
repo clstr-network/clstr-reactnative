@@ -1,169 +1,189 @@
-import React from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  Pressable,
-  Platform,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import Colors from "@/constants/colors";
-
-function SettingsRow({ icon, label, value, onPress, color }: {
-  icon: string;
-  label: string;
-  value?: string;
-  onPress?: () => void;
-  color?: string;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
-      onPress={onPress}
-    >
-      <View style={[styles.rowIcon, { backgroundColor: (color || Colors.dark.primary) + "20" }]}>
-        <Ionicons name={icon as any} size={18} color={color || Colors.dark.primary} />
-      </View>
-      <Text style={[styles.rowLabel, color ? { color } : undefined]}>{label}</Text>
-      {value && <Text style={styles.rowValue}>{value}</Text>}
-      <Ionicons name="chevron-forward" size={18} color={Colors.dark.textTertiary} />
-    </Pressable>
-  );
-}
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import Colors from '@/constants/colors';
+import { GlassContainer } from '@/components/GlassContainer';
+import { SettingsRow } from '@/components/SettingsRow';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const [pushNotifs, setPushNotifs] = useState(true);
+  const [emailNotifs, setEmailNotifs] = useState(false);
+  const [showActivity, setShowActivity] = useState(true);
+
+  const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <Pressable onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.dark.text} />
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        {
+          paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 8,
+          paddingBottom: Math.max(insets.bottom, 24) + 20,
+        },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+          hitSlop={12}
+        >
+          <Ionicons name="chevron-back" size={24} color={Colors.dark.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.title}>Settings</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>General</Text>
-          <View style={styles.group}>
-            <SettingsRow icon="moon-outline" label="Appearance" value="Dark" />
-            <SettingsRow icon="language-outline" label="Language" value="English" />
-            <SettingsRow icon="notifications-outline" label="Notifications" />
-          </View>
-        </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Notifications</Text>
+        <GlassContainer noPadding>
+          <SettingsRow
+            icon="notifications-outline"
+            iconColor={Colors.dark.textSecondary}
+            label="Push Notifications"
+            isSwitch
+            switchValue={pushNotifs}
+            onSwitchChange={setPushNotifs}
+          />
+          <SettingsRow
+            icon="mail-outline"
+            iconColor={Colors.dark.textSecondary}
+            label="Email Notifications"
+            isSwitch
+            switchValue={emailNotifs}
+            onSwitchChange={setEmailNotifs}
+            isLast
+          />
+        </GlassContainer>
+      </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy</Text>
-          <View style={styles.group}>
-            <SettingsRow icon="lock-closed-outline" label="Profile Visibility" value="Public" />
-            <SettingsRow icon="eye-off-outline" label="Activity Status" value="On" />
-            <SettingsRow icon="shield-outline" label="Blocked Users" />
-          </View>
-        </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Privacy</Text>
+        <GlassContainer noPadding>
+          <SettingsRow
+            icon="eye-outline"
+            iconColor={Colors.dark.success}
+            label="Show Activity Status"
+            isSwitch
+            switchValue={showActivity}
+            onSwitchChange={setShowActivity}
+          />
+          <SettingsRow
+            icon="lock-closed-outline"
+            iconColor={Colors.dark.warning}
+            label="Profile Visibility"
+            value="Everyone"
+            onPress={() => {}}
+          />
+          <SettingsRow
+            icon="shield-outline"
+            iconColor={Colors.dark.textSecondary}
+            label="Blocked Users"
+            value="0"
+            onPress={() => {}}
+            isLast
+          />
+        </GlassContainer>
+      </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <View style={styles.group}>
-            <SettingsRow icon="information-circle-outline" label="Version" value="1.0.0" color={Colors.dark.accent} />
-            <SettingsRow icon="document-text-outline" label="Terms of Service" color={Colors.dark.accent} />
-            <SettingsRow icon="shield-checkmark-outline" label="Privacy Policy" color={Colors.dark.accent} />
-          </View>
-        </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>General</Text>
+        <GlassContainer noPadding>
+          <SettingsRow
+            icon="moon-outline"
+            iconColor={Colors.dark.textSecondary}
+            label="Appearance"
+            value="Dark"
+            onPress={() => {}}
+          />
+          <SettingsRow
+            icon="language-outline"
+            iconColor={Colors.dark.textSecondary}
+            label="Language"
+            value="English"
+            onPress={() => {}}
+          />
+          <SettingsRow
+            icon="help-circle-outline"
+            iconColor={Colors.dark.textSecondary}
+            label="Help & Support"
+            onPress={() => {}}
+            isLast
+          />
+        </GlassContainer>
+      </View>
 
-        <View style={styles.brandSection}>
-          <Text style={styles.brandName}>clstr</Text>
-          <Text style={styles.brandTagline}>Connecting students & alumni</Text>
-        </View>
-      </ScrollView>
-    </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Danger Zone</Text>
+        <GlassContainer noPadding>
+          <SettingsRow
+            icon="log-out-outline"
+            label="Sign Out"
+            isDestructive
+            onPress={() => {}}
+          />
+          <SettingsRow
+            icon="trash-outline"
+            label="Delete Account"
+            isDestructive
+            onPress={() => {}}
+            isLast
+          />
+        </GlassContainer>
+      </View>
+
+      <Text style={styles.version}>clstr v1.0.0</Text>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: Colors.dark.background,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  content: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.dark.border,
   },
-  headerTitle: {
-    fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontFamily: 'SpaceGrotesk_700Bold',
+    fontSize: 20,
     color: Colors.dark.text,
-  },
-  scrollContent: {
-    paddingBottom: 40,
   },
   section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.dark.textSecondary,
-    marginBottom: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  group: {
-    backgroundColor: Colors.dark.surface,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    minHeight: 52,
-  },
-  rowIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
-  rowLabel: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-    color: Colors.dark.text,
-  },
-  rowValue: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textTertiary,
-    marginRight: 8,
-  },
-  brandSection: {
-    alignItems: "center",
-    marginTop: 40,
-    paddingBottom: 20,
-  },
-  brandName: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-    color: Colors.dark.primary,
-  },
-  brandTagline: {
+    fontFamily: 'SpaceGrotesk_600SemiBold',
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textTertiary,
-    marginTop: 4,
+    color: Colors.dark.textMeta,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  version: {
+    fontFamily: 'SpaceGrotesk_400Regular',
+    fontSize: 12,
+    color: Colors.dark.textMeta,
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

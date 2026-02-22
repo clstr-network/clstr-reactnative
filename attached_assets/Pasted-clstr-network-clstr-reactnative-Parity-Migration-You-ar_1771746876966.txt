@@ -1,0 +1,388 @@
+clstr.network → clstr-reactnative Parity Migration
+
+You are converting a production React web application into a React Native mobile application.
+
+Web Repo:
+https://github.com/clstr-network/clstr.network.git
+
+Mobile Repo:
+https://github.com/clstr-network/clstr-reactnative
+
+Goal:
+Make the React Native app match the web app in:
+
+Feature set
+
+Data flow
+
+Business logic
+
+Auth flow
+
+Supabase usage
+
+Profile roles (student, faculty, alumni)
+
+Realtime behavior
+
+Database integration
+
+Core UX flows
+
+BUT NOT:
+
+Desktop layout structure
+
+Radix/shadcn component patterns
+
+Hover interactions
+
+Multi-column desktop layouts
+
+DOM assumptions
+
+The mobile app must feel native while behaving identically.
+
+🔴 CRITICAL RULES
+
+DO NOT rewrite backend.
+
+DO NOT duplicate Supabase logic.
+
+DO NOT introduce new singletons.
+
+DO NOT hardcode environment variables.
+
+DO NOT port Tailwind styles directly.
+
+DO NOT copy web JSX into RN.
+
+DO NOT introduce new state managers.
+
+DO NOT use Expo Go assumptions (dev client required).
+
+DO NOT change database schema.
+
+DO NOT modify edge functions unless absolutely necessary.
+
+🟢 REQUIRED ARCHITECTURE
+
+Both apps must use:
+
+Same Supabase project
+
+Same auth system
+
+Same RLS rules
+
+Same database schema
+
+Same role logic
+
+Same shared core (API layer)
+
+Same query key definitions
+
+Same realtime channel naming
+
+Same pagination logic
+
+Web-specific code must remain in web repo.
+Mobile-specific code must remain in mobile repo.
+
+Business logic must live in shared/core layer only.
+
+TASK 1 — REPO ANALYSIS
+
+Clone both repositories.
+
+Map:
+
+Web:
+
+Routes
+
+Components
+
+Hooks
+
+Context providers
+
+Supabase usage points
+
+Role-based UI logic
+
+Feature modules
+
+Mobile:
+
+Navigation structure
+
+Screen registry pattern
+
+Supabase client injection
+
+Realtime hooks
+
+Existing components
+
+Auth structure
+
+Produce a parity map:
+
+Web Feature → Mobile Status (Missing / Partial / Complete)
+
+TASK 2 — LOGIC PARITY
+
+Ensure mobile uses:
+
+Same hooks logic (via shared core)
+
+Same Supabase RPC calls
+
+Same query keys
+
+Same pagination behavior
+
+Same realtime subscription patterns
+
+Same error structures
+
+Refactor mobile to consume shared logic if duplication exists.
+
+TASK 3 — AUTH PARITY
+
+Ensure mobile supports:
+
+Email/password
+
+Magic link (PKCE)
+
+Session persistence (SecureStore)
+
+Role-based onboarding
+
+Profile upsert logic
+
+Alumni/faculty/student differentiation
+
+Ensure mobile auth flow matches web logic but uses native navigation.
+
+TASK 4 — UI PARITY (Brand Only)
+
+Match:
+
+Colors
+
+Spacing scale
+
+Typography scale
+
+Avatar sizing
+
+Iconography
+
+Card style
+
+Theme (dark/light)
+
+Do NOT match:
+
+Desktop layout
+
+Hover states
+
+Desktop density
+
+Radix primitives
+
+Multi-column layouts
+
+TASK 5 — SCREEN IMPLEMENTATION PLAN
+
+Mobile must implement:
+
+Feed screen
+
+Post detail
+
+Profile (own + other)
+
+Messaging list
+
+Chat screen
+
+Events list
+
+Event detail
+
+Network connections
+
+Notifications
+
+Settings
+
+Onboarding
+
+Use:
+
+FlatList for lists
+
+Memoized cards
+
+Proper key extraction
+
+Controlled query invalidation
+
+No inline heavy closures
+
+Proper cleanup of subscriptions
+
+Background → foreground safety
+
+TASK 6 — NAVIGATION STRUCTURE
+
+Use bottom tab navigation:
+
+Home
+Network
+Create (if required)
+Messages
+Profile
+
+Stacks inside tabs for deep screens.
+
+Deep linking must map to:
+
+post/:id
+
+profile/:id
+
+events/:id
+
+messaging
+
+auth/callback
+
+Navigation must:
+
+Queue deep links before nav ready
+
+Handle cold start
+
+Handle background resume
+
+TASK 7 — PERFORMANCE ENFORCEMENT
+
+Ensure:
+
+No unnecessary re-renders
+
+All heavy components wrapped in React.memo
+
+Stable query keys
+
+No raw arrays in useQuery
+
+No manual cache mutation unless necessary
+
+No duplicate realtime subscriptions
+
+No missing cleanup on unmount
+
+Scroll stability preserved
+
+TASK 8 — ROLE SYSTEM PARITY
+
+Profiles must support:
+
+student
+
+faculty
+
+alumni
+
+Ensure:
+
+Role-based UI is preserved
+
+Role-based permissions are preserved
+
+Feature visibility logic matches web
+
+TASK 9 — TESTING REQUIREMENTS
+
+Mobile must pass:
+
+Deep link tests (custom scheme)
+
+Auth idempotency
+
+SecureStore persistence
+
+Realtime reconnect
+
+Chat stress test
+
+Background resume
+
+Navigation queue flush
+
+Cold start routing
+
+OUTPUT REQUIRED
+
+Return:
+
+Feature parity table
+
+Missing feature list
+
+Logic inconsistencies
+
+UI inconsistencies
+
+Lifecycle risks
+
+Performance risks
+
+Required mobile refactors
+
+Suggested refactor priority (Critical / High / Medium / Low)
+
+Clear implementation roadmap
+
+Be brutally honest.
+
+Call out:
+
+Web-only patterns leaking into mobile
+
+Duplicate logic
+
+Navigation mistakes
+
+Supabase misuse
+
+RLS bypass risk
+
+Auth edge cases
+
+Realtime lifecycle dangers
+
+Assume this app will scale to 10,000 daily active users.
+
+🔥 IMPORTANT
+
+The goal is not to “copy the web UI.”
+
+The goal is:
+
+Same brain
+Different body
+
+Web = desktop brain
+Mobile = native body
+
+Ensure logic is identical.
+Ensure UX is native.

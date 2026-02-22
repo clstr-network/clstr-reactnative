@@ -1,243 +1,224 @@
-import React from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  Pressable,
-  Platform,
-  ActivityIndicator,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { useData } from "@/lib/data-context";
-import Colors from "@/constants/colors";
-
-function Avatar({ name, size = 80 }: { name: string; size?: number }) {
-  const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2);
-  return (
-    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={[styles.avatarText, { fontSize: size * 0.36 }]}>{initials}</Text>
-    </View>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function SettingsRow({ icon, label, onPress, showChevron = true, color }: {
-  icon: string;
-  label: string;
-  onPress?: () => void;
-  showChevron?: boolean;
-  color?: string;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.settingsRow, pressed && { opacity: 0.7 }]}
-      onPress={onPress}
-    >
-      <View style={[styles.settingsIcon, { backgroundColor: (color || Colors.dark.primary) + "20" }]}>
-        <Ionicons name={icon as any} size={18} color={color || Colors.dark.primary} />
-      </View>
-      <Text style={[styles.settingsLabel, color ? { color } : undefined]}>{label}</Text>
-      {showChevron && <Ionicons name="chevron-forward" size={18} color={Colors.dark.textTertiary} />}
-    </Pressable>
-  );
-}
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import Colors from '@/constants/colors';
+import { useData } from '@/lib/data-context';
+import { Avatar } from '@/components/Avatar';
+import { GlassContainer } from '@/components/GlassContainer';
+import { SettingsRow } from '@/components/SettingsRow';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { currentUser, connections, posts, isLoading } = useData();
-  const connectedCount = connections.filter(c => c.status === "connected").length;
+  const { user } = useData();
+  const [notifs, setNotifs] = useState(true);
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <ActivityIndicator size="large" color={Colors.dark.primary} style={{ marginTop: 40 }} />
-      </View>
-    );
-  }
+  const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingBottom: Platform.OS === "web" ? 34 : 100 }]}
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        {
+          paddingTop: (Platform.OS === 'web' ? webTopInset : insets.top) + 8,
+          paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100,
+        },
+      ]}
       showsVerticalScrollIndicator={false}
     >
-      <LinearGradient
-        colors={["#6C5CE720", Colors.dark.background]}
-        style={[styles.headerGradient, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}
-      >
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }} />
-          <Pressable onPress={() => router.push("/settings")}>
-            <Ionicons name="settings-outline" size={24} color={Colors.dark.text} />
-          </Pressable>
-        </View>
+      <View style={styles.header}>
+        <Text style={styles.title}>Profile</Text>
+        <Pressable
+          onPress={() => router.push('/settings')}
+          style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.7 }]}
+          hitSlop={8}
+        >
+          <Ionicons name="settings-outline" size={22} color={Colors.dark.textSecondary} />
+        </Pressable>
+      </View>
 
-        <View style={styles.profileInfo}>
-          <Avatar name={currentUser.name} />
-          <Text style={styles.profileName}>{currentUser.name}</Text>
-          <Text style={styles.profileRole}>
-            {currentUser.role === "student" ? "Student" : "Alumni"} - {currentUser.department}
-          </Text>
-          <Text style={styles.profileBio}>{currentUser.bio}</Text>
+      <GlassContainer style={styles.profileCard} tier={1}>
+        <View style={styles.profileRow}>
+          <Avatar initials={user.avatar} size={64} isOnline={user.isOnline} />
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>{user.name}</Text>
+            <Text style={styles.profileHandle}>{user.handle}</Text>
+            <Text style={styles.profileRole}>{user.role}</Text>
+          </View>
         </View>
-
-        <View style={styles.statsRow}>
-          <StatCard label="Posts" value={posts.length} />
-          <View style={styles.statDivider} />
-          <StatCard label="Connections" value={connectedCount} />
-          <View style={styles.statDivider} />
-          <StatCard label="Class of" value={currentUser.gradYear} />
+        <Text style={styles.bio}>{user.bio}</Text>
+        <View style={styles.profileStats}>
+          <View style={styles.profileStat}>
+            <Text style={styles.profileStatNum}>{user.connections}</Text>
+            <Text style={styles.profileStatLabel}>Connections</Text>
+          </View>
+          <View style={[styles.profileStat, styles.profileStatBorder]}>
+            <Text style={styles.profileStatNum}>{user.posts}</Text>
+            <Text style={styles.profileStatLabel}>Posts</Text>
+          </View>
+          <View style={[styles.profileStat, styles.profileStatBorder]}>
+            <Text style={styles.profileStatNum}>{user.joined}</Text>
+            <Text style={styles.profileStatLabel}>Joined</Text>
+          </View>
         </View>
-      </LinearGradient>
+      </GlassContainer>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
-        <View style={styles.settingsGroup}>
-          <SettingsRow icon="person-outline" label="Edit Profile" />
-          <SettingsRow icon="bookmark-outline" label="Saved Posts" />
-          <SettingsRow icon="shield-checkmark-outline" label="Privacy" />
-          <SettingsRow icon="notifications-outline" label="Notifications" />
-        </View>
+        <Text style={styles.sectionTitle}>Preferences</Text>
+        <GlassContainer noPadding tier={2}>
+          <SettingsRow
+            icon="notifications-outline"
+            iconColor={Colors.dark.textSecondary}
+            label="Push Notifications"
+            isSwitch
+            switchValue={notifs}
+            onSwitchChange={setNotifs}
+          />
+          <SettingsRow
+            icon="moon-outline"
+            iconColor={Colors.dark.textSecondary}
+            label="Appearance"
+            value="Dark"
+            onPress={() => {}}
+          />
+          <SettingsRow
+            icon="shield-checkmark-outline"
+            iconColor={Colors.dark.success}
+            label="Privacy"
+            onPress={() => {}}
+            isLast
+          />
+        </GlassContainer>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>More</Text>
-        <View style={styles.settingsGroup}>
-          <SettingsRow icon="help-circle-outline" label="Help & Support" color={Colors.dark.accent} />
-          <SettingsRow icon="information-circle-outline" label="About clstr" color={Colors.dark.accent} />
-          <SettingsRow icon="log-out-outline" label="Sign Out" color={Colors.dark.error} showChevron={false} />
-        </View>
+        <Text style={styles.sectionTitle}>Account</Text>
+        <GlassContainer noPadding tier={2}>
+          <SettingsRow
+            icon="person-outline"
+            iconColor={Colors.dark.textSecondary}
+            label="Edit Profile"
+            onPress={() => {}}
+          />
+          <SettingsRow
+            icon="key-outline"
+            iconColor={Colors.dark.warning}
+            label="Change Password"
+            onPress={() => {}}
+          />
+          <SettingsRow
+            icon="log-out-outline"
+            label="Sign Out"
+            isDestructive
+            onPress={() => {}}
+            isLast
+          />
+        </GlassContainer>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: Colors.dark.background,
   },
-  scrollContent: {
+  content: {
+    paddingHorizontal: 16,
   },
-  headerGradient: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingVertical: 8,
-  },
-  profileInfo: {
-    alignItems: "center",
-    marginTop: 8,
-  },
-  avatar: {
-    backgroundColor: Colors.dark.primary,
-    alignItems: "center",
-    justifyContent: "center",
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
     marginBottom: 16,
   },
-  avatarText: {
-    color: "#fff",
-    fontFamily: "Inter_700Bold",
+  title: {
+    fontFamily: 'SpaceGrotesk_700Bold',
+    fontSize: 24,
+    color: Colors.dark.text,
+  },
+  settingsBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileCard: {
+    marginBottom: 24,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  profileInfo: {
+    flex: 1,
+    marginLeft: 14,
   },
   profileName: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
+    fontFamily: 'SpaceGrotesk_700Bold',
+    fontSize: 20,
     color: Colors.dark.text,
+  },
+  profileHandle: {
+    fontFamily: 'SpaceGrotesk_400Regular',
+    fontSize: 14,
+    color: Colors.dark.textSecondary,
+    marginTop: 1,
   },
   profileRole: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: Colors.dark.textSecondary,
-    marginTop: 4,
-  },
-  profileBio: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textSecondary,
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20,
-    paddingHorizontal: 20,
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 24,
-    backgroundColor: Colors.dark.surface,
-    borderRadius: 16,
-    paddingVertical: 16,
-  },
-  statCard: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
-    color: Colors.dark.text,
-  },
-  statLabel: {
+    fontFamily: 'SpaceGrotesk_400Regular',
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.dark.textSecondary,
+    color: Colors.dark.textMeta,
     marginTop: 2,
   },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: Colors.dark.border,
+  bio: {
+    fontFamily: 'SpaceGrotesk_400Regular',
+    fontSize: 14,
+    color: Colors.dark.textBody,
+    lineHeight: 24.5,
+    marginBottom: 16,
+  },
+  profileStats: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: Colors.dark.divider,
+    paddingTop: 14,
+  },
+  profileStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  profileStatBorder: {
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.dark.divider,
+  },
+  profileStatNum: {
+    fontFamily: 'SpaceGrotesk_700Bold',
+    fontSize: 18,
+    color: Colors.dark.text,
+  },
+  profileStatLabel: {
+    fontFamily: 'SpaceGrotesk_400Regular',
+    fontSize: 11,
+    color: Colors.dark.textMeta,
+    marginTop: 2,
   },
   section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.dark.textSecondary,
-    marginBottom: 12,
-  },
-  settingsGroup: {
-    backgroundColor: Colors.dark.surface,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  settingsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    minHeight: 52,
-  },
-  settingsIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
-  settingsLabel: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-    color: Colors.dark.text,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontSize: 13,
+    color: Colors.dark.textMeta,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });
