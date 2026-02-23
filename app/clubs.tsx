@@ -33,6 +33,8 @@ import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 
 // ─── Club Card ───────────────────────────────────────────────
 
@@ -122,6 +124,24 @@ export default function ClubsScreen() {
   const userId = identity?.user_id ?? '';
   const collegeDomain = identityDomain ?? '';
   const { canViewClubs, canFollowClub } = useFeatureAccess();
+
+  // Phase 13.5 — Realtime clubs subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.clubsRealtime(),
+    subscriptions: [
+      {
+        table: 'profiles',
+        event: '*',
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.clubs }),
+      },
+      {
+        table: 'connections',
+        event: '*',
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.clubs }),
+      },
+    ],
+    enabled: !!userId && !!collegeDomain,
+  });
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: [...QUERY_KEYS.clubs, collegeDomain],

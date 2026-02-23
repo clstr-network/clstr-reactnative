@@ -42,6 +42,8 @@ import type { Job, JobWithMatchScore, JobApplication, CreateJobInput, ApplyToJob
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 
 // ─── Tab types ───────────────────────────────────────────────
 
@@ -209,6 +211,36 @@ export default function JobsScreen() {
   const { identity } = useIdentityContext();
   const userId = identity?.user_id ?? '';
   const { canBrowseJobs, canSaveJobs, canPostJobs, canApplyToJobs, canUseAIJobMatching } = useFeatureAccess();
+
+  // Phase 13.4 — Realtime jobs subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.jobsRealtime(),
+    subscriptions: [
+      {
+        table: 'jobs',
+        event: '*',
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs });
+        },
+      },
+      {
+        table: 'saved_items',
+        event: '*',
+        filter: userId ? `user_id=eq.${userId}` : undefined,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.savedJobs });
+        },
+      },
+      {
+        table: 'job_applications',
+        event: '*',
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs });
+        },
+      },
+    ],
+    enabled: !!userId,
+  });
 
   const [activeTab, setActiveTab] = useState<TabKey>('browse');
   const [searchQuery, setSearchQuery] = useState('');

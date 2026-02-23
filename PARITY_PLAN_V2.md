@@ -558,86 +558,114 @@ These are existing screens that need feature additions to match the web.
 
 ---
 
-## Phase 13 — Realtime Subscription Parity (P1)
+## Phase 13 — Realtime Subscription Parity (P1) ✅ COMPLETED
 
 The web has 14 distinct realtime channel patterns. Mobile has 3 (feed, messages, notifications). Adding realtime to remaining screens provides live updates matching the web.
 
-### Task 13.1: Post Detail Realtime
+**Implementation Summary (completed):**
+- Used `useRealtimeMultiSubscription` (multi-table) and `useRealtimeSubscription` (single-table) hooks from `lib/hooks/useRealtimeSubscription.ts`
+- Channel names sourced from `CHANNELS` (`@clstr/core/channels`) for consistency with web
+- All subscriptions invalidate the appropriate React Query cache keys on realtime payload
+- Each subscription is guarded with `enabled` flag tied to auth/param availability
+
+### Task 13.1: Post Detail Realtime ✅
 
 **File**: `app/post/[id].tsx` (modify)  
 **Effort**: 2 hrs
 
 Subscribe to: `posts`, `post_likes`, `comments`, `comment_likes`, `post_shares`, `saved_items` filtered by `post_id`.
 
-### Task 13.2: Events Realtime
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.postDetail(id)` — 6 table subscriptions, invalidates `['post', id]` + `QUERY_KEYS.feed`.
+
+### Task 13.2: Events Realtime ✅
 
 **File**: `app/(tabs)/events.tsx` (modify)  
 **Effort**: 1.5 hrs
 
 Subscribe to: `events`, `event_registrations` filtered by `college_domain`.
 
-### Task 13.3: Network Realtime
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.eventsRealtime()` — 2 table subscriptions, invalidates `QUERY_KEYS.events`.
+
+### Task 13.3: Network Realtime ✅
 
 **File**: `app/(tabs)/network.tsx` (modify)  
 **Effort**: 1.5 hrs
 
 Subscribe to: `connections` table changes for current user.
 
-### Task 13.4: Jobs Realtime
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.networkConnections(userId)` — 2 subscriptions on `connections` (requester + receiver filters), invalidates `QUERY_KEYS.network` + `['connection-requests']`.
+
+### Task 13.4: Jobs Realtime ✅
 
 **File**: `app/jobs.tsx` (modify)  
 **Effort**: 1.5 hrs
 
 Subscribe to: `jobs`, `saved_items` (type=job), `job_applications`, `job_match_scores`.
 
-### Task 13.5: Clubs Realtime
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.jobsRealtime()` — 3 table subscriptions (`jobs`, `saved_items`, `job_applications`), invalidates `QUERY_KEYS.jobs` + `QUERY_KEYS.savedJobs`.
+
+### Task 13.5: Clubs Realtime ✅
 
 **File**: `app/clubs.tsx` (modify)  
 **Effort**: 1 hr
 
 Subscribe to: `profiles` (role=Club), `connections` (follow/unfollow).
 
-### Task 13.6: Projects Realtime
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.clubsRealtime()` — 2 table subscriptions, invalidates `QUERY_KEYS.clubs`. Uses `useIdentityContext` for auth.
+
+### Task 13.6: Projects Realtime ✅
 
 **File**: `app/projects.tsx` (modify)  
 **Effort**: 2 hrs
 
 Subscribe to: `collab_projects`, `collab_project_roles`, `collab_team_members`, `collab_project_applications`.
 
-### Task 13.7: Saved Items Realtime
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.projects(collegeDomain, userId)` — 4 table subscriptions with `college_domain` filter, invalidates `QUERY_KEYS.projects`.
+
+### Task 13.7: Saved Items Realtime ✅
 
 **File**: `app/saved.tsx` (modify)  
 **Effort**: 1 hr
 
 Subscribe to: `saved_items` + related post tables for current user.
 
-### Task 13.8: Alumni Directory Realtime
+**Implemented**: `useRealtimeSubscription` (single-table) on `CHANNELS.savedItems(userId)` — watches `saved_items` filtered by `user_id`, invalidates `QUERY_KEYS.savedItems(userId)`.
+
+### Task 13.8: Alumni Directory Realtime ✅
 
 **File**: `app/alumni.tsx` (modify)  
 **Effort**: 1.5 hrs
 
 Subscribe to: `connections`, `profiles`, `alumni_profiles` for domain.
 
-### Task 13.9: Event Detail Realtime
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.alumniDirectoryConnections(userId)` — 3 table subscriptions, invalidates `['alumni', collegeDomain, userId]` + `['connectionStatus']`.
+
+### Task 13.9: Event Detail Realtime ✅
 
 **File**: `app/event/[id].tsx` (modify)  
 **Effort**: 1 hr
 
 Subscribe to: `events`, `event_registrations` for specific event.
 
-### Task 13.10: Job Detail Realtime
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.eventDetail(id)` — 2 table subscriptions filtered by event `id`, invalidates `['event', id]` + `QUERY_KEYS.events`.
+
+### Task 13.10: Job Detail Realtime ✅
 
 **File**: `app/job/[id].tsx` (modify)  
 **Effort**: 1 hr
 
 Subscribe to: `jobs`, `saved_items`, `job_applications` for specific job.
 
-### Task 13.11: Profile Realtime
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.jobDetail(id)` — 3 table subscriptions filtered by job `id`, invalidates `[...QUERY_KEYS.jobs, 'detail', id]` + `QUERY_KEYS.savedJobs`.
+
+### Task 13.11: Profile Realtime ✅
 
 **File**: `app/(tabs)/profile.tsx` (modify)  
 **Effort**: 1.5 hrs
 
 Subscribe to: `connections`, `profile_views`, `posts` for own profile.
+
+**Implemented**: `useRealtimeMultiSubscription` on `CHANNELS.profileStats(userId)` — 4 subscriptions (`connections` x2 bidirectional, `profile_views`, `posts`), invalidates `QUERY_KEYS.profile(userId)` + `MOBILE_QUERY_KEYS.connectionCount(userId)` + `MOBILE_QUERY_KEYS.userPostsCount(userId)`.
 
 ---
 
@@ -902,7 +930,7 @@ npx expo install @react-native-community/datetimepicker react-native-markdown-di
 | Club detail page | ✅ Done | 12.8 |
 | Alumni connect/message | ✅ Done | 12.9 |
 | Multi-category search | ✅ Done | 12.11 |
-| All realtime subscriptions | 🔨 Phase 13 | 13.1-13.11 |
+| All realtime subscriptions | ✅ Done | 13.1-13.11 |
 | Project detail screen | 🔨 Phase 14 | 14.1 |
 | Skeleton loading screens | 🔨 Phase 15 | 15.4 |
 | Toast/snackbar system | 🔨 Phase 15 | 15.5 |

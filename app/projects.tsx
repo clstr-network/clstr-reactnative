@@ -49,6 +49,8 @@ import type {
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 
 type TabKey = 'explore' | 'mine' | 'teamups' | 'requests';
 
@@ -259,6 +261,43 @@ export default function ProjectsScreen() {
   const [applyMessage, setApplyMessage] = useState('');
   const [applySkills, setApplySkills] = useState('');
   const [applyAvailability, setApplyAvailability] = useState('');
+
+  // Phase 13.6 — Realtime projects subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.projects(collegeDomain ?? '', userId),
+    subscriptions: [
+      {
+        table: 'collab_projects',
+        event: '*',
+        filter: collegeDomain ? `college_domain=eq.${collegeDomain}` : undefined,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+        },
+      },
+      {
+        table: 'collab_project_roles',
+        event: '*',
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+        },
+      },
+      {
+        table: 'collab_team_members',
+        event: '*',
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+        },
+      },
+      {
+        table: 'collab_project_applications',
+        event: '*',
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+        },
+      },
+    ],
+    enabled: !!userId && !!collegeDomain,
+  });
 
   const exploreQ = useQuery({
     queryKey: [...QUERY_KEYS.projects, 'explore', collegeDomain],

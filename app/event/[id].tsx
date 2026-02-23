@@ -13,6 +13,8 @@ import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
 import { getEventById, toggleEventRegistration, type Event } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 
 function formatDateBanner(dateStr?: string): { month: string; day: string; weekday: string } {
   if (!dateStr) return { month: '---', day: '--', weekday: '---' };
@@ -30,6 +32,32 @@ export default function EventDetailScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+
+  // Phase 13.9 — Realtime event detail subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.eventDetail(id ?? ''),
+    subscriptions: [
+      {
+        table: 'events',
+        event: '*',
+        filter: `id=eq.${id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: ['event', id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events });
+        },
+      },
+      {
+        table: 'event_registrations',
+        event: '*',
+        filter: `event_id=eq.${id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: ['event', id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events });
+        },
+      },
+    ],
+    enabled: !!id,
+  });
 
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', id],

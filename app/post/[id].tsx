@@ -30,18 +30,68 @@ import {
 } from '@/lib/api';
 import { toggleSavePost, voteOnPoll } from '@/lib/api/social';
 import { formatRelativeTime } from '@/lib/time';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
+import { useAuth } from '@/lib/auth-context';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const [repostSheetVisible, setRepostSheetVisible] = useState(false);
+
+  // Phase 13.1 — Realtime post detail subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.postDetail(id ?? ''),
+    subscriptions: [
+      {
+        table: 'posts',
+        event: '*',
+        filter: `id=eq.${id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: ['post', id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
+        },
+      },
+      {
+        table: 'post_likes',
+        event: '*',
+        filter: `post_id=eq.${id}`,
+        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+      },
+      {
+        table: 'comments',
+        event: '*',
+        filter: `post_id=eq.${id}`,
+        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+      },
+      {
+        table: 'comment_likes',
+        event: '*',
+        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+      },
+      {
+        table: 'post_shares',
+        event: '*',
+        filter: `original_post_id=eq.${id}`,
+        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+      },
+      {
+        table: 'saved_items',
+        event: '*',
+        filter: user?.id ? `user_id=eq.${user.id}` : undefined,
+        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+      },
+    ],
+    enabled: !!id,
+  });
 
   const { data: post } = useQuery({
     queryKey: ['post', id],

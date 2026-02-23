@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
@@ -22,12 +22,57 @@ import type { Project as CollabProject } from '@/lib/api/projects';
 import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 
 export default function ProfileScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+
+  // Phase 13.11 — Realtime profile subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.profileStats(user?.id ?? ''),
+    subscriptions: [
+      {
+        table: 'connections',
+        event: '*',
+        filter: `requester_id=eq.${user?.id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(user?.id ?? '') });
+          queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionCount(user?.id ?? '') });
+        },
+      },
+      {
+        table: 'connections',
+        event: '*',
+        filter: `receiver_id=eq.${user?.id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(user?.id ?? '') });
+          queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionCount(user?.id ?? '') });
+        },
+      },
+      {
+        table: 'profile_views',
+        event: '*',
+        filter: `profile_id=eq.${user?.id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: ['profile-views', user?.id ?? ''] });
+        },
+      },
+      {
+        table: 'posts',
+        event: '*',
+        filter: `user_id=eq.${user?.id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.userPostsCount(user?.id ?? '') });
+        },
+      },
+    ],
+    enabled: !!user?.id,
+  });
 
   // Phase 4 — Role-based permissions
   const { canDoSkillAnalysis, canOfferMentorship, canToggleMentorStatus, isAlumni, isFaculty, isClubLead } = useRolePermissions();

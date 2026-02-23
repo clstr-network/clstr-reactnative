@@ -15,6 +15,8 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useTypeaheadSearch } from '@/lib/hooks/useTypeaheadSearch';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 import {
   getConnections,
   getPendingRequests,
@@ -42,6 +44,32 @@ export default function NetworkScreen() {
 
   // Phase 4 — Role-based permissions
   const { canSendConnectionRequests, canMessage } = useRolePermissions();
+
+  // Phase 13.3 — Realtime network subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.networkConnections(user?.id ?? ''),
+    subscriptions: [
+      {
+        table: 'connections',
+        event: '*',
+        filter: `requester_id=eq.${user?.id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
+          queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
+        },
+      },
+      {
+        table: 'connections',
+        event: '*',
+        filter: `receiver_id=eq.${user?.id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
+          queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
+        },
+      },
+    ],
+    enabled: !!user?.id,
+  });
 
   // Phase 6 — Typeahead search
   const { data: searchResults, isLoading: searchLoading } = useTypeaheadSearch({

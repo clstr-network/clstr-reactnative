@@ -11,6 +11,8 @@ import { useThemeColors } from '@/constants/colors';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { getEvents, toggleEventRegistration, type Event } from '@/lib/api';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 
 const CATEGORIES = ['All', 'Academic', 'Career', 'Social', 'Workshop', 'Sports'];
 
@@ -107,6 +109,23 @@ export default function EventsScreen() {
 
   // Phase 4 — Role-based permissions
   const { canCreateEvents } = useFeatureAccess();
+
+  // Phase 13.2 — Realtime events subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.eventsRealtime(),
+    subscriptions: [
+      {
+        table: 'events',
+        event: '*',
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events }),
+      },
+      {
+        table: 'event_registrations',
+        event: '*',
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events }),
+      },
+    ],
+  });
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: QUERY_KEYS.events,

@@ -30,6 +30,8 @@ import { getSavedItems, toggleSaveItem } from '@/lib/api/saved';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
+import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 
 // ─── Tab types ───────────────────────────────────────────────
 
@@ -268,6 +270,16 @@ export default function SavedItemsScreen() {
   const userId = identity?.user_id ?? '';
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabKey>('posts');
+
+  // Phase 13.7 — Realtime saved items subscription
+  useRealtimeSubscription({
+    channelName: CHANNELS.savedItems(userId),
+    table: 'saved_items',
+    event: '*',
+    filter: `user_id=eq.${userId}`,
+    onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.savedItems(userId) }),
+    enabled: !!userId,
+  });
 
   const {
     data,

@@ -34,6 +34,8 @@ import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useAuth } from '@/lib/auth-context';
 import { MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 
 // ─── Graduation year chips ───────────────────────────────────
 
@@ -203,6 +205,33 @@ export default function AlumniScreen() {
   const [search, setSearch] = useState('');
   const [mentorOnly, setMentorOnly] = useState(false);
   const [gradYearFilter, setGradYearFilter] = useState('All');
+  const queryClient = useQueryClient();
+
+  // Phase 13.8 — Realtime alumni directory subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.alumniDirectoryConnections(userId),
+    subscriptions: [
+      {
+        table: 'connections',
+        event: '*',
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: ['alumni', collegeDomain, userId] });
+          queryClient.invalidateQueries({ queryKey: ['connectionStatus'] });
+        },
+      },
+      {
+        table: 'profiles',
+        event: '*',
+        onPayload: () => queryClient.invalidateQueries({ queryKey: ['alumni', collegeDomain, userId] }),
+      },
+      {
+        table: 'alumni_profiles',
+        event: '*',
+        onPayload: () => queryClient.invalidateQueries({ queryKey: ['alumni', collegeDomain, userId] }),
+      },
+    ],
+    enabled: !!userId && !!collegeDomain,
+  });
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ['alumni', collegeDomain, userId],

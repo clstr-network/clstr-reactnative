@@ -26,6 +26,8 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { getJobById, toggleSaveJob, applyToJob } from '@/lib/api/jobs';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { QUERY_KEYS } from '@/lib/query-keys';
+import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
+import { CHANNELS } from '@/lib/channels';
 
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,6 +35,40 @@ export default function JobDetailScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { canApplyToJobs, canSaveJobs } = useFeatureAccess();
+
+  // Phase 13.10 — Realtime job detail subscription
+  useRealtimeMultiSubscription({
+    channelName: CHANNELS.jobDetail(id ?? ''),
+    subscriptions: [
+      {
+        table: 'jobs',
+        event: '*',
+        filter: `id=eq.${id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.jobs, 'detail', id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs });
+        },
+      },
+      {
+        table: 'saved_items',
+        event: '*',
+        filter: `item_id=eq.${id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.savedJobs });
+          queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.jobs, 'detail', id] });
+        },
+      },
+      {
+        table: 'job_applications',
+        event: '*',
+        filter: `job_id=eq.${id}`,
+        onPayload: () => {
+          queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.jobs, 'detail', id] });
+        },
+      },
+    ],
+    enabled: !!id,
+  });
 
   const { data: result, isLoading } = useQuery({
     queryKey: [...QUERY_KEYS.jobs, 'detail', id],
