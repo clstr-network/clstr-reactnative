@@ -41,6 +41,8 @@ const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }
   { key: 'saved', label: 'Saved', icon: 'bookmark-outline' },
 ];
 
+const JOB_TYPE_FILTERS = ['All', 'Full-time', 'Part-time', 'Internship', 'Contract', 'Remote'];
+
 // ─── Job Card ────────────────────────────────────────────────
 
 const JobCard = React.memo(function JobCard({
@@ -132,6 +134,7 @@ export default function JobsScreen() {
 
   const [activeTab, setActiveTab] = useState<TabKey>('browse');
   const [searchQuery, setSearchQuery] = useState('');
+  const [jobTypeFilter, setJobTypeFilter] = useState('All');
 
   // ── Browse jobs ────────────────────────────────────────────
   const browseQuery = useQuery({
@@ -176,9 +179,12 @@ export default function JobsScreen() {
 
   // ── Resolved data ──────────────────────────────────────────
   const displayJobs = useMemo(() => {
-    if (activeTab === 'saved') return savedQuery.data?.jobs ?? [];
-    return browseQuery.data?.jobs ?? [];
-  }, [activeTab, browseQuery.data, savedQuery.data]);
+    let jobs = activeTab === 'saved' ? (savedQuery.data?.jobs ?? []) : (browseQuery.data?.jobs ?? []);
+    if (jobTypeFilter !== 'All') {
+      jobs = jobs.filter((j: Job) => (j.job_type ?? '').toLowerCase() === jobTypeFilter.toLowerCase());
+    }
+    return jobs;
+  }, [activeTab, browseQuery.data, savedQuery.data, jobTypeFilter]);
 
   const isLoading = activeTab === 'browse' ? browseQuery.isLoading : savedQuery.isLoading;
   const isRefetching = activeTab === 'browse' ? browseQuery.isRefetching : savedQuery.isRefetching;
@@ -207,7 +213,7 @@ export default function JobsScreen() {
           <Ionicons name="lock-closed-outline" size={56} color={colors.textTertiary} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>Access Restricted</Text>
           <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            You don't have permission to browse jobs.
+            You don&apos;t have permission to browse jobs.
           </Text>
         </View>
       </View>
@@ -272,6 +278,32 @@ export default function JobsScreen() {
           );
         })}
       </View>
+
+      {/* Phase 6 — Job type filter chips */}
+      <FlatList
+        data={JOB_TYPE_FILTERS}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.jobTypeFilterList}
+        contentContainerStyle={styles.jobTypeFilterContent}
+        keyExtractor={(item) => item}
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() => { setJobTypeFilter(item); Haptics.selectionAsync(); }}
+            style={[
+              styles.jobTypeChip,
+              {
+                backgroundColor: jobTypeFilter === item ? colors.primary : 'transparent',
+                borderColor: jobTypeFilter === item ? colors.primary : colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.jobTypeChipText, { color: jobTypeFilter === item ? '#fff' : colors.textSecondary }]}>
+              {item}
+            </Text>
+          </Pressable>
+        )}
+      />
 
       {/* Content */}
       {isLoading ? (
@@ -354,6 +386,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: fontFamily.medium,
   },
+  jobTypeFilterList: { flexGrow: 0 },
+  jobTypeFilterContent: { paddingHorizontal: 14, paddingVertical: 8, gap: 6 },
+  jobTypeChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
+  jobTypeChipText: { fontSize: 12, fontWeight: '600', fontFamily: fontFamily.semiBold },
   listContent: { padding: 16, gap: 12 },
   card: {
     borderRadius: 14,

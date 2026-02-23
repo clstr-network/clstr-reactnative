@@ -1,6 +1,6 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Platform, RefreshControl, ActivityIndicator, Pressable
+  View, Text, StyleSheet, FlatList, Platform, RefreshControl, ActivityIndicator, Pressable, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,7 @@ export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Phase 3.1 — Realtime message subscription (conversation list level)
   useMessageSubscription();
@@ -32,6 +33,16 @@ export default function MessagesScreen() {
     staleTime: 30_000,       // 30s — realtime handles live updates
     gcTime: 5 * 60 * 1000,   // 5min
   });
+
+  // Phase 6 — Local search filter
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.toLowerCase();
+    return conversations.filter((c: Conversation) =>
+      c.partner_name?.toLowerCase().includes(q) ||
+      c.last_message?.toLowerCase().includes(q),
+    );
+  }, [conversations, searchQuery]);
 
   const handlePress = useCallback((partnerId: string) => {
     router.push({ pathname: '/chat/[id]', params: { id: partnerId } });
@@ -73,6 +84,25 @@ export default function MessagesScreen() {
             </Pressable>
           </View>
         </View>
+
+        {/* Phase 6 — Conversation search */}
+        <View style={[styles.searchContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+          <Ionicons name="search" size={16} color={colors.textTertiary} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search conversations..."
+            placeholderTextColor={colors.textTertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -81,7 +111,7 @@ export default function MessagesScreen() {
         </View>
       ) : (
         <FlatList
-          data={conversations}
+          data={filteredConversations}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
@@ -110,7 +140,7 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { borderBottomWidth: 1, paddingBottom: 12, paddingHorizontal: 16 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   composeBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
@@ -122,4 +152,6 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 8 },
   emptyText: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   emptySubtext: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 8 : 4, borderRadius: 10, borderWidth: 1, gap: 6 },
+  searchInput: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', padding: 0 },
 });

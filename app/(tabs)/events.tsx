@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl, ActivityIndicator
+  View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl, ActivityIndicator, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -102,6 +102,7 @@ export default function EventsScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [eventSearch, setEventSearch] = useState('');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   // Phase 4 — Role-based permissions
@@ -114,9 +115,21 @@ export default function EventsScreen() {
     gcTime: 10 * 60 * 1000,  // 10min
   });
 
-  const filtered = activeCategory === 'All'
-    ? events
-    : events.filter((e: Event) => (e.category ?? '').toLowerCase() === activeCategory.toLowerCase());
+  const filtered = useMemo(() => {
+    let list = events as Event[];
+    if (activeCategory !== 'All') {
+      list = list.filter((e) => (e.category ?? '').toLowerCase() === activeCategory.toLowerCase());
+    }
+    if (eventSearch.trim()) {
+      const q = eventSearch.toLowerCase();
+      list = list.filter(
+        (e) =>
+          e.title.toLowerCase().includes(q) ||
+          (e.location ?? '').toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [events, activeCategory, eventSearch]);
 
   const rsvpMutation = useMutation({
     mutationFn: (eventId: string) => toggleEventRegistration(eventId),
@@ -161,6 +174,26 @@ export default function EventsScreen() {
             </Pressable>
           )}
         </View>
+
+        {/* Phase 6 — Event search bar */}
+        <View style={[styles.eventSearchContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+          <Ionicons name="search" size={16} color={colors.textTertiary} />
+          <TextInput
+            style={[styles.eventSearchInput, { color: colors.text }]}
+            placeholder="Search events..."
+            placeholderTextColor={colors.textTertiary}
+            value={eventSearch}
+            onChangeText={setEventSearch}
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {eventSearch.length > 0 && (
+            <Pressable onPress={() => setEventSearch('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
+            </Pressable>
+          )}
+        </View>
+
         <View style={styles.statsRow}>
           <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
             <Text style={[styles.statNum, { color: colors.tint }]}>{upcomingCount}</Text>
@@ -228,9 +261,11 @@ export default function EventsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { borderBottomWidth: 1, paddingBottom: 0 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 10 },
   title: { fontSize: 28, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
   createEventBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  eventSearchContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 8 : 4, borderRadius: 10, borderWidth: 1, gap: 6 },
+  eventSearchInput: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', padding: 0 },
   statsRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 12 },
   statBox: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   statNum: { fontSize: 22, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },

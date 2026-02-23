@@ -125,7 +125,16 @@ export default function PortfolioScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Portfolio</Text>
-        <View style={{ width: 24 }} />
+        {portfolioUrl && isActive ? (
+          <Pressable
+            onPress={() => Linking.openURL(portfolioUrl)}
+            hitSlop={8}
+          >
+            <Ionicons name="open-outline" size={22} color={colors.primary} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 24 }} />
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -227,6 +236,25 @@ export default function PortfolioScreen() {
             <Text style={styles.saveBtnText}>Save Settings</Text>
           )}
         </Pressable>
+
+        {/* Edit Content */}
+        <Pressable
+          onPress={() => router.push('/portfolio-editor' as any)}
+          style={[styles.editCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <View style={styles.editCardLeft}>
+            <Ionicons name="create-outline" size={22} color={colors.primary} />
+            <View style={styles.editCardText}>
+              <Text style={[styles.editCardTitle, { color: colors.text }]}>Edit Portfolio Content</Text>
+              <Text style={[styles.editCardHint, { color: colors.textSecondary }]}>
+                Customize projects, experience, and more
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+        </Pressable>
+
+
       </ScrollView>
     </View>
   );
@@ -337,5 +365,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     paddingHorizontal: 40,
+  },
+  editCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  editCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  editCardText: { flex: 1, gap: 2 },
+  editCardTitle: {
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.semiBold,
+  },
+  editCardHint: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
   },
 });

@@ -31,6 +31,11 @@ import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { Avatar } from '@/components/Avatar';
 
+// ─── Graduation year chips ───────────────────────────────────
+
+const currentYear = new Date().getFullYear();
+const GRAD_YEAR_FILTERS = ['All', ...Array.from({ length: 6 }, (_, i) => String(currentYear - i))];
+
 // ─── Alumni Card ─────────────────────────────────────────────
 
 const AlumniCard = React.memo(function AlumniCard({
@@ -119,6 +124,7 @@ export default function AlumniScreen() {
   const { canViewAlumniDirectory } = useFeatureAccess();
   const [search, setSearch] = useState('');
   const [mentorOnly, setMentorOnly] = useState(false);
+  const [gradYearFilter, setGradYearFilter] = useState('All');
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ['alumni', collegeDomain, userId],
@@ -131,6 +137,9 @@ export default function AlumniScreen() {
   const alumni = useMemo(() => {
     let list = (data ?? []) as AlumniUser[];
     if (mentorOnly) list = list.filter((a) => a.willing_to_mentor);
+    if (gradYearFilter !== 'All') {
+      list = list.filter((a) => String(a.graduation_year) === gradYearFilter);
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -143,7 +152,10 @@ export default function AlumniScreen() {
       );
     }
     return list;
-  }, [data, search, mentorOnly]);
+  }, [data, search, mentorOnly, gradYearFilter]);
+
+  const totalAlumni = (data ?? []).length;
+  const mentorCount = (data ?? []).filter((a: AlumniUser) => a.willing_to_mentor).length;
 
   const renderItem = useCallback(
     ({ item }: { item: AlumniUser }) => <AlumniCard alumni={item} colors={colors} />,
@@ -165,7 +177,15 @@ export default function AlumniScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Alumni Directory</Text>
-        <View style={{ width: 24 }} />
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push('/alumni-invite' as any);
+          }}
+          hitSlop={8}
+        >
+          <Ionicons name="person-add-outline" size={22} color={colors.primary} />
+        </Pressable>
       </View>
 
       {/* Search + Filter */}
@@ -203,6 +223,48 @@ export default function AlumniScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {/* Phase 6 — Alumni stats */}
+      <View style={styles.alumniStatsRow}>
+        <View style={[styles.alumniStatBox, { backgroundColor: colors.surfaceSecondary }]}>
+          <Text style={[styles.alumniStatNum, { color: colors.primary }]}>{totalAlumni}</Text>
+          <Text style={[styles.alumniStatLabel, { color: colors.textSecondary }]}>Alumni</Text>
+        </View>
+        <View style={[styles.alumniStatBox, { backgroundColor: colors.surfaceSecondary }]}>
+          <Text style={[styles.alumniStatNum, { color: colors.primary }]}>{mentorCount}</Text>
+          <Text style={[styles.alumniStatLabel, { color: colors.textSecondary }]}>Mentors</Text>
+        </View>
+        <View style={[styles.alumniStatBox, { backgroundColor: colors.surfaceSecondary }]}>
+          <Text style={[styles.alumniStatNum, { color: colors.primary }]}>{alumni.length}</Text>
+          <Text style={[styles.alumniStatLabel, { color: colors.textSecondary }]}>Filtered</Text>
+        </View>
+      </View>
+
+      {/* Phase 6 — Graduation year filter chips */}
+      <FlatList
+        data={GRAD_YEAR_FILTERS}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.gradFilterList}
+        contentContainerStyle={styles.gradFilterContent}
+        keyExtractor={(item) => item}
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() => { setGradYearFilter(item); Haptics.selectionAsync(); }}
+            style={[
+              styles.gradChip,
+              {
+                backgroundColor: gradYearFilter === item ? colors.primary : 'transparent',
+                borderColor: gradYearFilter === item ? colors.primary : colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.gradChipText, { color: gradYearFilter === item ? '#fff' : colors.textSecondary }]}>
+              {item === 'All' ? 'All Years' : `Class of ${item}`}
+            </Text>
+          </Pressable>
+        )}
+      />
 
       {/* Content */}
       {isLoading ? (
@@ -287,6 +349,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: fontFamily.medium,
   },
+  alumniStatsRow: { flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 8, gap: 8 },
+  alumniStatBox: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
+  alumniStatNum: { fontSize: 20, fontWeight: '800', fontFamily: fontFamily.bold },
+  alumniStatLabel: { fontSize: 11, marginTop: 2, fontFamily: fontFamily.regular },
+  gradFilterList: { flexGrow: 0 },
+  gradFilterContent: { paddingHorizontal: 14, paddingBottom: 8, gap: 6 },
+  gradChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
+  gradChipText: { fontSize: 12, fontWeight: '600', fontFamily: fontFamily.semiBold },
   listContent: { padding: 16, gap: 12 },
   card: {
     borderRadius: 14,

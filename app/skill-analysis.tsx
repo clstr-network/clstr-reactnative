@@ -4,7 +4,7 @@
  * View computed skill analysis, score distribution, and skill gap.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,23 +17,18 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import {
-  getOrComputeSkillAnalysis,
-  computeSkillAnalysis,
   getSkillDistribution,
-  getOverallScore,
-  getScoreLabel,
   getScoreColor,
 } from '@/lib/api/skill-analysis';
 import type { SkillAnalysisData, SkillItem } from '@/lib/api/skill-analysis';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
-import { QUERY_KEYS } from '@/lib/query-keys';
+import { useSkillAnalysis } from '@/lib/hooks/useSkillAnalysis';
 
 // ─── Skill Bar ───────────────────────────────────────────────
 
@@ -108,31 +103,39 @@ function DistributionSection({
 export default function SkillAnalysisScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
   const { identity } = useIdentityContext();
   const userId = identity?.user_id ?? '';
   const { canAccessSkillAnalysis } = useFeatureAccess();
 
-  const { data, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.skillAnalysis(userId),
-    queryFn: () => getOrComputeSkillAnalysis(userId),
-    enabled: !!userId && canAccessSkillAnalysis,
-    staleTime: 5 * 60_000,
-    gcTime: 10 * 60_000,
-  });
+  const {
+    analysis,
+    isLoading,
+    isComputing,
+    overallScore: overall,
+    scoreLabel: label,
+    scoreColor,
+    refresh,
+  } = useSkillAnalysis(canAccessSkillAnalysis ? userId : undefined);
 
-  const recomputeMut = useMutation({
-    mutationFn: () => computeSkillAnalysis(userId),
-    onSuccess: () => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.skillAnalysis(userId) });
-    },
-  });
+  const skills = useMemo(
+    () => (analysis?.current_skills ?? []) as SkillItem[],
+    [analysis],
+  );
 
-  const analysis = data as SkillAnalysisData | undefined;
-  const overall = analysis ? getOverallScore(analysis) : 0;
-  const label = getScoreLabel(overall);
-  const skills = (analysis?.current_skills ?? []) as SkillItem[];
+  // Skill gap recommendations: find skills at Beginner / Intermediate
+  const gapRecommendations = useMemo(() => {
+    if (!skills.length) return [];
+    const levelPriority: Record<string, number> = {
+      Beginner: 1,
+      Intermediate: 2,
+      Expert: 3,
+      Professional: 4,
+    };
+    return skills
+      .filter((s) => levelPriority[s.level] !== undefined && levelPriority[s.level]! <= 2)
+      .sort((a, b) => (levelPriority[a.level] ?? 0) - (levelPriority[b.level] ?? 0))
+      .slice(0, 5);
+  }, [skills]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -150,12 +153,12 @@ export default function SkillAnalysisScreen() {
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            recomputeMut.mutate();
+            refresh();
           }}
-          disabled={recomputeMut.isPending}
+          disabled={isComputing}
           hitSlop={8}
         >
-          {recomputeMut.isPending ? (
+          {isComputing ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <Ionicons name="refresh-outline" size={22} color={colors.primary} />
@@ -179,7 +182,7 @@ export default function SkillAnalysisScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Overall Score */}
           <View style={[styles.scoreCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.scoreNumber, { color: getScoreColor(overall) }]}>{overall}</Text>
+            <Text style={[styles.scoreNumber, { color: scoreColor }]}>{overall}</Text>
             <Text style={[styles.scoreLabel, { color: colors.text }]}>{label}</Text>
             <Text style={[styles.scoreHint, { color: colors.textTertiary }]}>
               Overall Skill Score
@@ -188,6 +191,41 @@ export default function SkillAnalysisScreen() {
 
           {/* Distribution */}
           <DistributionSection data={analysis} colors={colors} />
+
+          {/* Skill Gap Recommendations */}
+          {gapRecommendations.length > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Focus Areas
+              </Text>
+              <Text style={[styles.gapHint, { color: colors.textSecondary }]}>
+                These skills could use a boost to improve your overall score
+              </Text>
+              {gapRecommendations.map((skill, idx) => {
+                const isBeginner = skill.level === 'Beginner';
+                return (
+                  <View
+                    key={skill.name ?? idx}
+                    style={[styles.gapCard, { backgroundColor: colors.surfaceSecondary }]}
+                  >
+                    <View style={[styles.gapIcon, { backgroundColor: isBeginner ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)' }]}>
+                      <Ionicons
+                        name={isBeginner ? 'alert-circle-outline' : 'arrow-up-circle-outline'}
+                        size={20}
+                        color={isBeginner ? '#ef4444' : '#f59e0b'}
+                      />
+                    </View>
+                    <View style={styles.gapInfo}>
+                      <Text style={[styles.gapName, { color: colors.text }]}>{skill.name}</Text>
+                      <Text style={[styles.gapLevel, { color: isBeginner ? '#ef4444' : '#f59e0b' }]}>
+                        {skill.level} — {isBeginner ? 'Start learning the basics' : 'Practice to level up'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {/* Individual Skills */}
           {skills.length > 0 && (
@@ -323,5 +361,33 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontFamily: fontFamily.regular,
     textAlign: 'center',
+  },
+  gapHint: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
+    marginBottom: 4,
+  },
+  gapCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    gap: 12,
+  },
+  gapIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gapInfo: { flex: 1, gap: 2 },
+  gapName: {
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.medium,
+  },
+  gapLevel: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
   },
 });

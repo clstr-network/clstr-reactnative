@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -29,11 +29,14 @@ import {
   type ReactionType,
 } from '@/lib/api';
 
+type SortOrder = 'recent' | 'top';
+
 export default function FeedScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+  const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
 
   const PAGE_SIZE = 20;
 
@@ -55,8 +58,8 @@ export default function FeedScreen() {
     hasNextPage,
     fetchNextPage,
   } = useInfiniteQuery({
-    queryKey: QUERY_KEYS.feed,
-    queryFn: ({ pageParam = 0 }) => getPosts({ page: pageParam, limit: PAGE_SIZE }),
+    queryKey: [...QUERY_KEYS.feed, sortOrder],
+    queryFn: ({ pageParam = 0 }) => getPosts({ page: pageParam, limit: PAGE_SIZE, sort: sortOrder }),
     getNextPageParam: (lastPage, allPages) => {
       // If the last page returned fewer than PAGE_SIZE items, there are no more
       if (!lastPage || lastPage.length < PAGE_SIZE) return undefined;
@@ -212,6 +215,51 @@ export default function FeedScreen() {
         </View>
       </View>
 
+      {/* Phase 6 — Quick compose prompt */}
+      {canCreatePost && (
+        <Pressable
+          onPress={() => router.push('/create-post')}
+          style={[styles.quickCompose, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <View style={[styles.quickComposeAvatar, { backgroundColor: colors.surfaceElevated }]}>
+            <Ionicons name="person" size={16} color={colors.textTertiary} />
+          </View>
+          <Text style={[styles.quickComposePlaceholder, { color: colors.textTertiary }]}>
+            What's on your mind?
+          </Text>
+        </Pressable>
+      )}
+
+      {/* Phase 6 — Sort toggle */}
+      <View style={[styles.sortRow, { borderBottomColor: colors.border }]}>
+        {(['recent', 'top'] as const).map((s) => (
+          <Pressable
+            key={s}
+            onPress={() => {
+              if (sortOrder !== s) {
+                Haptics.selectionAsync();
+                setSortOrder(s);
+              }
+            }}
+            style={[
+              styles.sortChip,
+              sortOrder === s
+                ? { backgroundColor: colors.tint }
+                : { borderColor: colors.border, borderWidth: 1 },
+            ]}
+          >
+            <Ionicons
+              name={s === 'recent' ? 'time-outline' : 'trending-up-outline'}
+              size={14}
+              color={sortOrder === s ? '#fff' : colors.textSecondary}
+            />
+            <Text style={[styles.sortChipText, { color: sortOrder === s ? '#fff' : colors.textSecondary }]}>
+              {s === 'recent' ? 'Recent' : 'Top'}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       {/* Phase 3.2 — "New posts" banner */}
       {hasNewPosts && (
         <Pressable
@@ -348,4 +396,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
   emptySubtext: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  quickCompose: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 24, borderWidth: 1, gap: 10 },
+  quickComposeAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  quickComposePlaceholder: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  sortRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8, borderBottomWidth: 1 },
+  sortChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  sortChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
 });

@@ -5,7 +5,7 @@
  * Tabs: Explore / My Projects
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -97,7 +98,15 @@ const ProjectCard = React.memo(function ProjectCard({
         <Text style={[styles.footerText, { color: colors.textTertiary }]}>
           {project.status === 'active' ? 'Recruiting' : project.status}
         </Text>
-        {project.max_team_size && (
+        {(project as any).team_members_count != null && (
+          <View style={styles.teamCountRow}>
+            <Ionicons name="people-outline" size={12} color={colors.textTertiary} />
+            <Text style={[styles.footerText, { color: colors.textTertiary }]}>
+              {(project as any).team_members_count}{project.max_team_size ? `/${project.max_team_size}` : ''} members
+            </Text>
+          </View>
+        )}
+        {(project as any).team_members_count == null && project.max_team_size && (
           <Text style={[styles.footerText, { color: colors.textTertiary }]}>
             Team: up to {project.max_team_size}
           </Text>
@@ -116,6 +125,7 @@ export default function ProjectsScreen() {
   const userId = identity?.user_id ?? '';
   const { canViewProjects, canCreateProjects } = useFeatureAccess();
   const [tab, setTab] = useState<TabKey>('explore');
+  const [projectSearch, setProjectSearch] = useState('');
 
   const exploreQ = useQuery({
     queryKey: [...QUERY_KEYS.projects, 'explore', collegeDomain],
@@ -137,7 +147,17 @@ export default function ProjectsScreen() {
 
   const isActive = tab === 'explore';
   const queryObj = isActive ? exploreQ : myQ;
-  const projects = (queryObj.data ?? []) as Project[];
+  const projects = useMemo(() => {
+    const raw = (queryObj.data ?? []) as Project[];
+    if (!projectSearch.trim()) return raw;
+    const q = projectSearch.toLowerCase();
+    return raw.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        (p.description ?? '').toLowerCase().includes(q) ||
+        (p.tech_stack ?? []).some((t: string) => t.toLowerCase().includes(q)),
+    );
+  }, [queryObj.data, projectSearch]);
 
   const renderItem = useCallback(
     ({ item }: { item: Project }) => <ProjectCard project={item} colors={colors} />,
@@ -205,6 +225,27 @@ export default function ProjectsScreen() {
             </Text>
           </Pressable>
         ))}
+      </View>
+
+      {/* Phase 6 — Project search bar */}
+      <View style={[styles.projectSearchRow, { borderBottomColor: colors.border }]}>
+        <View style={[styles.projectSearchBar, { backgroundColor: colors.surfaceSecondary }]}>
+          <Ionicons name="search-outline" size={16} color={colors.textTertiary} />
+          <TextInput
+            value={projectSearch}
+            onChangeText={setProjectSearch}
+            placeholder="Search projects or tech..."
+            placeholderTextColor={colors.textTertiary}
+            style={[styles.projectSearchInput, { color: colors.text }]}
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {projectSearch.length > 0 && (
+            <Pressable onPress={() => setProjectSearch('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {/* Content */}
@@ -278,6 +319,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: fontFamily.semiBold,
   },
+  projectSearchRow: { paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1 },
+  projectSearchBar: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 10, paddingHorizontal: 10, height: 36 },
+  projectSearchInput: { flex: 1, fontSize: fontSize.base, fontFamily: fontFamily.regular },
+  teamCountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   listContent: { padding: 16, gap: 12 },
   card: {
     borderRadius: 14,

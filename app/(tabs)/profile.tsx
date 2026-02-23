@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert, ActivityIndicator
+  View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +12,7 @@ import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
 import { useAuth } from '@/lib/auth-context';
 import { getProfile, type Profile } from '@/lib/api';
-import { calculateProfileCompletion, getMissingProfileFields, getConnectionCount } from '@/lib/api/profile';
+import { calculateProfileCompletion, getMissingProfileFields, getConnectionCount, getProfileViewsCount } from '@/lib/api/profile';
 import { getUserPostsCount } from '@/lib/api/social';
 import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
@@ -46,6 +46,36 @@ export default function ProfileScreen() {
     queryFn: () => getUserPostsCount(user!.id),
     enabled: !!user?.id,
   });
+
+  // Phase 6 — Profile views count (web parity)
+  const { data: profileViewsCount = 0 } = useQuery({
+    queryKey: ['profile-views', user?.id ?? ''],
+    queryFn: () => getProfileViewsCount(user!.id),
+    enabled: !!user?.id,
+    staleTime: 60_000,
+  });
+
+  // Phase 6 — Social links parsing
+  const socialLinks = useMemo(() => {
+    const links = profile?.social_links;
+    if (!links || typeof links !== 'object') return [];
+    const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+      website: 'globe-outline',
+      linkedin: 'logo-linkedin',
+      twitter: 'logo-twitter',
+      github: 'logo-github',
+      instagram: 'logo-instagram',
+      facebook: 'logo-facebook',
+    };
+    return Object.entries(links)
+      .filter(([_, url]) => !!url)
+      .map(([key, url]) => ({
+        key,
+        url: url as string,
+        icon: iconMap[key] ?? ('link-outline' as keyof typeof Ionicons.glyphMap),
+        label: key.charAt(0).toUpperCase() + key.slice(1),
+      }));
+  }, [profile?.social_links]);
 
   if (isLoading) {
     return (
@@ -130,10 +160,13 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.statsRow}>
-          <View style={styles.statItem}>
+          <Pressable
+            style={styles.statItem}
+            onPress={() => { Haptics.selectionAsync(); router.push('/connections'); }}
+          >
             <Text style={[styles.statNum, { color: colors.text }]}>{connectionsCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Connections</Text>
-          </View>
+            <Text style={[styles.statLabel, { color: colors.tint }]}>Connections</Text>
+          </Pressable>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
             <Text style={[styles.statNum, { color: colors.text }]}>{postsCount}</Text>
@@ -141,8 +174,8 @@ export default function ProfileScreen() {
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.text }]}>{profile.major ?? profile.university ?? '—'}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Department</Text>
+            <Text style={[styles.statNum, { color: colors.text }]}>{profileViewsCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Views</Text>
           </View>
         </View>
       </View>
@@ -169,6 +202,48 @@ export default function ProfileScreen() {
           </View>
         </Pressable>
       )}
+
+      {/* Phase 6 — Social Links */}
+      {socialLinks.length > 0 && (
+        <View style={[styles.socialLinksContainer, { borderColor: colors.border }]}>
+          {socialLinks.map((link) => (
+            <Pressable
+              key={link.key}
+              onPress={() => { Haptics.selectionAsync(); Linking.openURL(link.url); }}
+              style={({ pressed }) => [
+                styles.socialLinkBtn,
+                { backgroundColor: pressed ? colors.surfaceElevated : colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <Ionicons name={link.icon} size={18} color={colors.tint} />
+              <Text style={[styles.socialLinkLabel, { color: colors.text }]} numberOfLines={1}>
+                {link.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {/* Phase 6 — Portfolio Link */}
+      <Pressable
+        onPress={() => { Haptics.selectionAsync(); router.push('/portfolio'); }}
+        style={({ pressed }) => [
+          styles.portfolioBanner,
+          {
+            backgroundColor: pressed ? colors.tint + '18' : colors.tint + '10',
+            borderColor: colors.tint + '30',
+          },
+        ]}
+      >
+        <Ionicons name="briefcase-outline" size={20} color={colors.tint} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.portfolioTitle, { color: colors.text }]}>Portfolio</Text>
+          <Text style={[styles.portfolioSubtitle, { color: colors.textSecondary }]}>
+            Manage your public portfolio page
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+      </Pressable>
 
       <View style={styles.menuSection}>
         {MENU_ITEMS.map((item) => (
@@ -230,6 +305,23 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, marginTop: 2, fontFamily: 'Inter_400Regular' },
   statDivider: { width: 1, marginVertical: 10 },
   menuSection: { paddingHorizontal: 16, paddingTop: 20, gap: 8 },
+  socialLinksContainer: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+    paddingHorizontal: 16, paddingTop: 16,
+  },
+  socialLinkBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 10, borderWidth: 1,
+  },
+  socialLinkLabel: { fontSize: 13, fontWeight: '500', fontFamily: 'Inter_600SemiBold' },
+  portfolioBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 16, marginTop: 16,
+    padding: 14, borderRadius: 14, borderWidth: 1,
+  },
+  portfolioTitle: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  portfolioSubtitle: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   completionBanner: {
     marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 14, borderWidth: 1,
   },

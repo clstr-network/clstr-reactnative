@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl, ActivityIndicator
+  View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl, ActivityIndicator, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,10 +8,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import ConnectionCard from '@/components/ConnectionCard';
 import { useAuth } from '@/lib/auth-context';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
+import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
+import { useTypeaheadSearch } from '@/lib/hooks/useTypeaheadSearch';
 import {
   getConnections,
   getPendingRequests,
@@ -32,11 +35,19 @@ export default function NetworkScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { identity } = useIdentityContext();
   const [activeFilter, setActiveFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
   // Phase 4 — Role-based permissions
   const { canSendConnectionRequests, canMessage } = useRolePermissions();
+
+  // Phase 6 — Typeahead search
+  const { data: searchResults, isLoading: searchLoading } = useTypeaheadSearch({
+    query: searchQuery,
+    collegeDomain: identity?.college_domain,
+  });
 
   const { data: connections = [], isLoading: loadingConnections } = useQuery({
     queryKey: QUERY_KEYS.network,
@@ -116,6 +127,27 @@ export default function NetworkScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + webTopInset + 12, borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text }]}>Network</Text>
+
+        {/* Phase 6 — Typeahead search bar */}
+        <View style={[styles.searchContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+          <Ionicons name="search" size={18} color={colors.textTertiary} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search people..."
+            placeholderTextColor={colors.textTertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+            </Pressable>
+          )}
+        </View>
+
         <View style={styles.statsRow}>
           <View style={[styles.statBox, { backgroundColor: colors.surfaceElevated }]}>
             <Text style={[styles.statNum, { color: colors.tint }]}>{connectedItems.length}</Text>
@@ -152,7 +184,52 @@ export default function NetworkScreen() {
         />
       </View>
 
-      {isLoading ? (
+      {/* Phase 6 — Search results overlay */}
+      {searchQuery.length >= 2 ? (
+        <View style={styles.searchResultsContainer}>
+          {searchLoading ? (
+            <ActivityIndicator size="small" color={colors.tint} style={{ marginTop: 24 }} />
+          ) : searchResults && searchResults.length > 0 ? (
+            <FlatList
+              data={searchResults}
+              keyExtractor={(item: any) => String(item.id)}
+              contentContainerStyle={styles.listContent}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }: { item: any }) => (
+                <Pressable
+                  style={[styles.searchResultRow, { borderBottomColor: colors.border }]}
+                  onPress={() => {
+                    setSearchQuery('');
+                    router.push({ pathname: '/user/[id]', params: { id: item.id } });
+                  }}
+                >
+                  <View style={[styles.searchAvatar, { backgroundColor: colors.surfaceElevated }]}>
+                    <Text style={[styles.searchAvatarText, { color: colors.tint }]}>
+                      {(item.full_name || '?')[0].toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.searchResultInfo}>
+                    <Text style={[styles.searchResultName, { color: colors.text }]} numberOfLines={1}>
+                      {item.full_name || 'Unknown'}
+                    </Text>
+                    {item.headline ? (
+                      <Text style={[styles.searchResultHeadline, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {item.headline}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              )}
+            />
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={36} color={colors.textTertiary} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No results for "{searchQuery}"</Text>
+            </View>
+          )}
+        </View>
+      ) : isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.tint} />
         </View>
@@ -198,4 +275,13 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
   emptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 12, paddingVertical: Platform.OS === 'ios' ? 10 : 6, borderRadius: 12, borderWidth: 1 },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 15, fontFamily: 'Inter_400Regular', padding: 0 },
+  searchResultsContainer: { flex: 1 },
+  searchResultRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  searchAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  searchAvatarText: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  searchResultInfo: { flex: 1, marginLeft: 12 },
+  searchResultName: { fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  searchResultHeadline: { fontSize: 13, marginTop: 2, fontFamily: 'Inter_400Regular' },
 });
