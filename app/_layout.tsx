@@ -27,6 +27,7 @@ import {
   Inter_700Bold,
   Inter_800ExtraBold,
 } from '@expo-google-fonts/inter';
+import { StatusBar } from 'expo-status-bar';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { queryClient } from '@/lib/query-client';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
@@ -202,7 +203,8 @@ export default function RootLayout() {
               fontsReady={fontsLoaded || !!fontError}
               onReady={() => { splashHidden.current = true; }}
             />
-            <GestureHandlerRootView style={{ flex: 1 }}>
+            <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000000' }}>
+              <StatusBar style="light" backgroundColor="#000000" />
               <KeyboardProvider>
                 <RootLayoutNav />
               </KeyboardProvider>

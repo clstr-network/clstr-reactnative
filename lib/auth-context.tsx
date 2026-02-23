@@ -12,7 +12,8 @@ import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './adapters/core-client';
-import { createProfileRecord, mapUserTypeToRole } from './api/profile';
+import { createProfileRecord, mapUserTypeToRole, sanitizeSocialLinks } from './api/profile';
+import { determineUserRoleFromGraduation, calculateGraduationYear } from '@clstr/core/api/alumni-identification';
 import type { Session, User } from '@supabase/supabase-js';
 import type { ProfileSignupPayload } from '@clstr/core/api/profile';
 
@@ -29,10 +30,26 @@ export type UserRole = 'Student' | 'Alumni' | 'Faculty' | 'Club';
 
 interface OnboardingPayload {
   fullName: string;
+  role: string;
+  // Existing
   department: string;
   graduationYear?: string;
   bio?: string;
-  role: string;
+  // NEW — matching web Onboarding.tsx
+  university?: string;
+  major?: string;
+  enrollmentYear?: string;
+  courseDurationYears?: string;
+  interests?: string[];
+  socialLinks?: {
+    website?: string;
+    linkedin?: string;
+    twitter?: string;
+    facebook?: string;
+    instagram?: string;
+    googleScholar?: string;
+  };
+  avatarUrl?: string | null;
 }
 
 interface AuthContextType {
@@ -210,22 +227,131 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const user = session?.user;
       if (!user) throw new Error('Not authenticated');
 
-      const mappedRole = mapUserTypeToRole(data.role) ?? 'Student';
-      const domain = user.email?.split('@')[1] ?? null;
+      const email = user.email ?? '';
+      const domain = email.split('@')[1] ?? null;
+      const fullName = data.fullName.trim();
 
-      const payload: ProfileSignupPayload = {
-        id: user.id,
-        email: user.email ?? '',
-        full_name: data.fullName,
-        role: mappedRole,
-        college_domain: domain,
-        major: data.department || null,
-        graduation_year: data.graduationYear || null,
-        bio: data.bio || null,
-        onboarding_complete: true,
-      };
+      // Determine role from graduation timeline (matching web logic)
+      const isStaffRole = data.role === 'Faculty' || data.role === 'Principal' || data.role === 'Dean';
+      let resolvedRole: string;
+      let finalGraduationYear: string | null = null;
 
-      await createProfileRecord(payload);
+      if (isStaffRole) {
+        resolvedRole = data.role;
+        finalGraduationYear = data.graduationYear || null;
+      } else {
+        // Auto-calculate graduation year from enrollment + duration
+        const enrollmentYear = data.enrollmentYear ? parseInt(data.enrollmentYear, 10) : null;
+        const duration = data.courseDurationYears ? parseInt(data.courseDurationYears, 10) : 4;
+        const calculatedGradYear = enrollmentYear
+          ? calculateGraduationYear(enrollmentYear, duration)
+          : null;
+        finalGraduationYear = calculatedGradYear?.toString() || data.graduationYear || null;
+        resolvedRole = determineUserRoleFromGraduation(finalGraduationYear, data.role);
+      }
+
+      const mappedRole = mapUserTypeToRole(resolvedRole) ?? 'Student';
+      const university = data.university?.trim() || null;
+      const major = data.major?.trim() || data.department?.trim() || null;
+      const sanitizedSocialLinks = data.socialLinks
+        ? sanitizeSocialLinks(data.socialLinks)
+        : {};
+
+      const enrollmentYearVal = data.enrollmentYear ? parseInt(data.enrollmentYear, 10) : null;
+      const courseDurationVal = data.courseDurationYears ? parseInt(data.courseDurationYears, 10) : 4;
+
+      const headline = `${major || 'Student'} · ${university || domain || 'University'}`;
+
+      // Upsert main profile (matching web Onboarding.tsx directly)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: user.id,
+            email,
+            full_name: fullName,
+            role: mappedRole,
+            college_domain: domain,
+            university: university || null,
+            major: major || null,
+            branch: major || null,
+            graduation_year: finalGraduationYear,
+            year_of_completion: finalGraduationYear,
+            enrollment_year: enrollmentYearVal,
+            course_duration_years: courseDurationVal,
+            bio: data.bio?.trim() || null,
+            interests: data.interests || [],
+            social_links: sanitizedSocialLinks,
+            avatar_url: data.avatarUrl || null,
+            headline,
+            location: university || domain || null,
+            onboarding_complete: true,
+          } as any,
+          { onConflict: 'id' },
+        );
+
+      if (profileError) {
+        console.error('[completeOnboarding] Profile upsert error:', profileError);
+        throw new Error(`Failed to create profile: ${profileError.message}`);
+      }
+
+      // Create role-specific profile records (matching web)
+      if (mappedRole === 'Student') {
+        const { error: studentError } = await supabase
+          .from('student_profiles')
+          .upsert(
+            {
+              user_id: user.id,
+              college_domain: domain,
+              expected_graduation: finalGraduationYear
+                ? `${finalGraduationYear}-06-01`
+                : null,
+            } as any,
+            { onConflict: 'user_id' },
+          );
+        if (studentError) {
+          console.warn('[completeOnboarding] Student profile error:', studentError);
+        }
+      }
+
+      if (mappedRole === 'Alumni') {
+        const gradYearNum = finalGraduationYear ? parseInt(finalGraduationYear, 10) : null;
+        if (gradYearNum && !isNaN(gradYearNum)) {
+          const { error: alumniError } = await supabase
+            .from('alumni_profiles')
+            .upsert(
+              {
+                user_id: user.id,
+                college_domain: domain,
+                graduation_year: gradYearNum,
+                graduation_date: `${finalGraduationYear}-06-01`,
+                linkedin_url: sanitizedSocialLinks.linkedin ?? null,
+                company_website: sanitizedSocialLinks.website ?? null,
+              } as any,
+              { onConflict: 'user_id' },
+            );
+          if (alumniError) {
+            console.warn('[completeOnboarding] Alumni profile error:', alumniError);
+          }
+        }
+      }
+
+      if (isStaffRole) {
+        const { error: facultyError } = await supabase
+          .from('faculty_profiles')
+          .upsert(
+            {
+              user_id: user.id,
+              college_domain: domain,
+              department: major || 'Unknown',
+              position: resolvedRole,
+            } as any,
+            { onConflict: 'user_id' },
+          );
+        if (facultyError) {
+          console.warn('[completeOnboarding] Faculty profile error:', facultyError);
+        }
+      }
     },
     [session],
   );

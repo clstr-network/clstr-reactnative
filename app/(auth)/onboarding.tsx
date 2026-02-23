@@ -1,16 +1,23 @@
 /**
  * OnboardingScreen — Multi-step profile setup after signup.
  *
- * Step 0: Full name
- * Step 1: Role selection (Student / Faculty / Alumni)
- * Step 2: Department / Major selection
- * Step 3: Bio (optional)
+ * 8-step flow matching web's Onboarding.tsx:
+ *   Step 0: Full Name (auto-filled from Google metadata)
+ *   Step 1: Profile Picture (via AvatarPicker + useFileUpload)
+ *   Step 2: University (autocomplete from @clstr/shared)
+ *   Step 3: Major / Field (autocomplete from @clstr/shared)
+ *   Step 4: Academic Timeline (enrollment year + course duration → auto graduation)
+ *   Step 5: Interests (multi-select chips)
+ *   Step 6: Social Links (collapsible section)
+ *   Step 7: Bio (optional)
  *
- * Calls completeOnboarding() from auth-context which creates the
- * profile record via @clstr/core. Identity context then reflects
+ * Calls completeOnboarding() from auth-context which creates the profile
+ * record + role-specific records. Identity context then reflects
  * needsOnboarding = false automatically.
+ *
+ * Phase 2.4d: Onboarding Parity Rewrite
  */
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable, Platform, Alert,
 } from 'react-native';
@@ -21,23 +28,32 @@ import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useThemeColors } from '@/constants/colors';
 import { useAuth, type UserRole } from '@/lib/auth-context';
+import { useFileUpload } from '@/lib/hooks/useFileUpload';
+import { Autocomplete } from '@/components/Autocomplete';
+import { ChipPicker } from '@/components/ChipPicker';
+import { AvatarPicker } from '@/components/AvatarPicker';
+import { getUniversityOptions, getMajorOptions } from '@clstr/shared/utils/university-data';
+import {
+  determineUserRoleFromGraduation,
+  calculateGraduationYear,
+} from '@clstr/core/api/alumni-identification';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const ROLES: { value: UserRole; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
-  { value: 'Student', label: 'Student', icon: 'school-outline', desc: 'Currently enrolled at the university' },
-  { value: 'Faculty', label: 'Faculty', icon: 'library-outline', desc: 'Teaching or researching at the university' },
-  { value: 'Alumni', label: 'Alumni', icon: 'ribbon-outline', desc: 'Graduated from the university' },
+const TOTAL_STEPS = 8;
+
+const PRESET_INTERESTS = [
+  'Technology', 'Business', 'Design', 'Science', 'Arts',
+  'Sports', 'Music', 'Photography', 'Writing', 'Cooking',
+  'Travel', 'Volunteering',
 ];
 
-const DEPARTMENTS = [
-  'Computer Science', 'Engineering', 'Business', 'Mathematics', 'Physics',
-  'Biology', 'Design', 'Psychology', 'Economics', 'Communications',
-];
+const COURSE_DURATIONS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-const TOTAL_STEPS = 4;
+const currentYear = new Date().getFullYear();
+const ENROLLMENT_YEARS = Array.from({ length: 61 }, (_, i) => currentYear - i);
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -46,40 +62,96 @@ const TOTAL_STEPS = 4;
 export default function OnboardingScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { completeOnboarding } = useAuth();
+  const { completeOnboarding, user } = useAuth();
+  const { uploadImage, isUploading } = useFileUpload();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
+  // --- Form state ---
   const [step, setStep] = useState(0);
-  const [name, setName] = useState('');
-  const [role, setRole] = useState<UserRole | null>(null);
-  const [department, setDepartment] = useState('');
+  const [name, setName] = useState(
+    user?.user_metadata?.full_name ||
+    `${user?.user_metadata?.first_name || ''} ${user?.user_metadata?.last_name || ''}`.trim() ||
+    '',
+  );
+  const [avatarUri, setAvatarUri] = useState<string | null>(
+    user?.user_metadata?.avatar_url || null,
+  );
+  const [university, setUniversity] = useState('');
+  const [universityLabel, setUniversityLabel] = useState('');
+  const [major, setMajor] = useState('');
+  const [majorLabel, setMajorLabel] = useState('');
+  const [enrollmentYear, setEnrollmentYear] = useState('');
+  const [courseDuration, setCourseDuration] = useState('4');
+  const [interests, setInterests] = useState<string[]>([]);
+  const [socialLinks, setSocialLinks] = useState({
+    website: '',
+    linkedin: '',
+    twitter: '',
+    facebook: '',
+    instagram: '',
+    googleScholar: '',
+  });
   const [bio, setBio] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Validation per step
-  const canProceed =
-    (step === 0 && name.trim().length >= 2) ||
-    (step === 1 && !!role) ||
-    (step === 2 && !!department) ||
-    step === 3;
+  // --- Memoized data ---
+  const universityOptions = useMemo(() => getUniversityOptions(), []);
+  const majorOptions = useMemo(() => getMajorOptions(), []);
 
-  async function handleNext() {
+  // Auto-calculate graduation year
+  const calculatedGradYear = useMemo(() => {
+    if (!enrollmentYear) return null;
+    const dur = parseInt(courseDuration, 10) || 4;
+    return calculateGraduationYear(parseInt(enrollmentYear, 10), dur);
+  }, [enrollmentYear, courseDuration]);
+
+  // Auto-determine role
+  const autoRole = useMemo(() => {
+    const gradYear = calculatedGradYear?.toString() || null;
+    return determineUserRoleFromGraduation(gradYear);
+  }, [calculatedGradYear]);
+
+  // --- Validation per step ---
+  const canProceed = useMemo(() => {
+    switch (step) {
+      case 0: return name.trim().length >= 2;
+      case 1: return true; // Avatar is optional
+      case 2: return universityLabel.length > 0;
+      case 3: return majorLabel.length > 0;
+      case 4: return !!enrollmentYear;
+      case 5: return interests.length >= 1;
+      case 6: return true; // Social links optional
+      case 7: return true; // Bio optional
+      default: return false;
+    }
+  }, [step, name, universityLabel, majorLabel, enrollmentYear, interests]);
+
+  // --- Handlers ---
+  const handleNext = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (step === 0 && name.trim().length < 2) {
       Alert.alert('Name Required', 'Please enter your full name');
       return;
     }
-    if (step === 1 && !role) {
-      Alert.alert('Role Required', 'Please select your role');
+    if (step === 2 && !universityLabel) {
+      Alert.alert('University Required', 'Please select your university');
       return;
     }
-    if (step === 2 && !department) {
-      Alert.alert('Department Required', 'Please select your department');
+    if (step === 3 && !majorLabel) {
+      Alert.alert('Major Required', 'Please select your major or field of study');
+      return;
+    }
+    if (step === 4 && !enrollmentYear) {
+      Alert.alert('Enrollment Year Required', 'Please select when you started');
+      return;
+    }
+    if (step === 5 && interests.length < 1) {
+      Alert.alert('Interests Required', 'Please select at least 1 interest');
       return;
     }
 
-    // Not on the last step — just advance
+    // Not on the last step — advance
     if (step < TOTAL_STEPS - 1) {
       setStep(step + 1);
       return;
@@ -88,22 +160,54 @@ export default function OnboardingScreen() {
     // Last step — submit
     setIsLoading(true);
     try {
+      // Upload avatar to Supabase Storage if a local URI was picked
+      let finalAvatarUrl: string | null = null;
+      if (avatarUri && user?.id) {
+        // Only upload if it's a local file (not already a remote URL)
+        if (avatarUri.startsWith('file://') || avatarUri.startsWith('content://') || avatarUri.startsWith('data:') || avatarUri.startsWith('ph://')) {
+          finalAvatarUrl = await uploadImage(avatarUri, user.id);
+        } else {
+          // Already a remote URL (e.g., from Google OAuth metadata)
+          finalAvatarUrl = avatarUri;
+        }
+      }
+
       await completeOnboarding({
         fullName: name.trim(),
-        role: role!,
-        department,
+        role: autoRole,
+        department: majorLabel,
+        university: universityLabel,
+        major: majorLabel,
+        enrollmentYear,
+        courseDurationYears: courseDuration,
+        graduationYear: calculatedGradYear?.toString(),
+        interests,
+        socialLinks,
         bio: bio.trim(),
+        avatarUrl: finalAvatarUrl,
       });
-      // Auth guard in root layout will redirect to main automatically
-      // once identity.needsOnboarding flips to false.
+
       router.replace('/');
-    } catch (e) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Something went wrong. Please try again.');
       console.error('[Onboarding]', e);
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [
+    step, name, universityLabel, majorLabel, enrollmentYear, interests,
+    avatarUri, user, uploadImage, completeOnboarding, autoRole,
+    courseDuration, calculatedGradYear, socialLinks, bio,
+  ]);
+
+  const handleBack = useCallback(() => {
+    Haptics.selectionAsync();
+    if (step > 0) setStep(step - 1);
+  }, [step]);
+
+  const updateSocialLink = useCallback((key: keyof typeof socialLinks, value: string) => {
+    setSocialLinks((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -133,7 +237,7 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        {/* Step 0 — Name */}
+        {/* Step 0 — Full Name */}
         {step === 0 && (
           <View style={styles.stepContent}>
             <Text style={[styles.stepTitle, { color: colors.text }]}>What's your name?</Text>
@@ -154,80 +258,261 @@ export default function OnboardingScreen() {
           </View>
         )}
 
-        {/* Step 1 — Role */}
+        {/* Step 1 — Profile Picture */}
         {step === 1 && (
           <View style={styles.stepContent}>
-            <Text style={[styles.stepTitle, { color: colors.text }]}>What's your role?</Text>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>Add a profile photo</Text>
             <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
-              This helps us personalize your experience
+              Help others recognize you — you can always change this later
             </Text>
-            <View style={styles.roleList}>
-              {ROLES.map((r) => {
-                const isSelected = role === r.value;
-                const accent = isSelected ? colors.tint : colors.textTertiary;
-                return (
-                  <Pressable
-                    key={r.value}
-                    onPress={() => { setRole(r.value); Haptics.selectionAsync(); }}
-                    style={[
-                      styles.roleCard,
-                      {
-                        backgroundColor: isSelected ? colors.tint + '12' : colors.surface,
-                        borderColor: isSelected ? colors.tint : colors.border,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.roleIcon, { backgroundColor: accent + '15' }]}>
-                      <Ionicons name={r.icon} size={24} color={accent} />
-                    </View>
-                    <View style={styles.roleInfo}>
-                      <Text style={[styles.roleLabel, { color: colors.text }]}>{r.label}</Text>
-                      <Text style={[styles.roleDesc, { color: colors.textSecondary }]}>{r.desc}</Text>
-                    </View>
-                    {isSelected && <Ionicons name="checkmark-circle" size={24} color={colors.tint} />}
-                  </Pressable>
-                );
-              })}
+            <View style={styles.avatarCenter}>
+              <AvatarPicker
+                avatarUrl={avatarUri}
+                onImagePicked={setAvatarUri}
+                onRemove={() => setAvatarUri(null)}
+                size={140}
+                colors={colors}
+              />
             </View>
           </View>
         )}
 
-        {/* Step 2 — Department */}
+        {/* Step 2 — University */}
         {step === 2 && (
-          <View style={styles.stepContent}>
-            <Text style={[styles.stepTitle, { color: colors.text }]}>Your department?</Text>
+          <View style={[styles.stepContent, { zIndex: 10 }]}>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>Your university?</Text>
             <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
-              Select your primary department
+              Start typing to search
             </Text>
-            <View style={styles.deptGrid}>
-              {DEPARTMENTS.map((d) => (
+            <Autocomplete
+              options={universityOptions}
+              value={universityLabel}
+              onSelect={(val, label) => {
+                setUniversity(val);
+                setUniversityLabel(label);
+              }}
+              placeholder="Search universities..."
+              colors={colors}
+            />
+          </View>
+        )}
+
+        {/* Step 3 — Major / Field */}
+        {step === 3 && (
+          <View style={[styles.stepContent, { zIndex: 10 }]}>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>Your major or field?</Text>
+            <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
+              Select your primary area of study
+            </Text>
+            <Autocomplete
+              options={majorOptions}
+              value={majorLabel}
+              onSelect={(val, label) => {
+                setMajor(val);
+                setMajorLabel(label);
+              }}
+              placeholder="Search majors..."
+              colors={colors}
+            />
+          </View>
+        )}
+
+        {/* Step 4 — Academic Timeline */}
+        {step === 4 && (
+          <View style={styles.stepContent}>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>Academic timeline</Text>
+            <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
+              Your enrollment year and course duration
+            </Text>
+
+            {/* Enrollment Year */}
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+              Enrollment Year
+            </Text>
+            <View style={styles.yearGrid}>
+              {ENROLLMENT_YEARS.slice(0, 12).map((yr) => (
                 <Pressable
-                  key={d}
-                  onPress={() => { setDepartment(d); Haptics.selectionAsync(); }}
+                  key={yr}
+                  onPress={() => { setEnrollmentYear(String(yr)); Haptics.selectionAsync(); }}
                   style={[
-                    styles.deptChip,
+                    styles.yearChip,
                     {
-                      backgroundColor: department === d ? colors.tint : colors.surface,
-                      borderColor: department === d ? colors.tint : colors.border,
+                      backgroundColor: enrollmentYear === String(yr) ? colors.tint : colors.surface,
+                      borderColor: enrollmentYear === String(yr) ? colors.tint : colors.border,
                     },
                   ]}
                 >
-                  <Text style={[styles.deptText, { color: department === d ? '#fff' : colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.yearText,
+                      { color: enrollmentYear === String(yr) ? colors.primaryForeground : colors.textSecondary },
+                    ]}
+                  >
+                    {yr}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Course Duration */}
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary, marginTop: 20 }]}>
+              Course Duration (years)
+            </Text>
+            <View style={styles.durationRow}>
+              {COURSE_DURATIONS.map((d) => (
+                <Pressable
+                  key={d}
+                  onPress={() => { setCourseDuration(String(d)); Haptics.selectionAsync(); }}
+                  style={[
+                    styles.durationChip,
+                    {
+                      backgroundColor: courseDuration === String(d) ? colors.tint : colors.surface,
+                      borderColor: courseDuration === String(d) ? colors.tint : colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.durationText,
+                      { color: courseDuration === String(d) ? colors.primaryForeground : colors.textSecondary },
+                    ]}
+                  >
                     {d}
                   </Text>
                 </Pressable>
               ))}
             </View>
+
+            {/* Auto-calculated graduation + role badge */}
+            {calculatedGradYear && (
+              <View style={[styles.resultCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={styles.resultRow}>
+                  <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
+                    Expected Graduation
+                  </Text>
+                  <Text style={[styles.resultValue, { color: colors.text }]}>
+                    {calculatedGradYear}
+                  </Text>
+                </View>
+                <View style={styles.resultRow}>
+                  <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
+                    Auto-determined Role
+                  </Text>
+                  <View
+                    style={[
+                      styles.roleBadge,
+                      {
+                        backgroundColor:
+                          autoRole === 'Alumni'
+                            ? 'rgba(16, 185, 129, 0.15)'
+                            : 'rgba(59, 130, 246, 0.15)',
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={autoRole === 'Alumni' ? 'ribbon-outline' : 'school-outline'}
+                      size={14}
+                      color={autoRole === 'Alumni' ? '#10B981' : '#3B82F6'}
+                    />
+                    <Text
+                      style={[
+                        styles.roleBadgeText,
+                        { color: autoRole === 'Alumni' ? '#10B981' : '#3B82F6' },
+                      ]}
+                    >
+                      {autoRole}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
-        {/* Step 3 — Bio */}
-        {step === 3 && (
+        {/* Step 5 — Interests */}
+        {step === 5 && (
+          <View style={styles.stepContent}>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>Choose your interests</Text>
+            <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
+              Select topics you're passionate about (you can add custom ones too)
+            </Text>
+            <ChipPicker
+              presets={PRESET_INTERESTS}
+              selected={interests}
+              onSelectionChange={setInterests}
+              maxSelections={12}
+              allowCustom
+              customPlaceholder="Add a custom interest..."
+              colors={colors}
+            />
+          </View>
+        )}
+
+        {/* Step 6 — Social Links */}
+        {step === 6 && (
+          <View style={styles.stepContent}>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>Social profiles</Text>
+            <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
+              Optional — connect your other profiles
+            </Text>
+
+            {([
+              { key: 'linkedin' as const, label: 'LinkedIn', icon: 'logo-linkedin' as const, placeholder: 'https://linkedin.com/in/...' },
+              { key: 'twitter' as const, label: 'Twitter / X', icon: 'logo-twitter' as const, placeholder: 'https://x.com/...' },
+              { key: 'website' as const, label: 'Website', icon: 'globe-outline' as const, placeholder: 'https://...' },
+              { key: 'instagram' as const, label: 'Instagram', icon: 'logo-instagram' as const, placeholder: 'https://instagram.com/...' },
+              { key: 'facebook' as const, label: 'Facebook', icon: 'logo-facebook' as const, placeholder: 'https://facebook.com/...' },
+              { key: 'googleScholar' as const, label: 'Google Scholar', icon: 'school-outline' as const, placeholder: 'https://scholar.google.com/...' },
+            ] as const).map((link) => (
+              <View key={link.key} style={styles.socialRow}>
+                <Ionicons name={link.icon} size={20} color={colors.textSecondary} style={styles.socialIcon} />
+                <TextInput
+                  style={[
+                    styles.socialInput,
+                    { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                  value={socialLinks[link.key]}
+                  onChangeText={(v) => updateSocialLink(link.key, v)}
+                  placeholder={link.placeholder}
+                  placeholderTextColor={colors.textTertiary}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Step 7 — Bio */}
+        {step === 7 && (
           <View style={styles.stepContent}>
             <Text style={[styles.stepTitle, { color: colors.text }]}>Tell us about yourself</Text>
             <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
               Optional — you can always update this later
             </Text>
+
+            {/* Summary card */}
+            <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.summaryName, { color: colors.text }]}>{name}</Text>
+              {universityLabel ? (
+                <Text style={[styles.summaryDetail, { color: colors.textSecondary }]}>
+                  {majorLabel} · {universityLabel}
+                </Text>
+              ) : null}
+              {calculatedGradYear ? (
+                <View style={[styles.roleBadgeSmall, {
+                  backgroundColor: autoRole === 'Alumni' ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.15)',
+                }]}>
+                  <Text style={[styles.roleBadgeSmallText, {
+                    color: autoRole === 'Alumni' ? '#10B981' : '#3B82F6',
+                  }]}>
+                    {autoRole} · Class of {calculatedGradYear}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
             <TextInput
               style={[styles.input, styles.bioInput, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
               placeholder="A brief bio about you..."
@@ -247,7 +532,7 @@ export default function OnboardingScreen() {
         <View style={styles.bottomActions}>
           {step > 0 && (
             <Pressable
-              onPress={() => { setStep(step - 1); Haptics.selectionAsync(); }}
+              onPress={handleBack}
               style={[styles.backBtn, { borderColor: colors.border }]}
             >
               <Ionicons name="chevron-back" size={20} color={colors.text} />
@@ -255,19 +540,32 @@ export default function OnboardingScreen() {
           )}
           <Pressable
             onPress={handleNext}
-            disabled={!canProceed || isLoading}
+            disabled={!canProceed || isLoading || isUploading}
             style={({ pressed }) => [
               styles.nextBtn,
               { backgroundColor: canProceed ? colors.tint : colors.surface, flex: 1 },
               pressed && canProceed && { opacity: 0.85 },
             ]}
           >
-            <Text style={[styles.nextText, { color: canProceed ? '#fff' : colors.textTertiary }]}>
-              {isLoading ? 'Setting up...' : step === TOTAL_STEPS - 1 ? 'Get Started' : 'Continue'}
+            <Text style={[styles.nextText, { color: canProceed ? colors.primaryForeground : colors.textTertiary }]}>
+              {isLoading || isUploading
+                ? 'Setting up...'
+                : step === TOTAL_STEPS - 1
+                  ? 'Get Started'
+                  : step === 1
+                    ? (avatarUri ? 'Continue' : 'Skip for now')
+                    : 'Continue'}
             </Text>
-            {!isLoading && <Ionicons name="arrow-forward" size={18} color={canProceed ? '#fff' : colors.textTertiary} />}
+            {!isLoading && !isUploading && (
+              <Ionicons name="arrow-forward" size={18} color={canProceed ? colors.primaryForeground : colors.textTertiary} />
+            )}
           </Pressable>
         </View>
+
+        {/* Step indicator */}
+        <Text style={[styles.stepIndicator, { color: colors.textTertiary }]}>
+          Step {step + 1} of {TOTAL_STEPS}
+        </Text>
       </View>
     </View>
   );
@@ -280,24 +578,47 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1 },
-  progressRow: { flexDirection: 'row', gap: 8, marginBottom: 40 },
+  progressRow: { flexDirection: 'row', gap: 6, marginBottom: 40 },
   progressDot: { flex: 1, height: 4, borderRadius: 2 },
   stepContent: { gap: 12 },
   stepTitle: { fontSize: 28, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
   stepDesc: { fontSize: 15, lineHeight: 22, marginBottom: 8, fontFamily: 'Inter_400Regular' },
   input: { fontSize: 16, padding: 16, borderRadius: 14, borderWidth: 1, fontFamily: 'Inter_400Regular' },
   bioInput: { minHeight: 120 },
-  roleList: { gap: 12 },
-  roleCard: {
-    flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, borderWidth: 1.5, gap: 14,
-  },
-  roleIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  roleInfo: { flex: 1, gap: 2 },
-  roleLabel: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  roleDesc: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  deptGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  deptChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 18, borderWidth: 1 },
-  deptText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  fieldLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
+
+  // Year / Duration selectors
+  yearGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  yearChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, minWidth: 68, alignItems: 'center' },
+  yearText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  durationChip: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  durationText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+
+  // Result card (graduation + role)
+  resultCard: { marginTop: 16, borderRadius: 14, borderWidth: 1, padding: 16, gap: 12 },
+  resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  resultLabel: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  resultValue: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  roleBadgeText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+
+  // Avatar center
+  avatarCenter: { alignItems: 'center', marginTop: 20, marginBottom: 10 },
+
+  // Social links
+  socialRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  socialIcon: { width: 24 },
+  socialInput: { flex: 1, fontSize: 15, padding: 14, borderRadius: 12, borderWidth: 1, fontFamily: 'Inter_400Regular' },
+
+  // Summary card
+  summaryCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 6, marginBottom: 8 },
+  summaryName: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  summaryDetail: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  roleBadgeSmall: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginTop: 4 },
+  roleBadgeSmallText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+
+  // Bottom bar
   bottomBar: { paddingHorizontal: 24, paddingTop: 12 },
   bottomActions: { flexDirection: 'row', gap: 12 },
   backBtn: {
@@ -309,4 +630,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   nextText: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  stepIndicator: {
+    textAlign: 'center', fontSize: 12, fontFamily: 'Inter_400Regular',
+    marginTop: 8,
+  },
 });

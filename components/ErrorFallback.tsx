@@ -7,7 +7,6 @@ import {
   ScrollView,
   Text,
   Modal,
-  useColorScheme,
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,15 +18,16 @@ export type ErrorFallbackProps = {
 };
 
 export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const insets = useSafeAreaInsets();
 
+  // Hardcoded dark theme — matches Phase 3 pure-black dark-only design.
+  // Intentionally self-contained (no dependency on colors.ts) so the
+  // error boundary still renders correctly even if the theme system breaks.
   const theme = {
-    background: isDark ? "#000000" : "#FFFFFF",
-    backgroundSecondary: isDark ? "#1C1C1E" : "#F2F2F7",
-    text: isDark ? "#FFFFFF" : "#000000",
-    textSecondary: isDark ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
+    background: "#000000",
+    backgroundSecondary: "#1C1C1E",
+    text: "#FFFFFF",
+    textSecondary: "rgba(255, 255, 255, 0.7)",
     link: "#007AFF",
     buttonText: "#FFFFFF",
   };

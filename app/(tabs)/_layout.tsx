@@ -13,7 +13,7 @@ import { Tabs, router } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { SymbolView } from "expo-symbols";
-import { Platform, StyleSheet, useColorScheme, View, Pressable, Text } from "react-native";
+import { Platform, StyleSheet, View, Pressable, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 
@@ -49,7 +49,7 @@ function CreateTabButton({ color }: { color: string }) {
   return (
     <View style={styles.createIconContainer}>
       <View style={[styles.createIconCircle, { backgroundColor: color }]}>
-        <Ionicons name="add" size={26} color="#fff" />
+        <Ionicons name="add" size={26} color="#000" />
       </View>
     </View>
   );
@@ -89,22 +89,20 @@ function NativeTabLayout() {
 // Classic cross-platform tab layout
 // -----------------------------------------------------------------------
 function ClassicTabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const colors = useThemeColors();
   const { unreadCount } = useNotificationSubscription();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.tint,
+        tabBarActiveTintColor: colors.tabIconSelected,
         tabBarInactiveTintColor: colors.tabIconDefault,
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: Platform.select({
             ios: "transparent",
-            android: isDark ? "#0F172A" : "#F8FAFC",
+            android: "#000000",
           }),
           borderTopWidth: 0,
           elevation: 0,
@@ -113,7 +111,7 @@ function ClassicTabLayout() {
           Platform.OS === "ios" ? (
             <BlurView
               intensity={100}
-              tint={isDark ? "dark" : "light"}
+              tint="dark"
               style={StyleSheet.absoluteFill}
             />
           ) : null,

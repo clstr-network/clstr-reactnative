@@ -13,7 +13,6 @@ import {
   StyleSheet,
   FlatList,
   Pressable,
-  useColorScheme,
   Platform,
   ActivityIndicator,
   RefreshControl,

@@ -30,7 +30,22 @@
 | `app/auth/callback.tsx` | **REWRITE** (145 → ~470 lines). Added: OAuth error param handling (`#error=…`), DB error recovery retries, academic email domain validation (blocks non-edu), transitioned personal email checking, profile domain update with public domain safety check, OAuth metadata sync (full_name, avatar_url), status phase UX. |
 | `app/(auth)/academic-email-required.tsx` | **NEW** — Block screen for non-academic emails. Dark theme, brand header, explanation card, 3 action buttons (Use College Email → signup, Go to Login → login, Back to Home). |
 | `app/(auth)/_layout.tsx` | **MODIFIED** — Added `<Stack.Screen name="academic-email-required" />` to Stack navigator. |
-| `lib/hooks/useAcademicEmailValidator.ts` | **NEW** — Hook returning `{ validate }` function. Checks `isValidAcademicEmail` + custom domains from `EXPO_PUBLIC_ALLOWED_EMAIL_DOMAINS` env var. Returns `{ valid, domain?, message? }`. |
+| `lib/hooks/useFileUpload.ts` | **NEW** — Mobile file upload hook using expo-image-picker + Supabase Storage. Provides `pickImage`, `takePhoto`, `uploadImage` with progress tracking, 5MB size validation, blob-based upload (no expo-file-system dependency). |
+| `components/Autocomplete.tsx` | **NEW** — Searchable dropdown component for university/major selection. TextInput with search icon, FlatList dropdown, delayed close for tap handling, themed via `colors` prop. |
+| `components/ChipPicker.tsx` | **NEW** — Multi-select chip grid for interests. Preset chips in flexWrap layout, custom input row, haptic feedback, maxSelections support, checkmark on selected. |
+| `components/AvatarPicker.tsx` | **NEW** — Circular profile picture picker. Uses `useFileUpload` hook, Alert action sheet on native (Take Photo / Gallery / Remove), edit badge overlay, loading state. |
+| `app/(auth)/onboarding.tsx` | **REWRITE** (313 → ~530 lines). 4-step flow → 8-step flow: Full Name (auto-filled from Google) → Profile Picture (AvatarPicker) → University (Autocomplete) → Major (Autocomplete) → Academic Timeline (enrollment year + course duration + auto-graduation + auto-role badge) → Interests (ChipPicker with 12 presets + custom) → Social Links (6 platforms) → Bio. Auto-determines Student/Alumni role via `determineUserRoleFromGraduation()`. |
+| `lib/auth-context.tsx` | **MODIFIED** — Expanded `OnboardingPayload` with university, major, enrollmentYear, courseDurationYears, interests, socialLinks, avatarUrl. Rewrote `completeOnboarding()` to do direct `supabase.from('profiles').upsert()` with all fields + auto-role calculation + role-specific profile records (student_profiles, alumni_profiles, faculty_profiles). |
+| `constants/colors.ts` | **MODIFIED** — Dark palette updated to pure black (`#000000` background, rgba white hierarchy for surfaces/text/borders). Dark surface tiers updated to rgba values. `useThemeColors()` and `useSurfaceTiers()` now force dark-only mode. Removed `useColorScheme` dependency. |
+| `app/(tabs)/_layout.tsx` | **MODIFIED** — Tab bar now uses `#000000` background on Android, forced dark blur tint on iOS/`tabBarActiveTintColor` set to `colors.tabIconSelected`, removed `useColorScheme` dependency. |
+| `app/_layout.tsx` | **MODIFIED** — Added `<StatusBar style="light" backgroundColor="#000000" />`, set `GestureHandlerRootView` background to `#000000`. |
+| `app/(auth)/onboarding.tsx` | **POST-AUDIT FIX** — Changed 4 hardcoded `'#fff'` → `colors.primaryForeground` on tint-background elements (year chips, duration chips, next button text, next button icon) to fix white-on-white contrast. |
+| `components/ChipPicker.tsx` | **POST-AUDIT FIX** — Added `primaryForeground` to colors interface. Changed 4 hardcoded `'#fff'` → `colors.primaryForeground ?? '#000'` on selected chip text, close/checkmark icons, add button icon. |
+| `components/AvatarPicker.tsx` | **POST-AUDIT FIX** — Added `primaryForeground` to colors interface. Changed pencil icon from `'#fff'` → `colors.primaryForeground ?? '#000'`. |
+| `app/(tabs)/_layout.tsx` | **POST-AUDIT FIX** — Changed CreateTabButton "+" icon from `color="#fff"` → `color="#000"`. |
+| `app/search.tsx` | **POST-AUDIT FIX** — Removed unused `useColorScheme` import. |
+| `app/saved.tsx` | **POST-AUDIT FIX** — Removed unused `useColorScheme` import. |
+| `components/ErrorFallback.tsx` | **POST-AUDIT FIX** — Removed `useColorScheme`; hardcoded dark theme inline (self-contained for crash safety). |
 
 ---
 
@@ -149,11 +164,12 @@ export function useAcademicEmailValidator() {
 
 ---
 
-## Phase 2 — Onboarding Parity (P1 Registration Quality)
+## Phase 2 — Onboarding Parity (P1 Registration Quality) ✅ COMPLETE
 
-### Task 2.1: Expand `OnboardingPayload` Type
+### Task 2.1: Expand `OnboardingPayload` Type ✅
 
 **File**: `lib/auth-context.tsx`
+**Status**: ✅ Done. OnboardingPayload expanded with all fields.
 **Change**: Expand `OnboardingPayload` interface
 
 ```typescript
@@ -182,9 +198,10 @@ interface OnboardingPayload {
 }
 ```
 
-### Task 2.2: Update `completeOnboarding()` in Auth Context
+### Task 2.2: Update `completeOnboarding()` in Auth Context ✅
 
 **File**: `lib/auth-context.tsx`
+**Status**: ✅ Done. Direct supabase upsert with all fields, auto-role determination, headline generation.
 **Change**: Expand the profile payload creation to include new fields
 
 Map all new fields to `ProfileSignupPayload`:
@@ -198,9 +215,10 @@ Map all new fields to `ProfileSignupPayload`:
 - Auto-calculate `headline` = `"{major} · {university}"`
 - Auto-determine role from graduation using `determineUserRoleFromGraduation()` from `@clstr/shared`
 
-### Task 2.3: Create `useFileUpload` Hook
+### Task 2.3: Create `useFileUpload` Hook ✅
 
-**File**: `lib/hooks/useFileUpload.ts` (NEW — ~100 lines)
+**File**: `lib/hooks/useFileUpload.ts` (NEW — ~180 lines)
+**Status**: ✅ Created. 0 compile errors.
 **Source**: Web's `src/hooks/useFileUpload.ts` (110 lines)
 
 ```typescript
@@ -214,9 +232,10 @@ export function useFileUpload() {
 
 **Dependencies**: `expo-image-picker`, `expo-file-system`
 
-### Task 2.4: Rewrite Onboarding Screen
+### Task 2.4: Rewrite Onboarding Screen ✅
 
-**File**: `app/(auth)/onboarding.tsx` (REWRITE — from 291 → ~700 lines)
+**File**: `app/(auth)/onboarding.tsx` (REWRITE — from 313 → ~530 lines)
+**Status**: ✅ Done. 0 compile errors.
 **Source**: Web's `src/pages/Onboarding.tsx` (1265 lines)
 
 New step flow (8 steps replacing 4):
@@ -234,15 +253,16 @@ New step flow (8 steps replacing 4):
 
 **Key mobile-specific components needed**:
 
-- **Autocomplete component**: `components/Autocomplete.tsx` — searchable dropdown with FlatList. Filter `getUniversityOptions()` and `getMajorOptions()` results by text input.
-- **ChipPicker component**: `components/ChipPicker.tsx` — multi-select chip grid for interests. Wrap/flow layout with `flexWrap: 'wrap'`.
-- **AvatarPicker component**: `components/AvatarPicker.tsx` — circular preview + "Upload Photo" button using `expo-image-picker`.
+- **Autocomplete component**: `components/Autocomplete.tsx` ✅ — searchable dropdown with FlatList. Filter `getUniversityOptions()` and `getMajorOptions()` results by text input.
+- **ChipPicker component**: `components/ChipPicker.tsx` ✅ — multi-select chip grid for interests. Wrap/flow layout with `flexWrap: 'wrap'`.
+- **AvatarPicker component**: `components/AvatarPicker.tsx` ✅ — circular preview + "Upload Photo" button using `expo-image-picker`.
 
 **Auto-role determination**: Import `determineUserRoleFromGraduation()` and `calculateGraduationYear()` from `@clstr/shared` or `src/lib/alumni-identification.ts`. Show auto-determined Student/Alumni badge like web.
 
-### Task 2.5: Create Role-Specific Profile Records
+### Task 2.5: Create Role-Specific Profile Records ✅
 
 **File**: `lib/auth-context.tsx` — `completeOnboarding()` method
+**Status**: ✅ Done. student_profiles, alumni_profiles, faculty_profiles upsert inside completeOnboarding().
 **Source**: Web `Onboarding.tsx` L560-630
 
 After main profile upsert, create role-specific records:
@@ -252,11 +272,36 @@ After main profile upsert, create role-specific records:
 
 ---
 
-## Phase 3 — Theme & UI Alignment (P1 Visual Parity)
+## Phase 3 — Theme & UI Alignment (P1 Visual Parity) ✅ COMPLETE (Post-Audit Fixes Applied)
 
-### Task 3.1: Update Dark Theme Palette to Pure Black
+### Post-Audit Issues Found & Fixed (Phase 2↔3 Cross-Impact)
+
+**Critical Bug — White-on-White Contrast**
+
+Phase 3 changed `colors.tint` from `#3B82F6` (blue) → `rgba(255,255,255,0.90)` (near-white).
+Phase 2 components hardcoded `'#fff'` for text on `colors.tint` backgrounds → **white text on white background = invisible**.
+
+| File | Fix Applied |
+|---|---|
+| `app/(auth)/onboarding.tsx` | Changed 4 instances of `'#fff'` → `colors.primaryForeground` on year chips, duration chips, next button text, and next button arrow icon |
+| `components/ChipPicker.tsx` | Added `primaryForeground?: string` to colors interface. Changed 4 instances of `'#fff'` → `colors.primaryForeground ?? '#000'` for selected chip text, close icon, checkmark icon, and add button icon |
+| `components/AvatarPicker.tsx` | Added `primaryForeground?: string` to colors interface. Changed pencil icon color from `'#fff'` → `colors.primaryForeground ?? '#000'` |
+| `app/(tabs)/_layout.tsx` | Changed CreateTabButton "+" icon from `color="#fff"` → `color="#000"` |
+
+**Phase 3.6 Cleanup — Removed Stale Imports**
+
+| File | Fix Applied |
+|---|---|
+| `app/search.tsx` | Removed unused `useColorScheme` import (no longer needed with forced dark mode) |
+| `app/saved.tsx` | Removed unused `useColorScheme` import (no longer needed with forced dark mode) |
+| `components/ErrorFallback.tsx` | Removed `useColorScheme` import. Hardcoded dark theme inline (self-contained for crash safety, no dependency on colors.ts) |
+
+**Verification**: All 9 Phase 2&3 files pass `tsc --noEmit` with 0 errors. No `useColorScheme` usage remains in any app/ or components/ file. No hardcoded light theme hex colors (`#F8FAFC`, `#0F172A`, etc.) found in app/ or components/.
+
+### Task 3.1: Update Dark Theme Palette to Pure Black ✅
 
 **File**: `constants/colors.ts`
+**Status**: ✅ Done. Background `#000000`, surfaces/text/borders all rgba white hierarchy.
 **Change**: Align dark palette with web's `#000000` pure black design
 
 ```diff
@@ -285,9 +330,10 @@ Full mapping:
 | `tint` | `#3B82F6` | `rgba(255,255,255,0.90)` |
 | `primary` | `#3B82F6` | `rgba(255,255,255,0.90)` |
 
-### Task 3.2: Update Dark Surface Tiers
+### Task 3.2: Update Dark Surface Tiers ✅
 
 **File**: `constants/colors.ts`
+**Status**: ✅ Done. tier1/2/3 backgrounds and borders updated to rgba values.
 
 ```diff
 export const darkSurfaceTiers = {
@@ -312,9 +358,10 @@ export const darkSurfaceTiers = {
 };
 ```
 
-### Task 3.3: Force Dark Mode by Default
+### Task 3.3: Force Dark Mode by Default ✅
 
 **File**: `constants/colors.ts`
+**Status**: ✅ Done. `useThemeColors()` now always returns `dark`. `useSurfaceTiers()` always returns `darkSurfaceTiers`.
 **Change**: Make dark the default/only theme (matching web's dark-only)
 
 **Option A** (recommended): Change `useThemeColors()` to always return dark palette:
@@ -327,14 +374,16 @@ export function useThemeColors() {
 
 **Option B** (if user wants system toggle): Keep `useColorScheme()` but default to dark.
 
-### Task 3.4: Update Tab Bar Styling
+### Task 3.4: Update Tab Bar Styling ✅
 
 **File**: `app/(tabs)/_layout.tsx`
+**Status**: ✅ Done. Pure black Android bg, forced dark blur tint on iOS, white selected icons.
 **Change**: Update tab bar to pure black background with `rgba(255,255,255,0.60)` icons, white selected icon
 
-### Task 3.5: Update Root Layout Background
+### Task 3.5: Update Root Layout Background ✅
 
 **File**: `app/_layout.tsx`
+**Status**: ✅ Done. Added `<StatusBar style="light" backgroundColor="#000000" />`, root view bg `#000000`.
 **Change**: Set `StatusBar` to `light-content`, background to `#000000`
 
 ---
@@ -403,7 +452,7 @@ Access code verification flow + club profile setup. Can be deferred.
 
 | Hook | File | Source (Web) | Est. Lines | Key Deps |
 |---|---|---|---|---|
-| `useFileUpload` | `lib/hooks/useFileUpload.ts` | `src/hooks/useFileUpload.ts` (110) | ~100 | expo-image-picker, expo-file-system |
+| `useFileUpload` | `lib/hooks/useFileUpload.ts` | `src/hooks/useFileUpload.ts` (110) | ~180 | expo-image-picker | ✅ Created |
 | `useNetwork` | `lib/hooks/useNetwork.ts` | `src/hooks/useNetwork.ts` (31) | ~30 | @react-native-community/netinfo |
 | `useAcademicEmailValidator` | `lib/hooks/useAcademicEmailValidator.ts` | `src/hooks/useAcademicEmailValidator.ts` (48) | ~50 | ✅ Created |
 | `useDeleteAccount` | `lib/hooks/useDeleteAccount.ts` | `src/hooks/useDeleteAccount.ts` (32) | ~30 | supabase RPC |
@@ -450,7 +499,7 @@ Screens that exist but need feature enrichment:
 | `Login.tsx` (Google only) | `(auth)/login.tsx` | ✅ FIXED | Was email/password, now Google OAuth matching web |
 | `Signup.tsx` (Google + Magic Link) | `(auth)/signup.tsx` | ✅ FIXED | Was email/password, now Google + Magic Link matching web |
 | `AuthCallback.tsx` (529 lines) | `auth/callback.tsx` (~470 lines) | ✅ DONE | Academic email validation, profile domain update, OAuth metadata sync, error handling, DB error recovery |
-| `Onboarding.tsx` (1265 lines) | `(auth)/onboarding.tsx` (291 lines) | ⚠️ Partial | Missing: university autocomplete, avatar upload, interests picker, social links, graduation/enrollment year, course duration, major selection |
+| `Onboarding.tsx` (1265 lines) | `(auth)/onboarding.tsx` (~530 lines) | ✅ DONE | 8-step flow: name, avatar, university, major, academic timeline, interests, social links, bio. Auto-role determination, auto-graduation calculation. |
 | `Feed.tsx` + `Home.tsx` | `(tabs)/index.tsx` | ⏳ Exists | Needs depth audit (CreatePostCard, PostCard, network stats sidebar) |
 | `Profile.tsx` | `(tabs)/profile.tsx` | ⏳ Exists | Needs depth audit |
 | `Network.tsx` | `(tabs)/network.tsx` | ⏳ Exists | Needs depth audit |
@@ -495,8 +544,8 @@ Screens that exist but need feature enrichment:
 | AuthCallback validation | Validates academic email domain, checks admin status, handles email transition merge (529 lines) | ~~Simple token extraction + session set (129 lines)~~ **FIXED** — Academic email validation, domain update, OAuth metadata sync, DB error recovery (~470 lines) | ✅ Resolved |
 | Session detection | `detectSessionInUrl: true` (browser default) | `detectSessionInUrl: false` (explicit in core-client) | Intentional for native deep links, but callback must handle manually |
 | Redirect after auth | Complex: `authReturnUrl` from sessionStorage, `/feed` default | Root layout guard: `router.replace('/')` | OK — mobile guard pattern is standard |
-| Onboarding completeness | 8+ fields, university lookup, avatar, interests, social links | 4 fields: name, role, department, bio | Profile data gap |
-| Role from graduation | `determineUserRoleFromGraduation()` auto-classifies alumni | Manual role selection only | Alumni may self-misclassify |
+| Onboarding completeness | 8+ fields, university lookup, avatar, interests, social links | ~~4 fields: name, role, department, bio~~ **FIXED** — 8 steps matching web | ✅ Resolved |
+| Role from graduation | `determineUserRoleFromGraduation()` auto-classifies alumni | ~~Manual role selection only~~ **FIXED** — Auto-determined from enrollment + course duration | ✅ Resolved |
 
 ---
 
@@ -507,9 +556,9 @@ Screens that exist but need feature enrichment:
 | Auth background | `#000000` pure black | `#F8FAFC` light gray | `#000000` pure black ✅ |
 | Auth card | `bg-white/[0.04]` glass | Flat white form | `rgba(255,255,255,0.04)` glass ✅ |
 | Font | Space Grotesk (headings) + Inter | Inter only | Inter only (acceptable for mobile) |
-| Non-auth theme | Dark-only, pure black | Light default (`#F8FAFC`) with optional dark (`#0F172A` slate) | ⚠️ Unfixed — main app still uses light theme |
-| Surface tiers | `rgba(255,255,255, 0.02/0.04/0.06)` | `surface1: '#F1F5F9'` (light), `#1E293B` (dark) | ⚠️ Still divergent |
-| Primary color | Not explicitly declared (white text + glass on black) | `#2563EB` blue | ⚠️ Different identity |
+| Non-auth theme | Dark-only, pure black | ~~Light default (`#F8FAFC`) with optional dark (`#0F172A` slate)~~ | `#000000` pure black, forced dark-only ✅ |
+| Surface tiers | `rgba(255,255,255, 0.02/0.04/0.06)` | ~~`surface1: '#F1F5F9'` (light), `#1E293B` (dark)~~ | rgba white hierarchy matching web ✅ |
+| Primary color | Not explicitly declared (white text + glass on black) | ~~`#2563EB` blue~~ | `rgba(255,255,255,0.90)` white accent ✅ |
 | Border radius | `rounded-xl` = 12px on cards | `borderRadius: 16` on cards | Minor mismatch |
 | Google button | `bg-white/10 border-white/15` | Didn't exist | Matching ✅ |
 
@@ -541,14 +590,14 @@ Screens that exist but need feature enrichment:
 | `useSkillAnalysis` | — | ❌ Missing (API adapter exists) |
 | `useAIChat` | — | ❌ Missing (API adapter exists) |
 | `useMentorship` | `lib/api/mentorship.ts` (393 lines) | ✅ Exists as API module |
-| `useFileUpload` | — | ❌ Missing (critical for avatar/attachments) |
+| `useFileUpload` | `lib/hooks/useFileUpload.ts` | ✅ Created |
 | `useAcademicEmailValidator` | `lib/hooks/useAcademicEmailValidator.ts` | ✅ Created |
 | `useEmailTransition` | — | ❌ Missing |
 | `useDeleteAccount` | — | ❌ Missing |
 | `useUserSettings` | — | ❌ Missing |
 | `useTypeaheadSearch` | — | ❌ Missing |
 | `usePagination` | — | ❌ Missing |
-| `useTheme` | — | ❌ Missing (mobile uses `useColorScheme`) |
+| `useTheme` | — | ❌ N/A (forced dark mode via `useThemeColors()`) |
 | `useIdleDetection` | — | 🚫 N/A for mobile |
 | `usePWAInstall` | — | 🚫 N/A for mobile |
 | `useAdmin*` (12 hooks) | — | 🚫 N/A for mobile |
@@ -570,31 +619,31 @@ Screens that exist but need feature enrichment:
 | 1.5 | Create `useAcademicEmailValidator` hook | 1 | ✅ Done |
 | | **Sprint 1 Total** | **~6.5 hrs** | **✅ Complete** |
 
-### Sprint 2 (Week 1-2) — Onboarding & Upload
+### Sprint 2 (Week 1-2) — Onboarding & Upload ✅ COMPLETE
 
-| # | Task | Est. Hours |
-|---|---|---|
-| 2.1 | Expand OnboardingPayload type | 0.5 |
-| 2.2 | Update `completeOnboarding()` | 1.5 |
-| 2.3 | Create `useFileUpload` hook | 3 |
-| 2.4a | Create Autocomplete component | 2 |
-| 2.4b | Create ChipPicker component | 1 |
-| 2.4c | Create AvatarPicker component | 1 |
-| 2.4d | Rewrite onboarding screen (8 steps) | 5 |
-| 2.5 | Role-specific profile records | 1.5 |
-| | **Sprint 2 Total** | **~15.5 hrs** |
+| # | Task | Est. Hours | Status |
+|---|---|---|---|
+| 2.1 | Expand OnboardingPayload type | 0.5 | ✅ Done |
+| 2.2 | Update `completeOnboarding()` | 1.5 | ✅ Done |
+| 2.3 | Create `useFileUpload` hook | 3 | ✅ Done |
+| 2.4a | Create Autocomplete component | 2 | ✅ Done |
+| 2.4b | Create ChipPicker component | 1 | ✅ Done |
+| 2.4c | Create AvatarPicker component | 1 | ✅ Done |
+| 2.4d | Rewrite onboarding screen (8 steps) | 5 | ✅ Done |
+| 2.5 | Role-specific profile records | 1.5 | ✅ Done |
+| | **Sprint 2 Total** | **~15.5 hrs** | **✅ Complete** |
 
-### Sprint 3 (Week 2) — Theme & Visual
+### Sprint 3 (Week 2) — Theme & Visual ✅ COMPLETE
 
-| # | Task | Est. Hours |
-|---|---|---|
-| 3.1 | Update dark palette to pure black | 1 |
-| 3.2 | Update dark surface tiers | 0.5 |
-| 3.3 | Force dark mode default | 0.5 |
-| 3.4 | Update tab bar styling | 1 |
-| 3.5 | Update root layout + StatusBar | 0.5 |
-| 3.6 | Touch up all existing screens for dark theme consistency | 4 |
-| | **Sprint 3 Total** | **~7.5 hrs** |
+| # | Task | Est. Hours | Status |
+|---|---|---|---|
+| 3.1 | Update dark palette to pure black | 1 | ✅ Done |
+| 3.2 | Update dark surface tiers | 0.5 | ✅ Done |
+| 3.3 | Force dark mode default | 0.5 | ✅ Done |
+| 3.4 | Update tab bar styling | 1 | ✅ Done |
+| 3.5 | Update root layout + StatusBar | 0.5 | ✅ Done |
+| 3.6 | Touch up all existing screens for dark theme consistency | 4 | ✅ Done — contrast fixes, useColorScheme removal, ErrorFallback hardened |
+| | **Sprint 3 Total** | **~7.5 hrs** | **✅ Complete** |
 
 ### Sprint 4 (Week 3) — Missing Screens
 
@@ -648,9 +697,10 @@ npx expo install expo-image-picker expo-file-system @react-native-community/neti
 
 | Action | Count | Files |
 |---|---|---|
-| NEW files | ~25 | 3 adapters, 14 hooks, 6 screens, 2 reusable components |
-| REWRITE | 2 | `auth/callback.tsx`, `(auth)/onboarding.tsx` |
+| NEW files | ~30 | 3 adapters, 14 hooks, 6 screens, 5 reusable components |
+| REWRITE | 3 | `auth/callback.tsx`, `(auth)/onboarding.tsx`, + colors.ts dark palette |
 | MODIFY | 4 | `auth-context.tsx`, `constants/colors.ts`, `(tabs)/_layout.tsx`, `_layout.tsx` |
+| POST-AUDIT FIX | 8 | `onboarding.tsx`, `ChipPicker.tsx`, `AvatarPicker.tsx`, `(tabs)/_layout.tsx`, `search.tsx`, `saved.tsx`, `ErrorFallback.tsx` (contrast + stale import cleanup) |
 
 ---
 

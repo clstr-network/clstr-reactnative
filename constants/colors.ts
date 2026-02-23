@@ -9,7 +9,7 @@
  * Phase 6: Design Token Alignment
  */
 
-import { useColorScheme } from 'react-native';
+// useColorScheme no longer needed — forced dark mode (Phase 3)
 
 // ─── Core Palette ────────────────────────────────────────────
 
@@ -60,35 +60,35 @@ const light = {
 };
 
 const dark = {
-  // Brand
-  primary: '#3B82F6',
-  primaryLight: '#1E3A5F',
-  primaryForeground: '#FFFFFF',
+  // Brand — white-accent on pure black (matches web)
+  primary: 'rgba(255, 255, 255, 0.90)',
+  primaryLight: 'rgba(255, 255, 255, 0.08)',
+  primaryForeground: '#000000',
 
-  // Backgrounds
-  background: '#0F172A',
-  surface: '#1E293B',
-  surfaceSecondary: '#334155',
-  surfaceHover: '#334155',
-  surfaceElevated: '#334155',
+  // Backgrounds — pure black OLED
+  background: '#000000',
+  surface: 'rgba(255, 255, 255, 0.04)',
+  surfaceSecondary: 'rgba(255, 255, 255, 0.06)',
+  surfaceHover: 'rgba(255, 255, 255, 0.08)',
+  surfaceElevated: 'rgba(255, 255, 255, 0.08)',
 
   // Text hierarchy
-  text: '#F1F5F9',
-  textSecondary: '#94A3B8',
-  textTertiary: '#64748B',
-  textMeta: '#475569',
+  text: 'rgba(255, 255, 255, 0.95)',
+  textSecondary: 'rgba(255, 255, 255, 0.60)',
+  textTertiary: 'rgba(255, 255, 255, 0.40)',
+  textMeta: 'rgba(255, 255, 255, 0.25)',
 
   // Borders
-  border: '#334155',
-  borderLight: '#1E293B',
-  surfaceBorder: '#334155',
-  surfaceBorderStrong: '#475569',
-  divider: '#1E293B',
+  border: 'rgba(255, 255, 255, 0.10)',
+  borderLight: 'rgba(255, 255, 255, 0.06)',
+  surfaceBorder: 'rgba(255, 255, 255, 0.10)',
+  surfaceBorderStrong: 'rgba(255, 255, 255, 0.16)',
+  divider: 'rgba(255, 255, 255, 0.06)',
 
   // Tab bar
-  tint: '#3B82F6',
-  tabIconDefault: '#64748B',
-  tabIconSelected: '#3B82F6',
+  tint: 'rgba(255, 255, 255, 0.90)',
+  tabIconDefault: 'rgba(255, 255, 255, 0.40)',
+  tabIconSelected: 'rgba(255, 255, 255, 0.95)',
 
   // Signal colors
   success: '#34D399',
@@ -98,11 +98,11 @@ const dark = {
   danger: '#F87171',
 
   // Utility
-  secondary: '#334155',
-  muted: '#475569',
-  cardShadow: 'rgba(0, 0, 0, 0.3)',
-  inputBackground: '#1E293B',
-  inputBorder: '#334155',
+  secondary: 'rgba(255, 255, 255, 0.06)',
+  muted: 'rgba(255, 255, 255, 0.10)',
+  cardShadow: 'rgba(0, 0, 0, 0.5)',
+  inputBackground: 'rgba(255, 255, 255, 0.04)',
+  inputBorder: 'rgba(255, 255, 255, 0.10)',
 };
 
 export type ThemeColors = typeof light;
@@ -136,20 +136,20 @@ export const surfaceTiers = {
 
 export const darkSurfaceTiers = {
   tier1: {
-    backgroundColor: '#1E293B',
-    borderColor: '#475569',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.16)',
     borderWidth: 1,
     borderRadius: 14,
   },
   tier2: {
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: 'rgba(255, 255, 255, 0.10)',
     borderWidth: 1,
     borderRadius: 14,
   },
   tier3: {
-    backgroundColor: '#1E293B',
-    borderColor: '#1E293B',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderRadius: 14,
   },
@@ -250,13 +250,13 @@ export const radius = {
 // ─── Hooks ───────────────────────────────────────────────────
 
 export function useThemeColors() {
-  const scheme = useColorScheme();
-  return scheme === 'dark' ? dark : light;
+  // Phase 3: Force dark-only mode to match web's pure-black theme
+  return dark;
 }
 
 export function useSurfaceTiers() {
-  const scheme = useColorScheme();
-  return scheme === 'dark' ? darkSurfaceTiers : surfaceTiers;
+  // Phase 3: Force dark-only surface tiers
+  return darkSurfaceTiers;
 }
 
 /** Static light-theme palette for use in StyleSheet.create() and other module-level code. */
