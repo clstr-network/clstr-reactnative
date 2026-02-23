@@ -60,6 +60,7 @@
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
+    "react-native-toast-message": "^2.3.3",
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1",
     "tsx": "^4.20.6",
@@ -70,13 +71,17 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@expo/ngrok": "^4.1.0",
+    "@tailwindcss/postcss": "^4.2.0",
     "@types/express": "^5.0.0",
     "@types/react": "~19.1.10",
+    "autoprefixer": "^10.4.24",
     "babel-plugin-react-compiler": "^19.0.0-beta-e993439-20250117",
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.31.0",
     "eslint-config-expo": "~10.0.0",
     "patch-package": "^8.0.0",
+    "tailwindcss": "^4.2.0",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.2"
   },
   "private": true

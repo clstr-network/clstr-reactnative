@@ -4,10 +4,9 @@
  * Replaces shadcn/ui Alert with RN View + Text.
  */
 import React from 'react';
-import { StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
+import { StyleSheet, type ViewStyle, type TextStyle, type StyleProp } from 'react-native';
 import { View } from './primitives/View';
 import { Text } from './primitives/Text';
-import { useTheme } from '../../design/useTheme';
 import { tokens } from '../../design/tokens';
 
 type AlertVariant = 'default' | 'destructive';
@@ -19,7 +18,6 @@ interface AlertProps {
 }
 
 export function Alert({ variant = 'default', style, children }: AlertProps) {
-  const { colors } = useTheme();
   const isDestructive = variant === 'destructive';
 
   return (
@@ -40,7 +38,7 @@ export function Alert({ variant = 'default', style, children }: AlertProps) {
   );
 }
 
-export function AlertTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function AlertTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return (
     <Text weight="500" style={[styles.title, style]}>
       {children}
@@ -48,7 +46,7 @@ export function AlertTitle({ children, style }: { children?: React.ReactNode; st
   );
 }
 
-export function AlertDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function AlertDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return (
     <Text size={14} muted style={[styles.description, style]}>
       {children}

@@ -5,7 +5,7 @@
  * CardContent / CardFooter.
  */
 import React from 'react';
-import { StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
+import { StyleSheet, type ViewStyle, type TextStyle, type StyleProp } from 'react-native';
 import { View } from './primitives/View';
 import { Text } from './primitives/Text';
 import { tokens } from '../../design/tokens';
@@ -27,7 +27,7 @@ export function CardHeader({ children, style }: CardProps) {
   return <View style={[styles.header, style]}>{children}</View>;
 }
 
-export function CardTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function CardTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return (
     <Text size={24} weight="600" style={style}>
       {children}
@@ -35,7 +35,7 @@ export function CardTitle({ children, style }: { children?: React.ReactNode; sty
   );
 }
 
-export function CardDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function CardDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return (
     <Text size={14} muted style={style}>
       {children}

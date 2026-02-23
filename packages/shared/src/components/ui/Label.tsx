@@ -4,12 +4,12 @@
  * Replaces shadcn/ui Label.
  */
 import React from 'react';
-import { StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
+import { StyleSheet, type ViewStyle, type TextStyle, type StyleProp } from 'react-native';
 import { Text } from './primitives/Text';
 
 export interface LabelProps {
   children?: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<TextStyle>;
   required?: boolean;
 }
 

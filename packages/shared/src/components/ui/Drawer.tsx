@@ -11,6 +11,7 @@ import {
   View as RNView,
   TouchableWithoutFeedback,
   type ViewStyle,
+  type TextStyle,
   type StyleProp,
 } from 'react-native';
 import { Pressable } from './primitives/Pressable';
@@ -71,11 +72,11 @@ export function DrawerFooter({ children, style }: { children?: React.ReactNode; 
   return <View style={[styles.footer, style]}>{children}</View>;
 }
 
-export function DrawerTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function DrawerTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return <Text size={18} weight="600" style={style}>{children}</Text>;
 }
 
-export function DrawerDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function DrawerDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return <Text size={14} muted style={style}>{children}</Text>;
 }
 

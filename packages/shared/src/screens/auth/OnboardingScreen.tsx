@@ -60,7 +60,7 @@ export function OnboardingScreen() {
       role: role.toLowerCase(),
       university: college.trim(),
       onboarded: true,
-    });
+    } as any);
     setLoading(false);
 
     if (error) {

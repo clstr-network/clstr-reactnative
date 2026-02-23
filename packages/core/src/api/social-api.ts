@@ -117,14 +117,14 @@ export interface CreatePostPayload {
 interface PollOption {
   text: string;
   votes: number;
-  [key: string]: Json | undefined;
+  [key: string]: Json | PollOption[] | undefined;
 }
 
 interface Poll {
   question: string;
   options: PollOption[];
   endDate: string;
-  [key: string]: Json | undefined;
+  [key: string]: Json | PollOption[] | undefined;
 }
 
 export interface Post {

@@ -100,8 +100,8 @@ export default function ProfileScreen() {
 
   const badgeColor = getRoleBadgeColor(profile.role ?? 'Student');
   // F9: connectionsCount and postsCount now come from dedicated useQuery hooks above
-  const completionPct = calculateProfileCompletion(profile);
-  const missingFields = getMissingProfileFields(profile);
+  const completionPct = calculateProfileCompletion(profile as any);
+  const missingFields = getMissingProfileFields(profile as any);
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -162,7 +162,7 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           <Pressable
             style={styles.statItem}
-            onPress={() => { Haptics.selectionAsync(); router.push('/connections'); }}
+            onPress={() => { Haptics.selectionAsync(); router.push('/connections' as any); }}
           >
             <Text style={[styles.statNum, { color: colors.text }]}>{connectionsCount}</Text>
             <Text style={[styles.statLabel, { color: colors.tint }]}>Connections</Text>

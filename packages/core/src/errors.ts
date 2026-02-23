@@ -17,13 +17,18 @@ export type AppError = {
 export function createAppError(
   code: string,
   message: string,
-  opts?: { details?: unknown; retryable?: boolean }
+  opts?: unknown
 ): AppError {
+  // Accept both { details, retryable } options objects AND raw caught errors
+  const isOptsObject =
+    typeof opts === 'object' &&
+    opts !== null &&
+    ('details' in opts || 'retryable' in opts);
   return {
     code,
     message,
-    details: opts?.details,
-    retryable: opts?.retryable ?? false,
+    details: isOptsObject ? (opts as any).details : opts,
+    retryable: isOptsObject ? ((opts as any).retryable ?? false) : false,
   };
 }
 

@@ -68,7 +68,7 @@ export function RootNavigator() {
           setIsOnboarded(false);
           return;
         }
-        setIsOnboarded(!!data.onboarded);
+        setIsOnboarded(!!(data as { onboarded?: boolean }).onboarded);
       });
 
     return () => { cancelled = true; };

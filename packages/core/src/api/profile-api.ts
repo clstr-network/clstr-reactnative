@@ -452,7 +452,7 @@ export const uploadProjectImage = async (
 
   if (!file) throw new Error("No file provided");
 
-  const fileSize = getFileSize(file);
+  const fileSize = getFileSize(file) ?? 0;
   if (fileSize > MAX_PROJECT_IMAGE_SIZE) {
     throw new Error(`Image must be less than ${MAX_PROJECT_IMAGE_SIZE / 1024 / 1024}MB`);
   }

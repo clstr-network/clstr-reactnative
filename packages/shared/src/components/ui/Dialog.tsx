@@ -10,6 +10,7 @@ import {
   Modal,
   StyleSheet,
   type ViewStyle,
+  type TextStyle,
   type StyleProp,
   TouchableWithoutFeedback,
   View as RNView,
@@ -100,11 +101,11 @@ export function DialogFooter({ children, style }: { children?: React.ReactNode; 
   return <View style={[styles.footer, style]}>{children}</View>;
 }
 
-export function DialogTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function DialogTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return <Text size={18} weight="600" style={style}>{children}</Text>;
 }
 
-export function DialogDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function DialogDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return <Text size={14} muted style={style}>{children}</Text>;
 }
 

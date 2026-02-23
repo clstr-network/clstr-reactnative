@@ -189,9 +189,9 @@ export default function NetworkScreen() {
         <View style={styles.searchResultsContainer}>
           {searchLoading ? (
             <ActivityIndicator size="small" color={colors.tint} style={{ marginTop: 24 }} />
-          ) : searchResults && searchResults.length > 0 ? (
+          ) : searchResults && searchResults.profiles?.length > 0 ? (
             <FlatList
-              data={searchResults}
+              data={searchResults.profiles}
               keyExtractor={(item: any) => String(item.id)}
               contentContainerStyle={styles.listContent}
               keyboardShouldPersistTaps="handled"

@@ -3,14 +3,14 @@
  *
  * Replaces shadcn/ui Command (cmdk) with searchable list modal.
  */
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import {
   Modal,
-  FlatList,
   StyleSheet,
   View as RNView,
   TouchableWithoutFeedback,
   type ViewStyle,
+  type TextStyle,
   type StyleProp,
 } from 'react-native';
 import { Input } from './Input';
@@ -33,7 +33,7 @@ export function Command({ children, style }: { children?: React.ReactNode; style
   );
 }
 
-export function CommandInput({ placeholder, style }: { placeholder?: string; style?: StyleProp<ViewStyle> }) {
+export function CommandInput({ placeholder, style }: { placeholder?: string; style?: StyleProp<TextStyle> }) {
   const { search, setSearch } = useContext(CmdCtx);
   return (
     <Input

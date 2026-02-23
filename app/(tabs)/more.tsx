@@ -75,7 +75,7 @@ export default function MoreScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOut();
-          router.replace('/(auth)');
+          router.replace('/(auth)/login' as any);
         },
       },
     ]);

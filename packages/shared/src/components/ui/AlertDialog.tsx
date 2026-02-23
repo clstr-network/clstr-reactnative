@@ -10,6 +10,7 @@ import {
   StyleSheet,
   View as RNView,
   type ViewStyle,
+  type TextStyle,
   type StyleProp,
 } from 'react-native';
 import { View } from './primitives/View';
@@ -63,11 +64,11 @@ export function AlertDialogFooter({ children, style }: { children?: React.ReactN
   return <View style={[styles.footer, style]}>{children}</View>;
 }
 
-export function AlertDialogTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function AlertDialogTitle({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return <Text size={18} weight="600" style={style}>{children}</Text>;
 }
 
-export function AlertDialogDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function AlertDialogDescription({ children, style }: { children?: React.ReactNode; style?: StyleProp<TextStyle> }) {
   return <Text size={14} muted style={style}>{children}</Text>;
 }
 

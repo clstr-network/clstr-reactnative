@@ -7,7 +7,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
-  View as RNView,
   Animated,
   type ViewStyle,
   type StyleProp,
@@ -39,7 +38,7 @@ export function UndoSnackbar({
   const { colors } = useTheme();
   const opacity = useRef(new Animated.Value(0)).current;
   const [show, setShow] = useState(visible);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const dismiss = useCallback((confirmed: boolean) => {
     clearTimeout(timerRef.current);

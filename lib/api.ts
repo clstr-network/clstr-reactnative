@@ -1,5 +1,15 @@
 import { supabase } from '@/lib/supabase';
 
+/**
+ * Typed query helper — bypasses strict generic Database type resolution.
+ * The Database type uses Record<string, GenericTable> which doesn't resolve
+ * properly with newer @supabase/postgrest-js versions. This helper provides
+ * an untyped `from()` that works correctly at runtime while preserving the
+ * full Supabase client type for `.auth`, `.storage`, etc.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const from = (table: string) => (supabase as any).from(table);
+
 export type ReactionType = 'like' | 'celebrate' | 'support' | 'love' | 'insightful' | 'curious' | 'laugh';
 
 export const REACTION_EMOJI_MAP: Record<ReactionType, string> = {
@@ -33,6 +43,10 @@ export interface Profile {
   headline: string | null;
   major?: string | null;
   university?: string | null;
+  social_links?: Record<string, string> | null;
+  interests?: string[] | null;
+  enrollment_year?: string | null;
+  course_duration_years?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -162,8 +176,7 @@ async function getAuthUser() {
 
 async function getUserCollegeDomain(): Promise<string | null> {
   const user = await getAuthUser();
-  const { data } = await supabase
-    .from('profiles')
+  const { data } = await from('profiles')
     .select('college_domain')
     .eq('id', user.id)
     .single();
@@ -172,20 +185,19 @@ async function getUserCollegeDomain(): Promise<string | null> {
 
 // ─── Posts / Feed ───────────────────────────────────────────
 
-export async function getPosts(params?: { page?: number; limit?: number; category?: string }) {
+export async function getPosts(params?: { page?: number; limit?: number; category?: string; sort?: string }) {
   try {
     const user = await getAuthUser();
     const collegeDomain = await getUserCollegeDomain();
     const page = params?.page ?? 0;
     const limit = params?.limit ?? 20;
-    const from = page * limit;
-    const to = from + limit - 1;
+    const offset = page * limit;
+    const to = offset + limit - 1;
 
-    let query = supabase
-      .from('posts')
+    let query = from('posts')
       .select('*, profile:profiles!user_id(id, full_name, avatar_url, role, college_domain, headline)')
       .order('created_at', { ascending: false })
-      .range(from, to);
+      .range(offset, to);
 
     if (collegeDomain) {
       query = query.eq('college_domain', collegeDomain);
@@ -198,18 +210,15 @@ export async function getPosts(params?: { page?: number; limit?: number; categor
     const postIds = posts.map((p: any) => p.id);
 
     const [likesResult, savedResult, repostResult] = await Promise.all([
-      supabase
-        .from('post_likes')
+      from('post_likes')
         .select('post_id, reaction_type')
         .eq('user_id', user.id)
         .in('post_id', postIds),
-      supabase
-        .from('saved_items')
+      from('saved_items')
         .select('post_id')
         .eq('user_id', user.id)
         .in('post_id', postIds),
-      supabase
-        .from('reposts')
+      from('reposts')
         .select('original_post_id')
         .eq('user_id', user.id)
         .in('original_post_id', postIds),
@@ -252,8 +261,7 @@ export async function getPostById(postId: string) {
   try {
     const user = await getAuthUser();
 
-    const { data: post, error } = await supabase
-      .from('posts')
+    const { data: post, error } = await from('posts')
       .select('*, profile:profiles!user_id(id, full_name, avatar_url, role, college_domain, headline)')
       .eq('id', postId)
       .single();
@@ -261,20 +269,17 @@ export async function getPostById(postId: string) {
     if (error) throw error;
 
     const [reactionResult, savedResult, reactionsResult] = await Promise.all([
-      supabase
-        .from('post_likes')
+      from('post_likes')
         .select('reaction_type')
         .eq('post_id', postId)
         .eq('user_id', user.id)
         .maybeSingle(),
-      supabase
-        .from('saved_items')
+      from('saved_items')
         .select('id')
         .eq('post_id', postId)
         .eq('user_id', user.id)
         .maybeSingle(),
-      supabase
-        .from('post_likes')
+      from('post_likes')
         .select('reaction_type')
         .eq('post_id', postId),
     ]);
@@ -303,8 +308,7 @@ export async function createPost(content: string, images?: string[]) {
     const user = await getAuthUser();
     const collegeDomain = await getUserCollegeDomain();
 
-    const { data, error } = await supabase
-      .from('posts')
+    const { data, error } = await from('posts')
       .insert({
         user_id: user.id,
         content,
@@ -326,8 +330,7 @@ export async function toggleReaction(postId: string, reactionType: ReactionType)
   try {
     const user = await getAuthUser();
 
-    const { data: existing } = await supabase
-      .from('post_likes')
+    const { data: existing } = await from('post_likes')
       .select('id, reaction_type')
       .eq('post_id', postId)
       .eq('user_id', user.id)
@@ -335,23 +338,20 @@ export async function toggleReaction(postId: string, reactionType: ReactionType)
 
     if (existing) {
       if (existing.reaction_type === reactionType) {
-        const { error } = await supabase
-          .from('post_likes')
+        const { error } = await from('post_likes')
           .delete()
           .eq('id', existing.id);
         if (error) throw error;
         return { action: 'removed' as const, reactionType };
       } else {
-        const { error } = await supabase
-          .from('post_likes')
+        const { error } = await from('post_likes')
           .update({ reaction_type: reactionType })
           .eq('id', existing.id);
         if (error) throw error;
         return { action: 'changed' as const, reactionType };
       }
     } else {
-      const { error } = await supabase
-        .from('post_likes')
+      const { error } = await from('post_likes')
         .insert({
           post_id: postId,
           user_id: user.id,
@@ -409,8 +409,7 @@ export async function deleteRepost(originalPostId: string) {
 
 export async function getComments(postId: string) {
   try {
-    const { data, error } = await supabase
-      .from('comments')
+    const { data, error } = await from('comments')
       .select('*, profile:profiles!user_id(id, full_name, avatar_url, role, college_domain, headline)')
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
@@ -427,8 +426,7 @@ export async function addComment(postId: string, content: string, parentId?: str
   try {
     const user = await getAuthUser();
 
-    const { data, error } = await supabase
-      .from('comments')
+    const { data, error } = await from('comments')
       .insert({
         post_id: postId,
         user_id: user.id,
@@ -452,8 +450,7 @@ export async function getConnections() {
   try {
     const user = await getAuthUser();
 
-    const { data, error } = await supabase
-      .from('connections')
+    const { data, error } = await from('connections')
       .select(`
         *,
         requester:profiles!requester_id(id, full_name, avatar_url, role, college_domain, headline),
@@ -478,8 +475,7 @@ export async function getPendingRequests() {
   try {
     const user = await getAuthUser();
 
-    const { data, error } = await supabase
-      .from('connections')
+    const { data, error } = await from('connections')
       .select(`
         *,
         requester:profiles!requester_id(id, full_name, avatar_url, role, college_domain, headline)
@@ -507,8 +503,7 @@ export async function getSuggestedConnections() {
 
     if (!collegeDomain) return [];
 
-    const { data: existingConnections } = await supabase
-      .from('connections')
+    const { data: existingConnections } = await from('connections')
       .select('requester_id, receiver_id')
       .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`)
       .in('status', ['pending', 'accepted', 'blocked']);
@@ -521,8 +516,7 @@ export async function getSuggestedConnections() {
       }
     }
 
-    const { data, error } = await supabase
-      .from('profiles')
+    const { data, error } = await from('profiles')
       .select('id, full_name, avatar_url, role, college_domain, headline, bio')
       .eq('college_domain', collegeDomain)
       .not('id', 'in', `(${Array.from(excludeIds).join(',')})`)
@@ -540,8 +534,7 @@ export async function sendConnectionRequest(userId: string) {
   try {
     const user = await getAuthUser();
 
-    const { data, error } = await supabase
-      .from('connections')
+    const { data, error } = await from('connections')
       .insert({
         requester_id: user.id,
         receiver_id: userId,
@@ -560,8 +553,7 @@ export async function sendConnectionRequest(userId: string) {
 
 export async function acceptConnection(connectionId: string) {
   try {
-    const { data, error } = await supabase
-      .from('connections')
+    const { data, error } = await from('connections')
       .update({ status: 'accepted' })
       .eq('id', connectionId)
       .select()
@@ -577,8 +569,7 @@ export async function acceptConnection(connectionId: string) {
 
 export async function rejectConnection(connectionId: string) {
   try {
-    const { data, error } = await supabase
-      .from('connections')
+    const { data, error } = await from('connections')
       .update({ status: 'rejected' })
       .eq('id', connectionId)
       .select()
@@ -598,8 +589,7 @@ export async function getConversations() {
   try {
     const user = await getAuthUser();
 
-    const { data: messages, error } = await supabase
-      .from('messages')
+    const { data: messages, error } = await from('messages')
       .select('*')
       .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
@@ -622,8 +612,7 @@ export async function getConversations() {
     }
 
     const partnerIds = Array.from(conversationMap.keys());
-    const { data: profiles } = await supabase
-      .from('profiles')
+    const { data: profiles } = await from('profiles')
       .select('id, full_name, avatar_url, role, college_domain, headline')
       .in('id', partnerIds);
 
@@ -661,8 +650,7 @@ export async function getMessages(partnerId: string) {
   try {
     const user = await getAuthUser();
 
-    const { data, error } = await supabase
-      .from('messages')
+    const { data, error } = await from('messages')
       .select('*')
       .or(
         `and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`
@@ -682,8 +670,7 @@ export async function sendMessage(receiverId: string, content: string) {
     const user = await getAuthUser();
     const collegeDomain = await getUserCollegeDomain();
 
-    const { data, error } = await supabase
-      .from('messages')
+    const { data, error } = await from('messages')
       .insert({
         sender_id: user.id,
         receiver_id: receiverId,
@@ -706,8 +693,7 @@ export async function markMessagesAsRead(partnerId: string) {
   try {
     const user = await getAuthUser();
 
-    const { error } = await supabase
-      .from('messages')
+    const { error } = await from('messages')
       .update({ is_read: true })
       .eq('sender_id', partnerId)
       .eq('receiver_id', user.id)
@@ -727,8 +713,7 @@ export async function getEvents() {
     const user = await getAuthUser();
     const collegeDomain = await getUserCollegeDomain();
 
-    let query = supabase
-      .from('events')
+    let query = from('events')
       .select('*, creator:profiles!creator_id(id, full_name, avatar_url, role, college_domain, headline)')
       .order('event_date', { ascending: true });
 
@@ -743,12 +728,10 @@ export async function getEvents() {
     const eventIds = events.map((e: any) => e.id);
 
     const [registrationsResult, userRegistrations] = await Promise.all([
-      supabase
-        .from('event_registrations')
+      from('event_registrations')
         .select('event_id')
         .in('event_id', eventIds),
-      supabase
-        .from('event_registrations')
+      from('event_registrations')
         .select('event_id')
         .eq('user_id', user.id)
         .in('event_id', eventIds),
@@ -783,8 +766,7 @@ export async function getEventById(eventId: string) {
   try {
     const user = await getAuthUser();
 
-    const { data: event, error } = await supabase
-      .from('events')
+    const { data: event, error } = await from('events')
       .select('*, creator:profiles!creator_id(id, full_name, avatar_url, role, college_domain, headline)')
       .eq('id', eventId)
       .single();
@@ -792,12 +774,10 @@ export async function getEventById(eventId: string) {
     if (error) throw error;
 
     const [regCountResult, userRegResult] = await Promise.all([
-      supabase
-        .from('event_registrations')
+      from('event_registrations')
         .select('id', { count: 'exact' })
         .eq('event_id', eventId),
-      supabase
-        .from('event_registrations')
+      from('event_registrations')
         .select('id')
         .eq('event_id', eventId)
         .eq('user_id', user.id)
@@ -819,23 +799,20 @@ export async function toggleEventRegistration(eventId: string) {
   try {
     const user = await getAuthUser();
 
-    const { data: existing } = await supabase
-      .from('event_registrations')
+    const { data: existing } = await from('event_registrations')
       .select('id')
       .eq('event_id', eventId)
       .eq('user_id', user.id)
       .maybeSingle();
 
     if (existing) {
-      const { error } = await supabase
-        .from('event_registrations')
+      const { error } = await from('event_registrations')
         .delete()
         .eq('id', existing.id);
       if (error) throw error;
       return { registered: false };
     } else {
-      const { error } = await supabase
-        .from('event_registrations')
+      const { error } = await from('event_registrations')
         .insert({
           event_id: eventId,
           user_id: user.id,
@@ -855,8 +832,7 @@ export async function getProfile(userId?: string) {
   try {
     const targetId = userId ?? (await getAuthUser()).id;
 
-    const { data, error } = await supabase
-      .from('profiles')
+    const { data, error } = await from('profiles')
       .select('*')
       .eq('id', targetId)
       .single();
@@ -875,8 +851,7 @@ export async function updateProfile(profileData: Partial<Profile>) {
 
     const { id, ...updateData } = profileData;
 
-    const { data, error } = await supabase
-      .from('profiles')
+    const { data, error } = await from('profiles')
       .update(updateData)
       .eq('id', user.id)
       .select()
@@ -892,8 +867,7 @@ export async function updateProfile(profileData: Partial<Profile>) {
 
 export async function getExperiences(profileId: string) {
   try {
-    const { data, error } = await supabase
-      .from('experiences')
+    const { data, error } = await from('experiences')
       .select('*')
       .eq('profile_id', profileId)
       .order('start_date', { ascending: false });
@@ -908,8 +882,7 @@ export async function getExperiences(profileId: string) {
 
 export async function getEducation(profileId: string) {
   try {
-    const { data, error } = await supabase
-      .from('education')
+    const { data, error } = await from('education')
       .select('*')
       .eq('profile_id', profileId)
       .order('start_date', { ascending: false });
@@ -924,8 +897,7 @@ export async function getEducation(profileId: string) {
 
 export async function getSkills(profileId: string) {
   try {
-    const { data, error } = await supabase
-      .from('skills')
+    const { data, error } = await from('skills')
       .select('*')
       .eq('profile_id', profileId)
       .order('name', { ascending: true });
@@ -944,8 +916,7 @@ export async function getNotifications() {
   try {
     const user = await getAuthUser();
 
-    const { data, error } = await supabase
-      .from('notifications')
+    const { data, error } = await from('notifications')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
@@ -961,8 +932,7 @@ export async function getNotifications() {
 
 export async function markNotificationRead(notificationId: string) {
   try {
-    const { error } = await supabase
-      .from('notifications')
+    const { error } = await from('notifications')
       .update({ is_read: true })
       .eq('id', notificationId);
 

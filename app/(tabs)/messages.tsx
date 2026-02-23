@@ -39,8 +39,8 @@ export default function MessagesScreen() {
     if (!searchQuery.trim()) return conversations;
     const q = searchQuery.toLowerCase();
     return conversations.filter((c: Conversation) =>
-      c.partner_name?.toLowerCase().includes(q) ||
-      c.last_message?.toLowerCase().includes(q),
+      c.partner?.full_name?.toLowerCase().includes(q) ||
+      (typeof c.last_message === 'object' ? c.last_message?.content : '')?.toLowerCase().includes(q),
     );
   }, [conversations, searchQuery]);
 

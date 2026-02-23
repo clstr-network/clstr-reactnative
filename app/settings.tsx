@@ -185,7 +185,7 @@ export default function SettingsScreen() {
     const isTransitioned = emailTransition.status === 'transitioned';
     const resetEmail = isTransitioned && emailTransition.personalEmail
       ? emailTransition.personalEmail
-      : identity?.email;
+      : (identity?.college_email ?? identity?.personal_email);
 
     if (!resetEmail) {
       Alert.alert('No email', 'Your account does not have an email address on file.');
@@ -206,7 +206,7 @@ export default function SettingsScreen() {
     } finally {
       setIsSendingReset(false);
     }
-  }, [emailTransition.status, emailTransition.personalEmail, identity?.email]);
+  }, [emailTransition.status, emailTransition.personalEmail, identity?.college_email, identity?.personal_email]);
 
   // ── Push notification test ──
   const handleTestPush = useCallback(async () => {
@@ -532,7 +532,7 @@ export default function SettingsScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.settingSubtitle, { color: colors.textTertiary }]}>College Email</Text>
                   <Text style={[styles.settingLabel, { color: colors.text }]}>
-                    {emailTransition.collegeEmail ?? identity?.email ?? 'Not set'}
+                    {emailTransition.collegeEmail ?? identity?.college_email ?? 'Not set'}
                   </Text>
                 </View>
               </View>
@@ -565,7 +565,7 @@ export default function SettingsScreen() {
                 </View>
               )}
 
-              {emailTransition.status === 'pending_verification' && (
+              {emailTransition.status === 'pending' && (
                 <View style={{ padding: 14 }}>
                   <Text style={[styles.settingLabel, { color: colors.text, marginBottom: 4 }]}>
                     Verify: {emailTransition.personalEmail}
@@ -861,7 +861,7 @@ export default function SettingsScreen() {
                   const isTransitioned = emailTransition.status === 'transitioned';
                   return isTransitioned && emailTransition.personalEmail
                     ? emailTransition.personalEmail
-                    : (identity?.email ?? 'your email');
+                    : (identity?.college_email ?? identity?.personal_email ?? 'your email');
                 })()}
               </Text>.
             </Text>
