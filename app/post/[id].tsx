@@ -20,6 +20,8 @@ import ReactionPicker, { type ReactionType } from '@/components/ReactionPicker';
 import ReactionDisplay from '@/components/ReactionDisplay';
 import CommentSection from '@/components/CommentSection';
 import PostActionSheet from '@/components/PostActionSheet';
+import ShareSheet from '@/components/ShareSheet';
+import RepostSheet from '@/components/RepostSheet';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import {
   getPostById,
@@ -38,6 +40,8 @@ export default function PostDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
+  const [repostSheetVisible, setRepostSheetVisible] = useState(false);
 
   const { data: post } = useQuery({
     queryKey: ['post', id],
@@ -85,6 +89,16 @@ export default function PostDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     saveMutation.mutate();
   }, [saveMutation]);
+
+  const handleShare = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShareSheetVisible(true);
+  }, []);
+
+  const handleRepost = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRepostSheetVisible(true);
+  }, []);
 
   if (!post) {
     return (
@@ -228,6 +242,20 @@ export default function PostDetailScreen() {
               <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
               <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>{post.comments_count ?? 0}</Text>
             </Pressable>
+            <Pressable style={styles.actionItem} onPress={handleRepost}>
+              <Ionicons
+                name={(post as any).is_reposted ? 'repeat' : 'repeat-outline'}
+                size={20}
+                color={(post as any).is_reposted ? colors.success : colors.textSecondary}
+              />
+              <Text style={[styles.actionLabel, { color: (post as any).is_reposted ? colors.success : colors.textSecondary }]}>
+                {post.reposts_count ?? 0}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.actionItem} onPress={handleShare}>
+              <Ionicons name="paper-plane-outline" size={20} color={colors.textSecondary} />
+              <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Share</Text>
+            </Pressable>
             <Pressable style={styles.actionItem} onPress={handleSave}>
               <Ionicons
                 name={isSaved ? 'bookmark' : 'bookmark-outline'}
@@ -263,6 +291,28 @@ export default function PostDetailScreen() {
         authorId={post.user_id}
         isSaved={isSaved}
         onPostRemoved={() => router.back()}
+      />
+
+      {/* Phase 11: Share & Repost sheets */}
+      <ShareSheet
+        visible={shareSheetVisible}
+        onClose={() => setShareSheetVisible(false)}
+        shareData={{
+          type: 'post',
+          id: String(post.id),
+          previewText: post.content?.slice(0, 120) ?? '',
+          authorName: profile?.full_name ?? 'Unknown',
+        }}
+      />
+      <RepostSheet
+        visible={repostSheetVisible}
+        onClose={() => setRepostSheetVisible(false)}
+        postId={String(post.id)}
+        isReposted={!!(post as any).is_reposted}
+        postPreview={{
+          authorName: profile?.full_name ?? 'Unknown',
+          content: post.content?.slice(0, 200) ?? '',
+        }}
       />
     </KeyboardAvoidingView>
   );

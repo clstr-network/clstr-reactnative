@@ -13,6 +13,7 @@ import {
   Pressable,
   Platform,
   ActivityIndicator,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,8 +24,6 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { getJobById, toggleSaveJob, applyToJob } from '@/lib/api/jobs';
-import type { Job } from '@/lib/api/jobs';
-import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { QUERY_KEYS } from '@/lib/query-keys';
 
@@ -33,8 +32,6 @@ export default function JobDetailScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const { identity } = useIdentityContext();
-  const userId = identity?.user_id ?? '';
   const { canApplyToJobs, canSaveJobs } = useFeatureAccess();
 
   const { data: result, isLoading } = useQuery({
@@ -71,6 +68,17 @@ export default function JobDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     saveMutation.mutate();
   }, [saveMutation]);
+
+  const handleShare = useCallback(async () => {
+    if (!job) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Share.share({
+        message: `${job.title}${job.company_name ? ` at ${job.company_name}` : ''} — Check it out on Clstr!\nhttps://clstr.network/job/${id}`,
+        url: `https://clstr.network/job/${id}`,
+      });
+    } catch {}
+  }, [job, id]);
 
   if (isLoading) {
     return (
@@ -120,17 +128,20 @@ export default function JobDetailScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Job Details</Text>
-        {canSaveJobs ? (
-          <Pressable onPress={handleSave} hitSlop={8}>
-            <Ionicons
-              name={job.isSaved ? 'bookmark' : 'bookmark-outline'}
-              size={22}
-              color={job.isSaved ? colors.primary : colors.text}
-            />
+        <View style={styles.headerRight}>
+          <Pressable onPress={handleShare} hitSlop={8}>
+            <Ionicons name="share-outline" size={22} color={colors.text} />
           </Pressable>
-        ) : (
-          <View style={{ width: 24 }} />
-        )}
+          {canSaveJobs ? (
+            <Pressable onPress={handleSave} hitSlop={8}>
+              <Ionicons
+                name={job.isSaved ? 'bookmark' : 'bookmark-outline'}
+                size={22}
+                color={job.isSaved ? colors.primary : colors.text}
+              />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -333,5 +344,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: fontSize.lg,
     fontFamily: fontFamily.bold,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
 });

@@ -17,6 +17,8 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import PostCard from '@/components/PostCard';
+import ShareSheet from '@/components/ShareSheet';
+import RepostSheet from '@/components/RepostSheet';
 import { useFeedSubscription } from '@/lib/hooks/useFeedSubscription';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useNotificationSubscription } from '@/lib/hooks/useNotificationSubscription';
@@ -38,6 +40,10 @@ export default function FeedScreen() {
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
+
+  // Phase 11 — Share & Repost sheet state
+  const [sharePost, setSharePost] = useState<Post | null>(null);
+  const [repostTarget, setRepostTarget] = useState<{ postId: string; isReposted: boolean; authorName?: string; content?: string } | null>(null);
 
   const PAGE_SIZE = 20;
 
@@ -132,28 +138,19 @@ export default function FeedScreen() {
     router.push({ pathname: '/post/[id]', params: { id: postId } });
   }, []);
 
-  const handleShare = useCallback((postId: string, isSaved: boolean) => {
+  // Phase 11 — Open ShareSheet with post context
+  const handleShare = useCallback((post: Post) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({
-      pathname: '/post-actions',
-      params: { id: postId, isSaved: isSaved ? 'true' : 'false' },
-    });
+    setSharePost(post);
   }, []);
 
-  const repostMutation = useMutation({
-    mutationFn: ({ postId, isReposted }: { postId: string; isReposted: boolean }) =>
-      isReposted ? deleteRepost(postId) : createRepost(postId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
-    },
-  });
-
+  // Phase 11 — Open RepostSheet with post context
   const handleRepost = useCallback(
-    (postId: string, isReposted: boolean) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      repostMutation.mutate({ postId, isReposted });
+    (postId: string, isReposted: boolean, authorName?: string, content?: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setRepostTarget({ postId, isReposted, authorName, content });
     },
-    [repostMutation],
+    [],
   );
 
   const handleLoadMore = useCallback(() => {
@@ -201,8 +198,8 @@ export default function FeedScreen() {
         onPress={() => handlePress(item.id)}
         onReact={(type) => handleReact(item.id, type)}
         onComment={() => handleComment(item.id)}
-        onShare={() => handleShare(item.id, !!item.is_saved)}
-        onRepost={() => handleRepost(item.id, !!item.reposted)}
+        onShare={() => handleShare(item)}
+        onRepost={() => handleRepost(item.id, !!item.reposted, item.profile?.full_name, item.content)}
         onSave={() => handleSave(item.id)}
         onVotePoll={(index) => handleVotePoll(item.id, index)}
         onPostRemoved={() => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed })}
@@ -360,6 +357,30 @@ export default function FeedScreen() {
           }
         />
       )}
+
+      {/* Phase 11 — ShareSheet */}
+      <ShareSheet
+        visible={!!sharePost}
+        onClose={() => setSharePost(null)}
+        shareData={{
+          type: 'post',
+          id: sharePost?.id ?? '',
+          previewText: sharePost?.content ?? undefined,
+          authorName: sharePost?.profile?.full_name ?? undefined,
+        }}
+      />
+
+      {/* Phase 11 — RepostSheet */}
+      <RepostSheet
+        visible={!!repostTarget}
+        onClose={() => setRepostTarget(null)}
+        postId={repostTarget?.postId ?? ''}
+        isReposted={repostTarget?.isReposted ?? false}
+        postPreview={{
+          authorName: repostTarget?.authorName,
+          content: repostTarget?.content,
+        }}
+      />
     </View>
   );
 }

@@ -291,7 +291,20 @@ The mobile create-post screen only supports text + single image. Web supports 4 
 
 ---
 
-## Phase 11 — Social Sharing Features (P1)
+## Phase 11 — Social Sharing Features (P1) ✅ COMPLETED
+
+> **Implementation completed 2026-02-23.** All 4 tasks delivered. Posts can now be shared to connections via DM (multi-select with search) or via native OS share sheet. Repost modal supports quick repost, repost with commentary, and undo. Share buttons added to job and project detail screens.
+>
+> **New files created:**
+> - `components/ShareSheet.tsx` — bottom-sheet modal with two modes: Copy Link + Native Share, and Send to Connections (searchable list, multi-select, optional message, batch DM send via `sharePostToMultiple()`)
+> - `components/RepostSheet.tsx` — bottom-sheet modal with Quick Repost, Repost with Thoughts (commentary TextInput + post preview), and Undo Repost options
+>
+> **Modified files:**
+> - `app/(tabs)/index.tsx` — integrated ShareSheet + RepostSheet into feed (replaced old navigate-to-post-actions share and direct repost mutation)
+> - `app/post/[id].tsx` — added Repost + Share buttons to action bar, wired to ShareSheet + RepostSheet
+> - `app/job/[id].tsx` — added native `Share.share()` button in header alongside bookmark
+> - `app/project/[id].tsx` — added native `Share.share()` button in header
+> - `app/user/[id].tsx` — verified: profile share already implemented via `Share.share()` in Options alert
 
 ### Task 11.1: Share to Connections (DM Share)
 
@@ -854,8 +867,8 @@ npx expo install @react-native-community/datetimepicker react-native-markdown-di
 | Video post creation | ✅ Done | 10.2 |
 | Document post creation | ✅ Done | 10.3 |
 | Poll creation | ✅ Done | 10.4 |
-| Share to connections | 🔨 Phase 11 | 11.1 |
-| Repost modal | 🔨 Phase 11 | 11.2 |
+| Share to connections | ✅ Done | 11.1 |
+| Repost modal | ✅ Done | 11.2 |
 | Profile 3-tab layout | 🔨 Phase 12 | 12.2 |
 | Edit profile social links | 🔨 Phase 12 | 12.3 |
 | Jobs recommended + apply | 🔨 Phase 12 | 12.5 |

@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,6 +104,17 @@ export default function ProjectDetailScreen() {
   const project = projectQ.data as Project | undefined;
   const roles = (rolesQ.data ?? []) as ProjectRole[];
 
+  const handleShareProject = useCallback(async () => {
+    if (!project) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Share.share({
+        message: `${project.title} — Check out this project on Clstr!\nhttps://clstr.network/project/${id}`,
+        url: `https://clstr.network/project/${id}`,
+      });
+    } catch {}
+  }, [project, id]);
+
   const applyMut = useMutation({
     mutationFn: () =>
       applyForRole({
@@ -160,7 +172,9 @@ export default function ProjectDetailScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
           Project Details
         </Text>
-        <View style={{ width: 24 }} />
+        <Pressable onPress={handleShareProject} hitSlop={8}>
+          <Ionicons name="share-outline" size={22} color={colors.text} />
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
