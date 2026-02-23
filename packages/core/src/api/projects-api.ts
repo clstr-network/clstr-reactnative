@@ -1078,3 +1078,122 @@ export async function updateProjectApplicationStatus(
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Team Members
+// ---------------------------------------------------------------------------
+
+export type TeamMember = {
+  id: string;
+  user_id: string;
+  project_id: string;
+  role_id: string | null;
+  role_name: string | null;
+  is_owner: boolean;
+  status: string;
+  profile?: ProjectOwner;
+};
+
+/**
+ * Get team members for a specific project.
+ */
+export async function getProjectTeamMembers(
+  client: SupabaseClient,
+  projectId: string,
+): Promise<{ data: TeamMember[]; error: string | null }> {
+  try {
+    assertValidUuid(projectId, 'projectId');
+
+    const { data, error } = await client
+      .from('collab_team_members')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('status', 'active')
+      .order('is_owner', { ascending: false });
+
+    if (error) throw error;
+
+    const rows = (data ?? []) as Record<string, any>[];
+    const profileMap = await fetchProfileSummariesById(
+      client,
+      rows.map((row) => row.user_id),
+    );
+
+    const members: TeamMember[] = rows.map((row) => ({
+      id: row.id,
+      user_id: row.user_id,
+      project_id: row.project_id,
+      role_id: row.role_id ?? null,
+      role_name: row.role_name ?? null,
+      is_owner: row.is_owner ?? false,
+      status: row.status ?? 'active',
+      profile: profileMap.get(row.user_id) ?? fallbackOwner(row.user_id),
+    }));
+
+    return { data: members, error: null };
+  } catch (error) {
+    console.error('Error fetching team members:', error);
+    return { data: [], error: getErrorMessage(error, 'Failed to fetch team members') };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Update Project Status
+// ---------------------------------------------------------------------------
+
+export interface UpdateProjectStatusParams {
+  projectId: string;
+  ownerId: string;
+  status: string;
+}
+
+/**
+ * Update a project's status (open, in_progress, closed, archived).
+ */
+export async function updateProjectStatus(
+  client: SupabaseClient,
+  params: UpdateProjectStatusParams,
+): Promise<{ success: boolean; error: string | null }> {
+  try {
+    assertValidUuid(params.projectId, 'projectId');
+    assertValidUuid(params.ownerId, 'ownerId');
+
+    if (!ALLOWED_PROJECT_STATUS.includes(params.status)) {
+      throw new Error(`Invalid status: ${params.status}`);
+    }
+
+    const {
+      data: { user },
+    } = await client.auth.getUser();
+
+    if (!user || user.id !== params.ownerId) {
+      throw new Error('Unauthorized: active session mismatch');
+    }
+
+    const { data: project, error: projectError } = await client
+      .from('collab_projects')
+      .select('id, owner_id')
+      .eq('id', params.projectId)
+      .single();
+
+    if (projectError) throw projectError;
+    if (!project || project.owner_id !== params.ownerId) {
+      throw new Error('Unauthorized: only project owners can change status');
+    }
+
+    const { error } = await client
+      .from('collab_projects')
+      .update({ status: params.status } as any)
+      .eq('id', params.projectId);
+
+    if (error) throw error;
+
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Error updating project status:', error);
+    return {
+      success: false,
+      error: getErrorMessage(error, 'Failed to update project status'),
+    };
+  }
+}

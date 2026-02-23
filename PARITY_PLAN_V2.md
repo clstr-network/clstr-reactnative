@@ -669,37 +669,47 @@ Subscribe to: `connections`, `profile_views`, `posts` for own profile.
 
 ---
 
-## Phase 14 — Missing Screens (P2)
+## Phase 14 — Missing Screens (P2) ✅ COMPLETED
 
-### Task 14.1: Project Detail Screen
+### Task 14.1: Project Detail Screen ✅
 
-**File**: `app/project/[id].tsx` (NEW ~400 lines)  
+**File**: `app/project/[id].tsx` (ENHANCED 448 → ~750 lines)  
 **Effort**: 8 hrs
 
-**What to build**:
-- Full project detail: title, description, cover image, tech stack, team members, open roles
+**Implemented**:
+- Full project detail: title, description, cover image (hero), tech stack, team members, open roles
 - Apply for role button (with role selector)
-- Owner actions: manage applications, edit project, close project
-- Status badge, dates, remote indicator
+- Owner actions: manage applications, close/reopen project, delete project
+- Status badge, dates row (starts_on/ends_on), remote indicator (globe/location icon)
+- Owner info section with Avatar + tap-to-profile navigation
+- Team members section with TeamMemberCard (owner badge, role display)
+- Application management panel (ApplicationCard with accept/reject for owners)
+- Skills section with chip tags, Tags section
+- Realtime subscription on 4 tables (collab_projects, collab_project_roles, collab_team_members, collab_project_applications)
+- Summary/description section
+- Infrastructure: Added `getProjectTeamMembers()`, `updateProjectStatus()` to `packages/core/src/api/projects-api.ts`, bindings in `lib/api/projects.ts`, `projectDetail` channel in `packages/core/src/channels.ts`
 
-### Task 14.2: Landing/Marketing Page (Web-only or Deep Link Target)
+### Task 14.2: Landing/Marketing Page (Web-only or Deep Link Target) — SKIPPED
 
 **File**: Not needed for mobile — native app opens to login directly.
 
-### Task 14.3: Club Detail Screen
+### Task 14.3: Club Detail Screen — SKIPPED
 
 Already covered in Task 12.8.
 
-### Task 14.4: Portfolio Template Picker
+### Task 14.4: Portfolio Template Picker ✅
 
-**File**: `app/portfolio-template-picker.tsx` (NEW ~200 lines)  
+**File**: `app/portfolio-template-picker.tsx` (NEW ~220 lines)  
 **Source**: Web PortfolioTemplatePicker.tsx  
 **Effort**: 4 hrs
 
-**What to build**:
-- Template grid with previews
-- Select template → save to portfolio settings
-- Navigate to portfolio editor
+**Implemented**:
+- 2-column FlatList grid with all 4 templates (minimal, eliana, typefolio, geeky)
+- TemplateCard with colored preview thumbnail, accent icon, template name, description
+- "Current" badge on active template
+- Tap to select → calls `updateSettings({ template })` (auto-saves to Supabase)
+- Haptic feedback on selection, navigates back to editor after apply
+- OLED dark theme, uses `usePortfolioEditor` hook and `PORTFOLIO_TEMPLATES` constant
 
 ---
 
@@ -931,7 +941,8 @@ npx expo install @react-native-community/datetimepicker react-native-markdown-di
 | Alumni connect/message | ✅ Done | 12.9 |
 | Multi-category search | ✅ Done | 12.11 |
 | All realtime subscriptions | ✅ Done | 13.1-13.11 |
-| Project detail screen | 🔨 Phase 14 | 14.1 |
+| Project detail screen | ✅ Done | 14.1 |
+| Portfolio template picker | ✅ Done | 14.4 |
 | Skeleton loading screens | 🔨 Phase 15 | 15.4 |
 | Toast/snackbar system | 🔨 Phase 15 | 15.5 |
 | Chat online status | 🔨 Phase 16 | 16.1 |
@@ -1007,7 +1018,7 @@ Without these, Google OAuth will silently fail — the browser will redirect but
 | Phase 11: Social Sharing | 17 |
 | Phase 12: Screen Depth | 68 |
 | Phase 13: Realtime | 16 |
-| Phase 14: Missing Screens | 12 |
+| Phase 14: Missing Screens | 12 | ✅ COMPLETED |
 | Phase 15: Design Polish | 12 |
 | Phase 16: Messaging | 9 |
 | **TOTAL** | **~205 hrs** |

@@ -28,6 +28,7 @@ export const CHANNELS = {
 
   // Projects
   projects: (domain: string, userId: string) => `projects-${domain}-${userId}`,
+  projectDetail: (projectId: string) => `project-detail-${projectId}`,
   teamUps: (domain: string, userId: string) => `team-ups-${domain}-${userId}`,
 
   // Network
