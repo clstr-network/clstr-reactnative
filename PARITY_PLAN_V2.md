@@ -1,7 +1,7 @@
 # Clstr.network → clstr-reactnative: Full Parity Implementation Plan v2
 
 > **Generated**: June 24, 2025  
-> **Baseline**: Phases 0–8 complete (auth, onboarding, theme, hooks, screens, TS audit)  
+> **Baseline**: Phases 0–10 complete (auth, onboarding, theme, hooks, screens, TS audit, PostCard parity, rich post creation)  
 > **Scope**: All remaining feature gaps between web (`src/`) and mobile (`app/` + `lib/`)  
 > **Goal**: Pixel-perfect feature parity for non-admin, production-quality mobile app
 
@@ -210,9 +210,18 @@ The web PostCard is 1,108 lines. The mobile PostCard component is ~80 lines. Thi
 
 ---
 
-## Phase 10 — Rich Post Creation (P0 — Content Creation)
+## Phase 10 — Rich Post Creation (P0 — Content Creation) ✅ COMPLETED
 
 The mobile create-post screen only supports text + single image. Web supports 4 content types.
+
+> **Implementation completed 2026-02-23.** All 5 tasks delivered. Mobile create-post screen rewritten from ~170 lines to ~500 lines with 4-tab content switcher, multi-image, video, document, and poll creation. Dependencies installed: `expo-image-manipulator`, `expo-document-picker`.
+>
+> **New files created:**
+> - `components/PollCreator.tsx` — 2-6 option poll builder with duration selector and validation
+>
+> **Modified files:**
+> - `app/create-post.tsx` — full rewrite with tab switcher + multi-image + video + document + poll
+> - `packages/core/src/api/social-api.ts` — extended `CreatePostPayload` with `attachments[]` array for batch uploads
 
 ### Task 10.1: Multi-Image Upload + Preview
 
@@ -841,10 +850,10 @@ npx expo install @react-native-community/datetimepicker react-native-markdown-di
 | Inline threaded comments | ✅ Done | 9.6 |
 | Post action menu (edit/delete/report) | ✅ Done | 9.7 |
 | Save/bookmark toggle | ✅ Done | 9.8 |
-| Multi-image post creation | 🔨 Phase 10 | 10.1 |
-| Video post creation | 🔨 Phase 10 | 10.2 |
-| Document post creation | 🔨 Phase 10 | 10.3 |
-| Poll creation | 🔨 Phase 10 | 10.4 |
+| Multi-image post creation | ✅ Done | 10.1 |
+| Video post creation | ✅ Done | 10.2 |
+| Document post creation | ✅ Done | 10.3 |
+| Poll creation | ✅ Done | 10.4 |
 | Share to connections | 🔨 Phase 11 | 11.1 |
 | Repost modal | 🔨 Phase 11 | 11.2 |
 | Profile 3-tab layout | 🔨 Phase 12 | 12.2 |

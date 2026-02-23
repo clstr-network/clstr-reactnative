@@ -110,6 +110,8 @@ export type PostAttachmentInput = {
 export interface CreatePostPayload {
   content: string;
   attachment?: PostAttachmentInput;
+  /** Multiple attachments — images (up to 10), or a single video, or documents. */
+  attachments?: PostAttachmentInput[];
   poll?: Poll;
 }
 
@@ -376,14 +378,22 @@ export async function createPost(client: SupabaseClient, payload: CreatePostPayl
     let video: string | undefined;
     let documents: string[] | undefined;
 
-    if (payload.attachment) {
-      const { type, file, url } = payload.attachment;
+    // Support both single `attachment` and batch `attachments` array
+    const allAttachments: PostAttachmentInput[] = [];
+    if (payload.attachments && payload.attachments.length > 0) {
+      allAttachments.push(...payload.attachments);
+    } else if (payload.attachment) {
+      allAttachments.push(payload.attachment);
+    }
+
+    for (const att of allAttachments) {
+      const { type, file, url } = att;
       if (type === "image") {
         if (file) {
           const uploadedUrl = await uploadPostAttachment(client, file, user.id, "image");
-          images = [uploadedUrl];
+          images = images ? [...images, uploadedUrl] : [uploadedUrl];
         } else if (url) {
-          images = [url];
+          images = images ? [...images, url] : [url];
         }
       } else if (type === "video") {
         if (file) {
@@ -394,7 +404,7 @@ export async function createPost(client: SupabaseClient, payload: CreatePostPayl
       } else if (type === "document") {
         if (file) {
           const uploadedUrl = await uploadPostAttachment(client, file, user.id, "document");
-          documents = [uploadedUrl];
+          documents = documents ? [...documents, uploadedUrl] : [uploadedUrl];
         }
       }
     }
