@@ -28,6 +28,7 @@ import {
   type Post,
   type ReactionType,
 } from '@/lib/api';
+import { toggleSavePost, voteOnPoll } from '@/lib/api/social';
 
 type SortOrder = 'recent' | 'top';
 
@@ -80,16 +81,47 @@ export default function FeedScreen() {
     },
   });
 
+  const saveMutation = useMutation({
+    mutationFn: (postId: string) => toggleSavePost(postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
+    },
+  });
+
+  const pollVoteMutation = useMutation({
+    mutationFn: ({ postId, optionIndex }: { postId: string; optionIndex: number }) =>
+      voteOnPoll(postId, optionIndex),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
+    },
+  });
+
   const handleRefresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
   }, [queryClient]);
 
   const handleReact = useCallback(
-    (postId: string) => {
+    (postId: string, type: ReactionType) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      reactionMutation.mutate({ postId, type: 'like' });
+      reactionMutation.mutate({ postId, type });
     },
     [reactionMutation],
+  );
+
+  const handleSave = useCallback(
+    (postId: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      saveMutation.mutate(postId);
+    },
+    [saveMutation],
+  );
+
+  const handleVotePoll = useCallback(
+    (postId: string, optionIndex: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      pollVoteMutation.mutate({ postId, optionIndex });
+    },
+    [pollVoteMutation],
   );
 
   const handlePress = useCallback((postId: string) => {
@@ -135,9 +167,15 @@ export default function FeedScreen() {
       <PostCard
         post={{
           id: item.id,
+          user_id: item.user_id,
           content: item.content,
+          images: item.images ?? null,
+          video: (item as any).video ?? null,
+          documents: (item as any).documents ?? null,
+          poll: (item as any).poll ?? null,
           user: item.profile
             ? {
+                id: item.profile.id ?? item.user_id,
                 full_name: item.profile.full_name,
                 avatar_url: item.profile.avatar_url,
                 role: item.profile.role ?? undefined,
@@ -153,18 +191,24 @@ export default function FeedScreen() {
           userReaction: item.user_reaction ?? null,
           topReactions: item.reactions_summary
             ? Object.entries(item.reactions_summary)
-                .map(([type, count]) => ({ type, count }))
+                .map(([type, count]) => ({ type, count, emoji: '' }))
                 .sort((a, b) => b.count - a.count)
             : undefined,
+          isRepost: !!(item as any).is_repost,
+          originalPost: (item as any).original_post ?? null,
+          repostCommentary: (item as any).repost_commentary ?? null,
         }}
         onPress={() => handlePress(item.id)}
-        onReact={() => handleReact(item.id)}
+        onReact={(type) => handleReact(item.id, type)}
         onComment={() => handleComment(item.id)}
         onShare={() => handleShare(item.id, !!item.is_saved)}
         onRepost={() => handleRepost(item.id, !!item.reposted)}
+        onSave={() => handleSave(item.id)}
+        onVotePoll={(index) => handleVotePoll(item.id, index)}
+        onPostRemoved={() => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed })}
       />
     ),
-    [handlePress, handleReact, handleComment, handleShare, handleRepost],
+    [handlePress, handleReact, handleComment, handleShare, handleRepost, handleSave, handleVotePoll, queryClient],
   );
 
   const keyExtractor = useCallback((item: Post) => item.id, []);

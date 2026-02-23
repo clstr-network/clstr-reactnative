@@ -1,6 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput, Pressable, Platform
+  View, Text, StyleSheet, Pressable, Platform, ScrollView
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -9,19 +9,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
-import Avatar from '@/components/Avatar';
+import { Avatar } from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
+import ImageGrid from '@/components/ImageGrid';
+import ImageLightbox from '@/components/ImageLightbox';
+import VideoPlayer from '@/components/VideoPlayer';
+import DocumentAttachment from '@/components/DocumentAttachment';
+import PollView from '@/components/PollView';
+import ReactionPicker, { type ReactionType } from '@/components/ReactionPicker';
+import ReactionDisplay from '@/components/ReactionDisplay';
+import CommentSection from '@/components/CommentSection';
+import PostActionSheet from '@/components/PostActionSheet';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import {
   getPostById,
-  getComments,
-  addComment,
   toggleReaction,
-  type Post,
-  type Comment,
-  type ReactionType,
   REACTION_EMOJI_MAP,
 } from '@/lib/api';
+import { toggleSavePost, voteOnPoll } from '@/lib/api/social';
 import { formatRelativeTime } from '@/lib/time';
 
 export default function PostDetailScreen() {
@@ -29,22 +34,16 @@ export default function PostDetailScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const [commentText, setCommentText] = useState('');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [actionSheetVisible, setActionSheetVisible] = useState(false);
 
   const { data: post } = useQuery({
     queryKey: ['post', id],
     queryFn: () => getPostById(id!),
     enabled: !!id,
-    staleTime: 30_000,       // 30s
-    gcTime: 5 * 60 * 1000,   // 5min
-  });
-
-  const { data: comments = [] } = useQuery({
-    queryKey: ['comments', id],
-    queryFn: () => getComments(id!),
-    enabled: !!id,
-    staleTime: 15_000,       // 15s — comments update moderately
+    staleTime: 30_000,
     gcTime: 5 * 60 * 1000,
   });
 
@@ -57,27 +56,35 @@ export default function PostDetailScreen() {
     },
   });
 
-  const commentMutation = useMutation({
-    mutationFn: (content: string) => addComment(id!, content),
+  const saveMutation = useMutation({
+    mutationFn: () => toggleSavePost(id!),
     onSuccess: () => {
-      setCommentText('');
-      queryClient.invalidateQueries({ queryKey: ['comments', id] });
       queryClient.invalidateQueries({ queryKey: ['post', id] });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
 
-  const handleReaction = useCallback(() => {
-    if (!id) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    reactionMutation.mutate({ postId: id, type: 'like' });
-  }, [id, reactionMutation]);
+  const pollVoteMutation = useMutation({
+    mutationFn: (optionIndex: number) => voteOnPoll(id!, optionIndex),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
+    },
+  });
 
-  const handleComment = useCallback(() => {
-    if (!commentText.trim() || !id) return;
+  const handleReaction = useCallback(
+    (type: ReactionType) => {
+      if (!id) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      reactionMutation.mutate({ postId: id, type });
+    },
+    [id, reactionMutation],
+  );
+
+  const handleSave = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    commentMutation.mutate(commentText.trim());
-  }, [commentText, id, commentMutation]);
+    saveMutation.mutate();
+  }, [saveMutation]);
 
   if (!post) {
     return (
@@ -97,81 +104,19 @@ export default function PostDetailScreen() {
   }
 
   const profile = post.profile;
-  const userReaction = post.user_reaction;
-  const hasReacted = !!userReaction;
-
-  const renderComment = useCallback(({ item }: { item: Comment }) => (
-    <View style={[styles.commentRow, { borderTopColor: colors.border }]}>
-      <Avatar uri={item.profile?.avatar_url} name={item.profile?.full_name} size={32} />
-      <View style={styles.commentInfo}>
-        <View style={styles.commentHeader}>
-          <Text style={[styles.commentName, { color: colors.text }]}>{item.profile?.full_name ?? 'Unknown'}</Text>
-          {item.profile?.role ? <RoleBadge role={item.profile.role} /> : null}
-          <Text style={[styles.commentTime, { color: colors.textTertiary }]}>{formatRelativeTime(item.created_at)}</Text>
-        </View>
-        <Text style={[styles.commentContent, { color: colors.text }]}>{item.content}</Text>
-      </View>
-    </View>
-  ), [colors]);
-
-  const keyExtractor = useCallback((item: Comment) => item.id, []);
+  const userReaction = post.user_reaction as ReactionType | null | undefined;
+  const isSaved = !!(post as any).is_saved;
+  const images = post.images ?? [];
+  const video = (post as any).video;
+  const documents = (post as any).documents ?? [];
+  const poll = (post as any).poll;
 
   const reactionsSummary = (post.reactions_summary ?? {}) as Record<string, number>;
   const totalReactions: number = Object.values(reactionsSummary).reduce((s: number, c: number) => s + c, 0);
-
-  const listHeader = useMemo(() => (
-    <View style={styles.postSection}>
-      <View style={styles.authorRow}>
-        <Pressable onPress={() => router.push({ pathname: '/user/[id]', params: { id: post.user_id } })} style={styles.authorInfo}>
-          <Avatar uri={profile?.avatar_url} name={profile?.full_name} size={48} />
-          <View>
-            <View style={styles.nameRow}>
-              <Text style={[styles.authorName, { color: colors.text }]}>{profile?.full_name ?? 'Unknown'}</Text>
-              {profile?.role ? <RoleBadge role={profile.role} /> : null}
-            </View>
-            <Text style={[styles.authorMeta, { color: colors.textTertiary }]}>{formatRelativeTime(post.created_at)}</Text>
-          </View>
-        </Pressable>
-      </View>
-
-      <Text style={[styles.postContent, { color: colors.text }]}>{post.content}</Text>
-
-      {totalReactions > 0 && (
-        <View style={[styles.reactionsRow, { borderTopColor: colors.borderLight ?? colors.border }]}>
-          {Object.entries(reactionsSummary)
-            .sort(([, a], [, b]) => (b as number) - (a as number))
-            .slice(0, 3)
-            .map(([type]) => (
-              <Text key={type} style={styles.reactionEmoji}>
-                {REACTION_EMOJI_MAP[type as ReactionType] ?? '👍'}
-              </Text>
-            ))}
-          <Text style={[styles.reactionTotal, { color: colors.textSecondary }]}>{totalReactions}</Text>
-        </View>
-      )}
-
-      <View style={[styles.actionsRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
-        <Pressable onPress={handleReaction} style={styles.actionItem} hitSlop={8}>
-          <Ionicons
-            name={hasReacted ? 'thumbs-up' : 'thumbs-up-outline'}
-            size={22}
-            color={hasReacted ? colors.primary : colors.textSecondary}
-          />
-          <Text style={[styles.actionLabel, { color: hasReacted ? colors.primary : colors.textSecondary }]}>
-            {userReaction ? REACTION_EMOJI_MAP[userReaction] + ' ' : ''}Like
-          </Text>
-        </Pressable>
-        <View style={styles.actionItem}>
-          <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
-          <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>{post.comments_count}</Text>
-        </View>
-      </View>
-
-      {comments.length > 0 && (
-        <Text style={[styles.commentsTitle, { color: colors.text }]}>Comments ({comments.length})</Text>
-      )}
-    </View>
-  ), [post, profile, colors, comments.length, totalReactions, reactionsSummary, hasReacted, userReaction, handleReaction]);
+  const topReactions = Object.entries(reactionsSummary)
+    .map(([type, count]) => ({ type, count, emoji: REACTION_EMOJI_MAP[type as ReactionType] ?? '👍' }))
+    .sort((a, b) => b.count - a.count);
+  const repostShareCount = (post.reposts_count ?? 0) + (post.shares_count ?? 0);
 
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior="padding" keyboardVerticalOffset={0}>
@@ -180,47 +125,145 @@ export default function PostDetailScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Post</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <FlatList
-        ListHeaderComponent={listHeader}
-        data={comments}
-        renderItem={renderComment}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        initialNumToRender={10}
-        removeClippedSubviews={Platform.OS === 'android'}
-        keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
-      />
-
-      <View style={[styles.inputBar, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 8) }]}>
-        <TextInput
-          style={[styles.input, { color: colors.text, backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-          placeholder="Add a comment..."
-          placeholderTextColor={colors.textTertiary}
-          value={commentText}
-          onChangeText={setCommentText}
-          multiline
-          maxLength={500}
-        />
-        <Pressable
-          onPress={handleComment}
-          disabled={!commentText.trim() || commentMutation.isPending}
-          style={({ pressed }) => [
-            styles.sendBtn,
-            { backgroundColor: commentText.trim() ? colors.tint : colors.surfaceElevated },
-            pressed && { opacity: 0.85 },
-          ]}
-          hitSlop={8}
-        >
-          <Ionicons name="send" size={16} color={commentText.trim() ? '#fff' : colors.textTertiary} />
+        <Pressable onPress={() => setActionSheetVisible(true)} hitSlop={8}>
+          <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
         </Pressable>
       </View>
+
+      <ScrollView
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.postSection}>
+          {/* Author */}
+          <View style={styles.authorRow}>
+            <Pressable onPress={() => router.push({ pathname: '/user/[id]', params: { id: post.user_id } })} style={styles.authorInfo}>
+              <Avatar uri={profile?.avatar_url} name={profile?.full_name} size={48} />
+              <View>
+                <View style={styles.nameRow}>
+                  <Text style={[styles.authorName, { color: colors.text }]}>{profile?.full_name ?? 'Unknown'}</Text>
+                  {profile?.role ? <RoleBadge role={profile.role} /> : null}
+                </View>
+                <Text style={[styles.authorMeta, { color: colors.textTertiary }]}>{formatRelativeTime(post.created_at)}</Text>
+              </View>
+            </Pressable>
+          </View>
+
+          {/* Content */}
+          <Text style={[styles.postContent, { color: colors.text }]}>{post.content}</Text>
+
+          {/* Media: Images */}
+          {images.length > 0 && (
+            <View style={styles.mediaSection}>
+              <ImageGrid
+                images={images}
+                onImagePress={(index) => {
+                  setLightboxIndex(index);
+                  setLightboxVisible(true);
+                }}
+              />
+            </View>
+          )}
+
+          {/* Media: Video */}
+          {video && (
+            <View style={styles.mediaSection}>
+              <VideoPlayer uri={video} />
+            </View>
+          )}
+
+          {/* Documents */}
+          {documents.length > 0 && (
+            <View style={styles.docsSection}>
+              {documents.map((doc: string, i: number) => (
+                <DocumentAttachment key={i} url={doc} />
+              ))}
+            </View>
+          )}
+
+          {/* Poll */}
+          {poll && (
+            <View style={styles.pollSection}>
+              <PollView
+                poll={{ question: poll.question, options: poll.options, endDate: poll.endDate }}
+                userVoteIndex={poll.userVotedIndex ?? null}
+                onVote={(index) => pollVoteMutation.mutate(index)}
+              />
+            </View>
+          )}
+
+          {/* Stats row */}
+          {(totalReactions > 0 || (post.comments_count ?? 0) > 0 || repostShareCount > 0) && (
+            <View style={[styles.statsRow, { borderTopColor: colors.borderLight ?? colors.border }]}>
+              <ReactionDisplay
+                topReactions={topReactions}
+                totalCount={totalReactions}
+              />
+              <View style={styles.statsRight}>
+                {(post.comments_count ?? 0) > 0 && (
+                  <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                    {post.comments_count} comment{post.comments_count !== 1 ? 's' : ''}
+                  </Text>
+                )}
+                {repostShareCount > 0 && (
+                  <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                    {repostShareCount} repost{repostShareCount !== 1 ? 's' : ''}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Action bar */}
+          <View style={[styles.actionsRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
+            <View style={styles.actionItem}>
+              <ReactionPicker
+                currentReaction={userReaction}
+                onReact={handleReaction}
+              />
+            </View>
+            <Pressable style={styles.actionItem}>
+              <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
+              <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>{post.comments_count ?? 0}</Text>
+            </Pressable>
+            <Pressable style={styles.actionItem} onPress={handleSave}>
+              <Ionicons
+                name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                size={20}
+                color={isSaved ? colors.warning : colors.textSecondary}
+              />
+              <Text style={[styles.actionLabel, { color: isSaved ? colors.warning : colors.textSecondary }]}>
+                {isSaved ? 'Saved' : 'Save'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Threaded comment section (Phase 9.6) */}
+        {id && <CommentSection postId={id} />}
+      </ScrollView>
+
+      {/* Image lightbox */}
+      {images.length > 0 && (
+        <ImageLightbox
+          images={images}
+          visible={lightboxVisible}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxVisible(false)}
+        />
+      )}
+
+      {/* Action sheet */}
+      <PostActionSheet
+        visible={actionSheetVisible}
+        onClose={() => setActionSheetVisible(false)}
+        postId={String(post.id)}
+        authorId={post.user_id}
+        isSaved={isSaved}
+        onPostRemoved={() => router.back()}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -239,33 +282,38 @@ const styles = StyleSheet.create({
   authorName: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   authorMeta: { fontSize: 13, marginTop: 2, fontFamily: 'Inter_400Regular' },
   postContent: { fontSize: 17, lineHeight: 26, marginBottom: 16, fontFamily: 'Inter_400Regular' },
-  reactionsRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, marginBottom: 4,
+  mediaSection: {
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  reactionEmoji: { fontSize: 16 },
-  reactionTotal: { fontSize: 13, marginLeft: 4, fontFamily: 'Inter_600SemiBold' },
+  docsSection: {
+    gap: 6,
+    marginBottom: 12,
+  },
+  pollSection: {
+    marginBottom: 12,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginBottom: 4,
+  },
+  statsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
   actionsRow: {
     flexDirection: 'row', gap: 28, paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1,
   },
   actionItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionLabel: { fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  commentsTitle: { fontSize: 16, fontWeight: '700', marginTop: 16, fontFamily: 'Inter_700Bold' },
-  commentRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1 },
-  commentInfo: { flex: 1, gap: 4 },
-  commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  commentName: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  commentTime: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  commentContent: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  listContent: { paddingBottom: 16 },
-  inputBar: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 14,
-    paddingTop: 8, borderTopWidth: 1,
-  },
-  input: {
-    flex: 1, fontSize: 15, padding: 12, borderRadius: 20, borderWidth: 1,
-    maxHeight: 100, fontFamily: 'Inter_400Regular',
-  },
-  sendBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  listContent: { paddingBottom: 40 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { fontSize: 16, fontFamily: 'Inter_400Regular' },
 });

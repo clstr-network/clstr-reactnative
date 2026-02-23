@@ -49,9 +49,27 @@ The mobile app has achieved **structural parity** — all 35+ non-admin routes e
 
 ---
 
-## Phase 9 — PostCard Feature Parity (P0 — Core Engagement)
+## Phase 9 — PostCard Feature Parity (P0 — Core Engagement) ✅ COMPLETED
 
 The web PostCard is 1,108 lines. The mobile PostCard component is ~80 lines. This is the single largest gap.
+
+> **Implementation completed 2026-02-23.** All 8 tasks delivered. Mobile PostCard is now ~320 lines with 9 sub-components. Dependencies installed: `expo-av`, `react-native-webview`.
+>
+> **New files created:**
+> - `components/ImageGrid.tsx` — responsive 1/2/3/4+ image grid with shimmer loading
+> - `components/ImageLightbox.tsx` — fullscreen horizontal pager with page dots
+> - `components/VideoPlayer.tsx` — expo-av player with tap play/pause overlay
+> - `components/DocumentAttachment.tsx` — file card with type icon, tap to open
+> - `components/PollView.tsx` — animated vote bars, optimistic voting, closed state
+> - `components/ReactionPicker.tsx` — 7-type picker (quick tap + long-press tray)
+> - `components/ReactionDisplay.tsx` — top emoji circles + total count
+> - `components/CommentSection.tsx` — 2-level threaded comments (~400 lines)
+> - `components/PostActionSheet.tsx` — modal bottom sheet (own vs others actions)
+>
+> **Modified files:**
+> - `components/PostCard.tsx` — full rewrite integrating all sub-components
+> - `app/(tabs)/index.tsx` — new mutations, handlers, and props for feed
+> - `app/post/[id].tsx` — rewritten with full media + comments + actions
 
 ### Task 9.1: Image Grid + Lightbox
 
@@ -815,14 +833,14 @@ npx expo install @react-native-community/datetimepicker react-native-markdown-di
 | Academic email validation | ✅ Done | Phase 1 |
 | 8-step onboarding | ✅ Done | Phase 2 |
 | Pure black theme | ✅ Done | Phase 3 |
-| 7-type reactions | 🔨 Phase 9 | 9.5 |
-| Image grid + lightbox | 🔨 Phase 9 | 9.1 |
-| Video player | 🔨 Phase 9 | 9.2 |
-| Document display | 🔨 Phase 9 | 9.3 |
-| Poll voting | 🔨 Phase 9 | 9.4 |
-| Inline threaded comments | 🔨 Phase 9 | 9.6 |
-| Post action menu (edit/delete/report) | 🔨 Phase 9 | 9.7 |
-| Save/bookmark toggle | 🔨 Phase 9 | 9.8 |
+| 7-type reactions | ✅ Done | 9.5 |
+| Image grid + lightbox | ✅ Done | 9.1 |
+| Video player | ✅ Done | 9.2 |
+| Document display | ✅ Done | 9.3 |
+| Poll voting | ✅ Done | 9.4 |
+| Inline threaded comments | ✅ Done | 9.6 |
+| Post action menu (edit/delete/report) | ✅ Done | 9.7 |
+| Save/bookmark toggle | ✅ Done | 9.8 |
 | Multi-image post creation | 🔨 Phase 10 | 10.1 |
 | Video post creation | 🔨 Phase 10 | 10.2 |
 | Document post creation | 🔨 Phase 10 | 10.3 |
