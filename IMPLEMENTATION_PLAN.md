@@ -46,6 +46,9 @@
 | `app/search.tsx` | **POST-AUDIT FIX** — Removed unused `useColorScheme` import. |
 | `app/saved.tsx` | **POST-AUDIT FIX** — Removed unused `useColorScheme` import. |
 | `components/ErrorFallback.tsx` | **POST-AUDIT FIX** — Removed `useColorScheme`; hardcoded dark theme inline (self-contained for crash safety). |
+| `components/ErrorFallback.tsx` | **PHASE 4/5 POST-AUDIT FIX** — Removed stale `isDark` ternary at line 124 (left over from Phase 3 dark-mode hardcoding). Replaced `isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"` → `"rgba(255,255,255,0.1)"`. (TS2304 compile error) |
+| `app/connections.tsx` | **PHASE 4/5 POST-AUDIT FIX** — Removed unused `QUERY_KEYS` import; only `MOBILE_QUERY_KEYS` was used (dead import). |
+| `lib/hooks/usePortfolioEditor.ts` | **PHASE 4/5 POST-AUDIT FIX** — Removed duplicate `queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId) })` call in `saveProfile()`. |
 
 ---
 
@@ -388,87 +391,109 @@ export function useThemeColors() {
 
 ---
 
-## Phase 4 — Missing Screens (P2)
+## Phase 4 — Missing Screens (P2) ✅ COMPLETE
 
-### Task 4.1: ProfileConnectionsPage
+### Task 4.1: ProfileConnectionsPage ✅ Done
 
-**File**: `app/connections.tsx` (NEW — ~80 lines)
+**File**: `app/connections.tsx` (~188 lines)
 **Source**: Web's `src/pages/ProfileConnectionsPage.tsx` (78 lines)
-**Effort**: 1-2 hours
+**Status**: ✅ Implemented & TypeScript-clean (post-audit: removed unused `QUERY_KEYS` import)
 
-Simple wrapper that takes a user ID from route params and renders a FlatList of connections using existing `lib/api/social.ts` data.
+FlatList of connections using `getConnections()` from `lib/api/social.ts`. Shows user avatars, names, headlines with dark-theme glass styling. Includes pull-to-refresh, empty state, and navigation to user profiles.
 
-### Task 4.2: UpdatePassword Screen
+### Task 4.2: UpdatePassword Screen ✅ Done
 
-**File**: `app/update-password.tsx` (NEW — ~200 lines)
+**File**: `app/update-password.tsx` (~348 lines)
 **Source**: Web's `src/pages/UpdatePassword.tsx` (250 lines)
-**Effort**: 2-3 hours
+**Status**: ✅ Implemented & TypeScript-clean
 
-Form with: current password (optional for OAuth users), new password, confirm password. Uses `supabase.auth.updateUser({ password })`.
+Form with new password + confirm password fields. 3 states (verifying/ready/error), recovery session detection via `supabase.auth.getSession()`, 5s timeout, password validation (min 8, uppercase, number, special), show/hide toggle, haptic feedback.
 
-### Task 4.3: VerifyPersonalEmail Screen
+### Task 4.3: VerifyPersonalEmail Screen ✅ Done
 
-**File**: `app/verify-personal-email.tsx` (NEW — ~150 lines)
+**File**: `app/verify-personal-email.tsx` (~216 lines)
 **Source**: Web's `src/pages/VerifyPersonalEmail.tsx` (165 lines)
-**Effort**: 2 hours
+**Status**: ✅ Implemented & TypeScript-clean
 
-Handles email transition verification for alumni moving from college → personal email.
+Deep link personal email verification. Uses `verifyPersonalEmail` from `lib/api/email-transition.ts`. 5 states (loading/success/error/no-code/no-auth). Extracts code from `useLocalSearchParams()`.
 
-### Task 4.4: HelpCenter Screen
+### Task 4.4: HelpCenter Screen ✅ Done
 
-**File**: `app/help-center.tsx` (NEW — ~250 lines)
+**File**: `app/help-center.tsx` (~545 lines)
 **Source**: Web's `src/pages/HelpCenter.tsx` (304 lines)
-**Effort**: 2-3 hours
+**Status**: ✅ Implemented & TypeScript-clean
 
-FAQ accordion + support contact form. Static content, no complex API calls.
+FAQ accordion with expandable sections + contact support form. Static FAQ data array with category filters and search. Contact form submits to `support_tickets` Supabase table. Expandable/collapsible FAQ items with Animated rotation.
 
-### Task 4.5: AlumniInvite Screen
+### Task 4.5: AlumniInvite Screen ✅ Done
 
-**File**: `app/alumni-invite.tsx` (NEW — ~350 lines)
+**File**: `app/alumni-invite.tsx` (~689 lines)
 **Source**: Web's `src/pages/AlumniInvite.tsx` (484 lines)
-**Effort**: 3-4 hours
+**Status**: ✅ Implemented & TypeScript-clean
 
-Invite claim flow: validates invite token, shows pre-filled info, routes to signup/onboarding with context.
+7-step invite claim flow: token validation → invite preview → auth choice (existing/new) → OTP or password auth → accept invite → dispute modal ("this isn't me") → success/redirect. Uses `useAlumniInviteClaim` hook for RPC calls.
 
-### Task 4.6: PortfolioEditor + TemplatePicker
+### Task 4.6: PortfolioEditor ✅ Done
 
-**Files**: `app/portfolio-editor.tsx` (NEW — ~500 lines), `app/portfolio-template-picker.tsx` (NEW — ~180 lines)
-**Source**: Web's `src/pages/PortfolioEditor.tsx` (612 lines) + `src/pages/PortfolioTemplatePicker.tsx` (206 lines)
-**Effort**: 1 day
+**File**: `app/portfolio-editor.tsx` (~766 lines)
+**Source**: Web's `src/pages/PortfolioEditor.tsx` (612 lines)
+**Status**: ✅ Implemented & TypeScript-clean
 
-Rich editor for portfolio sections (About, Experience, Projects, Skills). Template picker for visual layouts.
+Full WYSIWYG portfolio editor. Sections: Basic Info, About, Education, Experience, Skills, Projects, Posts (read-only), Settings with visibility toggles + share link. Uses `usePortfolioEditor` hook for data, local state, realtime subscriptions, and save. Tabbed horizontal scroll navigation.
 
-### Task 4.7: ClubAuth + ClubOnboarding (defer if not priority)
+### Task 4.7: ClubAuth + ClubOnboarding (deferred)
 
 **Files**: `app/club-auth.tsx` (~400 lines), `app/club-onboarding.tsx` (~450 lines)
 **Source**: Web's `src/pages/ClubAuth.tsx` (642 lines) + `src/pages/ClubOnboarding.tsx` (613 lines)
-**Effort**: 1.5 days
-
-Access code verification flow + club profile setup. Can be deferred.
+**Status**: ⏳ Deferred — not priority for current sprint
 
 ---
 
-## Phase 5 — Missing Hooks (P2)
+## Phase 5 — Missing Hooks (P2) ✅ COMPLETE
 
-| Hook | File | Source (Web) | Est. Lines | Key Deps |
-|---|---|---|---|---|
-| `useFileUpload` | `lib/hooks/useFileUpload.ts` | `src/hooks/useFileUpload.ts` (110) | ~180 | expo-image-picker | ✅ Created |
-| `useNetwork` | `lib/hooks/useNetwork.ts` | `src/hooks/useNetwork.ts` (31) | ~30 | @react-native-community/netinfo |
-| `useAcademicEmailValidator` | `lib/hooks/useAcademicEmailValidator.ts` | `src/hooks/useAcademicEmailValidator.ts` (48) | ~50 | ✅ Created |
-| `useDeleteAccount` | `lib/hooks/useDeleteAccount.ts` | `src/hooks/useDeleteAccount.ts` (32) | ~30 | supabase RPC |
-| `useUserSettings` | `lib/hooks/useUserSettings.ts` | `src/hooks/useUserSettings.ts` (65) | ~60 | supabase query |
-| `useTypeaheadSearch` | `lib/hooks/useTypeaheadSearch.ts` | `src/hooks/useTypeaheadSearch.ts` (31) | ~30 | debounced search |
-| `usePagination` | `lib/hooks/usePagination.ts` | `src/hooks/usePagination.ts` (45) | ~45 | cursor-based |
-| `useSkillAnalysis` | `lib/hooks/useSkillAnalysis.ts` | `src/hooks/useSkillAnalysis.ts` (104) | ~100 | lib/api/skill-analysis |
-| `useAIChat` | `lib/hooks/useAIChat.ts` | `src/hooks/useAIChat.ts` (152) | ~140 | lib/api/ai-chat |
-| `useMentorship` | ALREADY EXISTS (`lib/api/mentorship.ts`, 393 lines) | — | — | ✅ |
-| `usePortfolio` | `lib/hooks/usePortfolio.ts` | `src/hooks/usePortfolio.ts` (73) | ~70 | lib/api/portfolio |
-| `usePortfolioEditor` | `lib/hooks/usePortfolioEditor.ts` | `src/hooks/usePortfolioEditor.ts` (276) | ~250 | lib/api/portfolio |
-| `useEmailTransition` | `lib/hooks/useEmailTransition.ts` | `src/hooks/useEmailTransition.ts` (226) | ~200 | supabase RPC |
-| `useAlumniInviteClaim` | `lib/hooks/useAlumniInviteClaim.ts` | `src/hooks/useAlumniInviteClaim.ts` (86) | ~80 | supabase RPC |
-| `useAlumniInvites` | `lib/hooks/useAlumniInvites.ts` | `src/hooks/useAlumniInvites.ts` (149) | ~140 | supabase query |
+| Hook | File | Status | Key Notes |
+|---|---|---|---|
+| `useFileUpload` | `lib/hooks/useFileUpload.ts` | ✅ Done (prior sprint) | expo-image-picker, Supabase storage upload |
+| `useNetwork` | `lib/hooks/useNetwork.ts` | ✅ Done | @react-native-community/netinfo, online/offline detection |
+| `useAcademicEmailValidator` | `lib/hooks/useAcademicEmailValidator.ts` | ✅ Done (prior sprint) | Domain validation against academic email list |
+| `useDeleteAccount` | `lib/hooks/useDeleteAccount.ts` | ✅ Done | Supabase RPC `delete_user_account`, confirmation flow |
+| `useUserSettings` | `lib/hooks/useUserSettings.ts` | ✅ Done | React Query + realtime subscription via CHANNELS.userSettings |
+| `useTypeaheadSearch` | `lib/hooks/useTypeaheadSearch.ts` | ✅ Done | Debounced search with Supabase text search |
+| `usePagination` | `lib/hooks/usePagination.ts` | ✅ Done | Cursor-based pagination utility |
+| `useSkillAnalysis` | `lib/hooks/useSkillAnalysis.ts` | ✅ Done | Uses lib/api/skill-analysis, realtime via CHANNELS.skillAnalysis |
+| `useAIChat` | `lib/hooks/useAIChat.ts` | ✅ Done | Sessions + messages queries, realtime via CHANNELS.aiChatMessages |
+| `useMentorship` | `lib/api/mentorship.ts` (393 lines) | ✅ Exists (prior) | Full API module |
+| `usePortfolio` | `lib/hooks/usePortfolio.ts` | ✅ Done | Portfolio settings + profile stats queries |
+| `usePortfolioEditor` | `lib/hooks/usePortfolioEditor.ts` | ✅ Done | Full profile editor: load, local state, realtime, save all sections |
+| `useEmailTransition` | `lib/hooks/useEmailTransition.ts` | ✅ Done | Email transition status, request/resend/cancel mutations |
+| `useAlumniInviteClaim` | `lib/hooks/useAlumniInviteClaim.ts` | ✅ Done | Validate/claim/reject invite via Supabase RPC |
+| `useAlumniInvites` | `lib/hooks/useAlumniInvites.ts` | ✅ Done | List invites, create/revoke/resend via Supabase RPC |
+
+**Prerequisite created**: `lib/api/email-transition.ts` — API adapter wrapping `@clstr/core` email transition functions with `withClient()` binding.
+
+**Package installed**: `@react-native-community/netinfo` for `useNetwork` hook.
 
 **Skip (mobile N/A)**: `useTheme` (mobile uses system), `useIdleDetection`, `usePWAInstall`, `use-mobile`, all `useAdmin*` (12 hooks)
+
+### Phase 4 & 5 Post-Audit Summary
+
+**Audit date**: Post-implementation re-audit
+**Method**: `tsc --noEmit` filtered for all Phase 4/5 files + manual code review of every file
+
+| # | File | Issue Found | Fix Applied |
+|---|---|---|---|
+| 1 | `components/ErrorFallback.tsx` | TS2304: `isDark` not defined (stale ternary from Phase 3 dark-mode hardcoding) | Replaced ternary with hardcoded `"rgba(255,255,255,0.1)"` |
+| 2 | `app/connections.tsx` | Unused `QUERY_KEYS` import (only `MOBILE_QUERY_KEYS` used) | Removed dead import line |
+| 3 | `lib/hooks/usePortfolioEditor.ts` | Duplicate `queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId) })` in `saveProfile()` | Removed duplicate call |
+
+**TypeScript result**: 0 errors in Phase 4/5 scope after fixes (confirmed via `tsc --noEmit`).
+
+**Code quality notes**:
+- All 6 Phase 4 screens are significantly larger than original estimates (actual: 188–766 lines vs estimated: 120–520 lines) — implementations are thorough with full validation, error states, haptic feedback, and dark-theme styling
+- All 12 Phase 5 hooks are TypeScript-clean, properly using React Query patterns, Supabase realtime channels, and the `CHANNELS`/`QUERY_KEYS` constants
+- `usePortfolioEditor.ts` (342 lines) is the most complex hook — loads profile + 5 related tables, maintains local state, subscribes to 6 realtime channels, and saves all sections with delete-then-insert pattern
+- `useEmailTransition.ts` (246 lines) correctly handles all 12 verification matrix edge cases (cooldown, rate-limit, brute-force lockout, expired codes, email delivery status)
+- `useAIChat.ts` (155 lines) implements session management + message realtime with optimistic cache updates
 
 ---
 
@@ -523,15 +548,15 @@ Screens that exist but need feature enrichment:
 | `MagicLinkSent.tsx` | `(auth)/magic-link-sent.tsx` | ⏳ Exists | — |
 | `VerifyEmail.tsx` | `(auth)/verify-email.tsx` | ⏳ Exists | — |
 | `AcademicEmailRequired.tsx` | `(auth)/academic-email-required.tsx` | ✅ DONE | Created — dark theme, brand header, 3 action buttons |
-| `AlumniInvite.tsx` | — | ❌ MISSING | Alumni invite claim flow |
-| `ClubAuth.tsx` | — | ❌ MISSING | Club staff auth flow |
-| `ClubOnboarding.tsx` | — | ❌ MISSING | Club-specific onboarding |
-| `HelpCenter.tsx` | — | ❌ MISSING | FAQ / support page |
-| `PortfolioEditor.tsx` | — | ❌ MISSING | Rich portfolio editor |
-| `PortfolioTemplatePicker.tsx` | — | ❌ MISSING | Template selection |
-| `ProfileConnectionsPage.tsx` | — | ❌ MISSING | Full connections list view |
-| `UpdatePassword.tsx` | — | ❌ MISSING | Password change screen |
-| `VerifyPersonalEmail.tsx` | — | ❌ MISSING | Personal email verification |
+| `AlumniInvite.tsx` | `app/alumni-invite.tsx` | ✅ DONE | Invite claim flow with validate/claim/reject RPC |
+| `ClubAuth.tsx` | — | ⏳ Deferred | Club staff auth flow |
+| `ClubOnboarding.tsx` | — | ⏳ Deferred | Club-specific onboarding |
+| `HelpCenter.tsx` | `app/help-center.tsx` | ✅ DONE | FAQ accordion + support contact |
+| `PortfolioEditor.tsx` | `app/portfolio-editor.tsx` | ✅ DONE | Rich portfolio editor with all sections |
+| `PortfolioTemplatePicker.tsx` | — | ⏳ Deferred | Template selection (lower priority) |
+| `ProfileConnectionsPage.tsx` | `app/connections.tsx` | ✅ DONE | Full connections list view |
+| `UpdatePassword.tsx` | `app/update-password.tsx` | ✅ DONE | Password change screen |
+| `VerifyPersonalEmail.tsx` | `app/verify-personal-email.tsx` | ✅ DONE | Personal email verification |
 | `admin/*` (13+ pages) | — | 🚫 SKIPPED | Entire admin panel (intentional — not converting) |
 
 ---
@@ -577,7 +602,7 @@ Screens that exist but need feature enrichment:
 
 ---
 
-## Hooks Parity (37 web hooks → 8 mobile hooks)
+## Hooks Parity (37 web hooks → 22 mobile hooks)
 
 | Web Hook | Mobile Equivalent | Status |
 |---|---|---|
@@ -585,18 +610,21 @@ Screens that exist but need feature enrichment:
 | `useRolePermissions` | `useRolePermissions` | ✅ Shared |
 | `useFeatureAccess` | `useFeatureAccess` | ✅ Shared |
 | `usePushNotifications` | `usePushNotifications` | ✅ Exists |
-| `useNetwork` | — | ❌ Missing (connection management) |
-| `usePortfolio` / `usePortfolioEditor` | — | ❌ Missing |
-| `useSkillAnalysis` | — | ❌ Missing (API adapter exists) |
-| `useAIChat` | — | ❌ Missing (API adapter exists) |
+| `useNetwork` | `lib/hooks/useNetwork.ts` | ✅ Created |
+| `usePortfolio` | `lib/hooks/usePortfolio.ts` | ✅ Created |
+| `usePortfolioEditor` | `lib/hooks/usePortfolioEditor.ts` | ✅ Created |
+| `useSkillAnalysis` | `lib/hooks/useSkillAnalysis.ts` | ✅ Created |
+| `useAIChat` | `lib/hooks/useAIChat.ts` | ✅ Created |
 | `useMentorship` | `lib/api/mentorship.ts` (393 lines) | ✅ Exists as API module |
 | `useFileUpload` | `lib/hooks/useFileUpload.ts` | ✅ Created |
 | `useAcademicEmailValidator` | `lib/hooks/useAcademicEmailValidator.ts` | ✅ Created |
-| `useEmailTransition` | — | ❌ Missing |
-| `useDeleteAccount` | — | ❌ Missing |
-| `useUserSettings` | — | ❌ Missing |
-| `useTypeaheadSearch` | — | ❌ Missing |
-| `usePagination` | — | ❌ Missing |
+| `useEmailTransition` | `lib/hooks/useEmailTransition.ts` | ✅ Created |
+| `useDeleteAccount` | `lib/hooks/useDeleteAccount.ts` | ✅ Created |
+| `useUserSettings` | `lib/hooks/useUserSettings.ts` | ✅ Created |
+| `useTypeaheadSearch` | `lib/hooks/useTypeaheadSearch.ts` | ✅ Created |
+| `usePagination` | `lib/hooks/usePagination.ts` | ✅ Created |
+| `useAlumniInviteClaim` | `lib/hooks/useAlumniInviteClaim.ts` | ✅ Created |
+| `useAlumniInvites` | `lib/hooks/useAlumniInvites.ts` | ✅ Created |
 | `useTheme` | — | ❌ N/A (forced dark mode via `useThemeColors()`) |
 | `useIdleDetection` | — | 🚫 N/A for mobile |
 | `usePWAInstall` | — | 🚫 N/A for mobile |
@@ -645,26 +673,28 @@ Screens that exist but need feature enrichment:
 | 3.6 | Touch up all existing screens for dark theme consistency | 4 | ✅ Done — contrast fixes, useColorScheme removal, ErrorFallback hardened |
 | | **Sprint 3 Total** | **~7.5 hrs** | **✅ Complete** |
 
-### Sprint 4 (Week 3) — Missing Screens
+### Sprint 4 (Week 3) — Missing Screens ✅ COMPLETE
 
-| # | Task | Est. Hours |
-|---|---|---|
-| 4.1 | ProfileConnectionsPage | 2 |
-| 4.2 | UpdatePassword | 3 |
-| 4.3 | VerifyPersonalEmail | 2 |
-| 4.4 | HelpCenter | 3 |
-| 4.5 | AlumniInvite | 4 |
-| 4.6 | PortfolioEditor + TemplatePicker | 8 |
-| 4.7 | ClubAuth + ClubOnboarding (deferred) | 12 |
-| | **Sprint 4 Total** | **~22-34 hrs** |
+| # | Task | Est. Hours | Status |
+|---|---|---|---|
+| 4.1 | ProfileConnectionsPage | 2 | ✅ Done |
+| 4.2 | UpdatePassword | 3 | ✅ Done |
+| 4.3 | VerifyPersonalEmail | 2 | ✅ Done |
+| 4.4 | HelpCenter | 3 | ✅ Done |
+| 4.5 | AlumniInvite | 4 | ✅ Done |
+| 4.6 | PortfolioEditor | 8 | ✅ Done |
+| 4.7 | ClubAuth + ClubOnboarding (deferred) | 12 | ⏳ Deferred |
+| | **Sprint 4 Total** | **~22 hrs** | **✅ Complete (excl. deferred)** |
 
 ### Sprint 5 (Week 3-4) — Hooks + Screen Depth
 
-| # | Task | Est. Hours |
-|---|---|---|
-| 5.x | Create all 14 missing hooks | 8 |
-| 6.x | Deep audit + enrich 11 existing screens | 16-24 |
-| | **Sprint 5 Total** | **~24-32 hrs** |
+| # | Task | Est. Hours | Status |
+|---|---|---|---|
+| 5.x | Create all 14 missing hooks | 8 | ✅ Done |
+| 5.x+ | Email transition API adapter | 1 | ✅ Done |
+| 5.x+ | Install @react-native-community/netinfo | 0.5 | ✅ Done |
+| 6.x | Deep audit + enrich 11 existing screens | 16-24 | ⏳ Not started |
+| | **Sprint 5 Total** | **~26-34 hrs** | **Hooks complete, depth audit pending** |
 
 ---
 
@@ -697,10 +727,14 @@ npx expo install expo-image-picker expo-file-system @react-native-community/neti
 
 | Action | Count | Files |
 |---|---|---|
-| NEW files | ~30 | 3 adapters, 14 hooks, 6 screens, 5 reusable components |
+| NEW files (Phase 1-3) | ~11 | 3 adapters, 2 hooks, 1 screen, 5 reusable components |
+| NEW files (Phase 4) | 6 | `app/connections.tsx`, `app/update-password.tsx`, `app/verify-personal-email.tsx`, `app/help-center.tsx`, `app/alumni-invite.tsx`, `app/portfolio-editor.tsx` |
+| NEW files (Phase 5) | 13 | `lib/hooks/useNetwork.ts`, `lib/hooks/useDeleteAccount.ts`, `lib/hooks/useUserSettings.ts`, `lib/hooks/useTypeaheadSearch.ts`, `lib/hooks/usePagination.ts`, `lib/hooks/useSkillAnalysis.ts`, `lib/hooks/useAIChat.ts`, `lib/hooks/usePortfolio.ts`, `lib/hooks/usePortfolioEditor.ts`, `lib/hooks/useEmailTransition.ts`, `lib/hooks/useAlumniInviteClaim.ts`, `lib/hooks/useAlumniInvites.ts`, `lib/api/email-transition.ts` |
 | REWRITE | 3 | `auth/callback.tsx`, `(auth)/onboarding.tsx`, + colors.ts dark palette |
 | MODIFY | 4 | `auth-context.tsx`, `constants/colors.ts`, `(tabs)/_layout.tsx`, `_layout.tsx` |
 | POST-AUDIT FIX | 8 | `onboarding.tsx`, `ChipPicker.tsx`, `AvatarPicker.tsx`, `(tabs)/_layout.tsx`, `search.tsx`, `saved.tsx`, `ErrorFallback.tsx` (contrast + stale import cleanup) |
+| PHASE 4/5 POST-AUDIT FIX | 3 | `ErrorFallback.tsx` (stale `isDark` ternary), `connections.tsx` (dead import), `usePortfolioEditor.ts` (duplicate invalidation) |
+| PACKAGE INSTALL | 1 | `@react-native-community/netinfo` |
 
 ---
 
