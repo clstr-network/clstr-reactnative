@@ -75,7 +75,12 @@
         }
       ],
       "expo-font",
-      "expo-web-browser",
+      [
+        "expo-web-browser",
+        {
+          "experimentalLauncherActivity": false
+        }
+      ],
       "expo-secure-store",
       "expo-notifications"
     ],

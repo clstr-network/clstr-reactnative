@@ -8,19 +8,52 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { Platform } from 'react-native';
-import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import { makeRedirectUri } from 'expo-auth-session';
+import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { supabase } from './adapters/core-client';
 import { createProfileRecord, mapUserTypeToRole, sanitizeSocialLinks } from './api/profile';
 import { determineUserRoleFromGraduation, calculateGraduationYear } from '@clstr/core/api/alumni-identification';
 import type { Session, User } from '@supabase/supabase-js';
 import type { ProfileSignupPayload } from '@clstr/core/api/profile';
 
-// Ensure any outstanding auth sessions are properly closed on web
-if (Platform.OS === 'web') {
-  WebBrowser.maybeCompleteAuthSession();
-}
+// Required for expo-web-browser auth sessions to complete properly
+WebBrowser.maybeCompleteAuthSession();
+
+// Module-scope redirect URI — explicitly uses the "clstr" scheme.
+// In a dev build this returns "clstr://"; in Expo Go it would fall back to exp:// which won't work.
+const redirectTo = makeRedirectUri({ scheme: 'clstr' });
+
+/**
+ * Extract session tokens from a Supabase OAuth callback URL.
+ * Handles both hash fragments (#access_token=…) and query params (?code=…).
+ */
+const createSessionFromUrl = async (url: string) => {
+  console.log('[createSessionFromUrl] Processing URL:', url?.substring(0, 100));
+  const { params, errorCode } = QueryParams.getQueryParams(url);
+
+  if (errorCode) {
+    console.error('[createSessionFromUrl] Error code:', errorCode);
+    throw new Error(errorCode);
+  }
+
+  const { access_token, refresh_token } = params;
+
+  if (!access_token) {
+    console.warn('[createSessionFromUrl] No access_token found in URL params');
+    return;
+  }
+
+  console.log('[createSessionFromUrl] Setting session from tokens...');
+  const { data, error } = await supabase.auth.setSession({
+    access_token,
+    refresh_token,
+  });
+  if (error) throw new Error(error.message);
+  console.log('[createSessionFromUrl] Session set successfully');
+  return data.session;
+};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -115,6 +148,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // --- Deep-link fallback for OAuth redirects ---
+  // Catches redirects that bypass openAuthSessionAsync on some Android versions.
+  // This follows the Supabase blog pattern exactly.
+  const url = Linking.useURL();
+  useEffect(() => {
+    if (url && (url.includes('access_token') || url.includes('code='))) {
+      console.log('[AuthProvider] useURL received auth redirect:', url.substring(0, 100));
+      createSessionFromUrl(url).catch((e) =>
+        console.error('[AuthProvider] useURL session error:', e.message),
+      );
+    }
+  }, [url]);
+
   // --- Core auth methods ---
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -134,7 +180,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithOtp = useCallback(async (email: string) => {
-    const redirectTo = Linking.createURL('auth/callback');
+    // Use web callback URL so Supabase recognises it from the redirect allowlist.
+    // The user taps the magic link on their phone → opens the app via intent filter
+    // or opens clstr.in/auth/callback in browser → app's auth/callback screen picks it up.
+    const redirectTo = 'https://clstr.in/auth/callback';
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: redirectTo },
@@ -144,83 +193,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * Google OAuth — opens an in-app browser via expo-web-browser and
-   * handles the redirect back to the app via the `clstr://` scheme.
-   *
-   * Matches the web's `supabase.auth.signInWithOAuth({ provider: 'google' })`
-   * but uses the native OAuth flow via system browser.
+   * Google OAuth — opens a system browser via expo-web-browser.
+   * Follows the official Supabase React Native auth guide:
+   * https://supabase.com/blog/react-native-authentication
    */
   const signInWithGoogle = useCallback(async () => {
     try {
-      const redirectTo = Linking.createURL('auth/callback');
+      console.log('[signInWithGoogle] redirectTo:', redirectTo);
 
-      // 1. Ask Supabase for the Google OAuth URL.
-      //    skipBrowserRedirect prevents the JS client from navigating.
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
           skipBrowserRedirect: true,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
         },
       });
 
       if (error) throw new Error(error.message);
       if (!data?.url) throw new Error('No OAuth URL returned');
 
-      // 2. Open the OAuth URL in a system browser / in-app browser.
+      console.log('[signInWithGoogle] Opening OAuth URL in browser...');
+
       const result = await WebBrowser.openAuthSessionAsync(
         data.url,
         redirectTo,
-        { showInRecents: true },
       );
 
-      if (result.type === 'success' && result.url) {
-        // 3. Extract tokens from the redirect URL and set the session.
-        const url = result.url;
+      console.log('[signInWithGoogle] Browser result type:', result.type);
 
-        // Try hash fragment first (implicit flow)
-        const hashIndex = url.indexOf('#');
-        if (hashIndex !== -1) {
-          const hashParams = new URLSearchParams(url.substring(hashIndex + 1));
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
-          if (accessToken && refreshToken) {
-            const { error: sessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            if (sessionError) throw new Error(sessionError.message);
-            return { error: null };
-          }
-        }
-
-        // Try query params (PKCE flow)
-        const queryIndex = url.indexOf('?');
-        if (queryIndex !== -1) {
-          const queryParams = new URLSearchParams(url.substring(queryIndex + 1));
-          const code = queryParams.get('code');
-          if (code) {
-            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-            if (exchangeError) throw new Error(exchangeError.message);
-            return { error: null };
-          }
-        }
-      }
-
-      if (result.type === 'cancel' || result.type === 'dismiss') {
-        // User cancelled — not an error
-        return { error: null };
+      if (result.type === 'success') {
+        const { url } = result;
+        console.log('[signInWithGoogle] Callback URL:', url?.substring(0, 100));
+        await createSessionFromUrl(url);
       }
 
       return { error: null };
     } catch (e: any) {
+      console.error('[signInWithGoogle] Error:', e.message);
       throw new Error(e.message || 'Google sign-in failed');
     }
   }, []);
+
+
 
   const completeOnboarding = useCallback(
     async (data: OnboardingPayload) => {

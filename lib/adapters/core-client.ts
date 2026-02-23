@@ -36,6 +36,7 @@ const authStorage =
 /**
  * Singleton Supabase client created via @clstr/core factory.
  * detectSessionInUrl: false — mobile doesn't have URL session detection.
+ * Uses implicit flow (default) for OAuth — PKCE causes bad_oauth_state on mobile.
  */
 export const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
