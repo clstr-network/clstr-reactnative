@@ -1,8 +1,8 @@
 /**
- * Search Screen — Phase 8.1
+ * Search Screen — Phase 8.1 → Phase 12.11
  *
- * Typeahead search for People, Events using `typeaheadSearch()` from @clstr/core.
- * Debounced input → React Query → results grouped by category.
+ * Multi-category search: People, Events, Jobs, Clubs, Projects.
+ * Uses `typeaheadSearch()` for profiles + events, direct Supabase for the rest.
  */
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
@@ -16,6 +16,7 @@ import {
   Platform,
   ActivityIndicator,
   Keyboard,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
+import { supabase } from '@/lib/adapters/core-client';
 
 // ─── Debounce hook ───────────────────────────────────────────
 
@@ -47,12 +49,28 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debounced;
 }
 
+// ─── Search categories ───────────────────────────────────────
+
+type SearchCategory = 'all' | 'people' | 'events' | 'jobs' | 'clubs' | 'projects';
+
+const CATEGORIES: { key: SearchCategory; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'all', label: 'All', icon: 'search-outline' },
+  { key: 'people', label: 'People', icon: 'person-outline' },
+  { key: 'events', label: 'Events', icon: 'calendar-outline' },
+  { key: 'jobs', label: 'Jobs', icon: 'briefcase-outline' },
+  { key: 'clubs', label: 'Clubs', icon: 'people-outline' },
+  { key: 'projects', label: 'Projects', icon: 'code-slash-outline' },
+];
+
 // ─── Result item types ───────────────────────────────────────
 
 type SearchResultItem =
   | { type: 'section'; title: string; key: string }
   | { type: 'profile'; id: string; full_name: string | null; headline: string | null; avatar_url: string | null; role: string | null; key: string }
   | { type: 'event'; id: string; title: string | null; event_date: string | null; location: string | null; category: string | null; key: string }
+  | { type: 'job'; id: string; title: string | null; company: string | null; location: string | null; job_type: string | null; key: string }
+  | { type: 'club'; id: string; name: string | null; description: string | null; club_type: string | null; key: string }
+  | { type: 'project'; id: string; title: string | null; description: string | null; status: string | null; key: string }
   | { type: 'empty'; key: string; message: string };
 
 // ─── Screen ──────────────────────────────────────────────────
@@ -62,23 +80,83 @@ export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const { collegeDomain } = useIdentityContext();
   const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<SearchCategory>('all');
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const inputRef = useRef<TextInput>(null);
 
+  // Core typeahead: profiles + events
   const { data, isLoading, isFetching } = useQuery({
     queryKey: QUERY_KEYS.typeahead(debouncedQuery, collegeDomain ?? ''),
     queryFn: () => typeaheadSearch({ query: debouncedQuery, collegeDomain }),
-    enabled: debouncedQuery.length >= 2 && !!collegeDomain,
+    enabled: debouncedQuery.length >= 2 && !!collegeDomain && (category === 'all' || category === 'people' || category === 'events'),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
   });
 
+  // Jobs search
+  const { data: jobsData } = useQuery({
+    queryKey: ['search', 'jobs', debouncedQuery, collegeDomain],
+    queryFn: async () => {
+      const pattern = `%${debouncedQuery}%`;
+      const { data: rows, error } = await supabase
+        .from('jobs')
+        .select('id, title, company, location, job_type')
+        .eq('college_domain', collegeDomain!.trim().toLowerCase())
+        .or(`title.ilike.${pattern},company.ilike.${pattern}`)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return rows ?? [];
+    },
+    enabled: debouncedQuery.length >= 2 && !!collegeDomain && (category === 'all' || category === 'jobs'),
+    staleTime: 60_000,
+  });
+
+  // Clubs search
+  const { data: clubsData } = useQuery({
+    queryKey: ['search', 'clubs', debouncedQuery, collegeDomain],
+    queryFn: async () => {
+      const pattern = `%${debouncedQuery}%`;
+      const { data: rows, error } = await supabase
+        .from('clubs')
+        .select('id, name, description, club_type')
+        .eq('college_domain', collegeDomain!.trim().toLowerCase())
+        .or(`name.ilike.${pattern},description.ilike.${pattern}`)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return rows ?? [];
+    },
+    enabled: debouncedQuery.length >= 2 && !!collegeDomain && (category === 'all' || category === 'clubs'),
+    staleTime: 60_000,
+  });
+
+  // Projects search
+  const { data: projectsData } = useQuery({
+    queryKey: ['search', 'projects', debouncedQuery, collegeDomain],
+    queryFn: async () => {
+      const pattern = `%${debouncedQuery}%`;
+      const { data: rows, error } = await supabase
+        .from('collab_projects')
+        .select('id, title, description, status')
+        .eq('college_domain', collegeDomain!.trim().toLowerCase())
+        .or(`title.ilike.${pattern},description.ilike.${pattern}`)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return rows ?? [];
+    },
+    enabled: debouncedQuery.length >= 2 && !!collegeDomain && (category === 'all' || category === 'projects'),
+    staleTime: 60_000,
+  });
+
   // Build flat list data with section headers
   const listData = useMemo<SearchResultItem[]>(() => {
-    if (!data) return [];
+    if (debouncedQuery.length < 2) return [];
     const items: SearchResultItem[] = [];
 
-    if (data.profiles.length > 0) {
+    // People
+    if ((category === 'all' || category === 'people') && data?.profiles && data.profiles.length > 0) {
       items.push({ type: 'section', title: 'People', key: 'section-people' });
       data.profiles.forEach((p) =>
         items.push({
@@ -93,7 +171,8 @@ export default function SearchScreen() {
       );
     }
 
-    if (data.events.length > 0) {
+    // Events
+    if ((category === 'all' || category === 'events') && data?.events && data.events.length > 0) {
       items.push({ type: 'section', title: 'Events', key: 'section-events' });
       data.events.forEach((e) =>
         items.push({
@@ -108,12 +187,58 @@ export default function SearchScreen() {
       );
     }
 
-    if (debouncedQuery.length >= 2 && items.length === 0 && !isLoading) {
+    // Jobs
+    if ((category === 'all' || category === 'jobs') && jobsData && jobsData.length > 0) {
+      items.push({ type: 'section', title: 'Jobs', key: 'section-jobs' });
+      jobsData.forEach((j: any) =>
+        items.push({
+          type: 'job',
+          id: j.id,
+          title: j.title,
+          company: j.company,
+          location: j.location,
+          job_type: j.job_type,
+          key: `job-${j.id}`,
+        }),
+      );
+    }
+
+    // Clubs
+    if ((category === 'all' || category === 'clubs') && clubsData && clubsData.length > 0) {
+      items.push({ type: 'section', title: 'Clubs', key: 'section-clubs' });
+      clubsData.forEach((c: any) =>
+        items.push({
+          type: 'club',
+          id: c.id,
+          name: c.name,
+          description: c.description,
+          club_type: c.club_type,
+          key: `club-${c.id}`,
+        }),
+      );
+    }
+
+    // Projects
+    if ((category === 'all' || category === 'projects') && projectsData && projectsData.length > 0) {
+      items.push({ type: 'section', title: 'Projects', key: 'section-projects' });
+      projectsData.forEach((p: any) =>
+        items.push({
+          type: 'project',
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          status: p.status,
+          key: `project-${p.id}`,
+        }),
+      );
+    }
+
+    if (items.length === 0 && !isLoading) {
       items.push({ type: 'empty', key: 'empty', message: `No results for "${debouncedQuery}"` });
     }
 
     return items;
-  }, [data, debouncedQuery, isLoading]);
+  }, [data, jobsData, clubsData, projectsData, debouncedQuery, isLoading, category]);
 
   const handleProfilePress = useCallback((id: string) => {
     Haptics.selectionAsync();
@@ -125,6 +250,24 @@ export default function SearchScreen() {
     Haptics.selectionAsync();
     Keyboard.dismiss();
     router.push(`/event/${id}`);
+  }, []);
+
+  const handleJobPress = useCallback((id: string) => {
+    Haptics.selectionAsync();
+    Keyboard.dismiss();
+    router.push(`/job/${id}`);
+  }, []);
+
+  const handleClubPress = useCallback((id: string) => {
+    Haptics.selectionAsync();
+    Keyboard.dismiss();
+    router.push(`/club/${id}` as any);
+  }, []);
+
+  const handleProjectPress = useCallback((id: string) => {
+    Haptics.selectionAsync();
+    Keyboard.dismiss();
+    router.push(`/project/${id}`);
   }, []);
 
   const handleClear = useCallback(() => {
@@ -200,6 +343,79 @@ export default function SearchScreen() {
               <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </Pressable>
           );
+        case 'job':
+          return (
+            <Pressable
+              onPress={() => handleJobPress(item.id)}
+              style={({ pressed }) => [
+                styles.resultRow,
+                { backgroundColor: pressed ? colors.surfaceHover : 'transparent' },
+              ]}
+            >
+              <View style={[styles.eventIcon, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="briefcase" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.resultTextContainer}>
+                <Text style={[styles.resultName, { color: colors.text }]} numberOfLines={1}>
+                  {item.title ?? 'Untitled Job'}
+                </Text>
+                <Text style={[styles.resultSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {[item.company, item.location, item.job_type].filter(Boolean).join(' · ')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </Pressable>
+          );
+        case 'club':
+          return (
+            <Pressable
+              onPress={() => handleClubPress(item.id)}
+              style={({ pressed }) => [
+                styles.resultRow,
+                { backgroundColor: pressed ? colors.surfaceHover : 'transparent' },
+              ]}
+            >
+              <View style={[styles.eventIcon, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="people" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.resultTextContainer}>
+                <Text style={[styles.resultName, { color: colors.text }]} numberOfLines={1}>
+                  {item.name ?? 'Untitled Club'}
+                </Text>
+                {item.club_type && (
+                  <Text style={[styles.resultSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {item.club_type}
+                  </Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </Pressable>
+          );
+        case 'project':
+          return (
+            <Pressable
+              onPress={() => handleProjectPress(item.id)}
+              style={({ pressed }) => [
+                styles.resultRow,
+                { backgroundColor: pressed ? colors.surfaceHover : 'transparent' },
+              ]}
+            >
+              <View style={[styles.eventIcon, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="code-slash" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.resultTextContainer}>
+                <Text style={[styles.resultName, { color: colors.text }]} numberOfLines={1}>
+                  {item.title ?? 'Untitled Project'}
+                </Text>
+                {item.status && (
+                  <Text style={[styles.resultSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {item.status}
+                  </Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </Pressable>
+          );
         case 'empty':
           return (
             <View style={styles.emptyContainer}>
@@ -213,7 +429,7 @@ export default function SearchScreen() {
           return null;
       }
     },
-    [colors, handleProfilePress, handleEventPress],
+    [colors, handleProfilePress, handleEventPress, handleJobPress, handleClubPress, handleProjectPress],
   );
 
   const keyExtractor = useCallback((item: SearchResultItem) => item.key, []);
@@ -240,7 +456,7 @@ export default function SearchScreen() {
           <TextInput
             ref={inputRef}
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search people, events..."
+            placeholder="Search people, events, jobs, clubs…"
             placeholderTextColor={colors.textTertiary}
             value={query}
             onChangeText={setQuery}
@@ -258,13 +474,43 @@ export default function SearchScreen() {
         </View>
       </View>
 
+      {/* Category filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipBar}
+        style={{ flexGrow: 0 }}
+      >
+        {CATEGORIES.map((cat) => {
+          const isActive = category === cat.key;
+          return (
+            <Pressable
+              key={cat.key}
+              onPress={() => { setCategory(cat.key); Haptics.selectionAsync(); }}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: isActive ? colors.tint + '18' : colors.surfaceSecondary,
+                  borderColor: isActive ? colors.tint : colors.border,
+                },
+              ]}
+            >
+              <Ionicons name={cat.icon} size={14} color={isActive ? colors.tint : colors.textSecondary} />
+              <Text style={[styles.chipLabel, { color: isActive ? colors.tint : colors.textSecondary }]}>
+                {cat.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
       {/* Prompt */}
       {debouncedQuery.length < 2 && (
         <View style={styles.promptContainer}>
           <Ionicons name="search-outline" size={56} color={colors.textTertiary} />
           <Text style={[styles.promptTitle, { color: colors.text }]}>Search Clstr</Text>
           <Text style={[styles.promptSub, { color: colors.textSecondary }]}>
-            Find people and events in your college network
+            Find people, events, jobs, clubs and projects
           </Text>
         </View>
       )}
@@ -314,6 +560,20 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   spinner: { marginLeft: 4 },
+  chipBar: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 4,
+  },
+  chipLabel: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.semiBold,
+  },
   listContent: { paddingBottom: 40 },
   sectionHeader: {
     fontSize: fontSize.xs,

@@ -16,28 +16,30 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
-import { getSavedItems } from '@/lib/api/saved';
+import { getSavedItems, toggleSaveItem } from '@/lib/api/saved';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
 
 // ─── Tab types ───────────────────────────────────────────────
 
-type TabKey = 'posts' | 'projects' | 'clubs';
+type TabKey = 'posts' | 'projects' | 'clubs' | 'jobs';
 
 const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'posts', label: 'Posts', icon: 'document-text-outline' },
   { key: 'projects', label: 'Projects', icon: 'code-slash-outline' },
   { key: 'clubs', label: 'Clubs', icon: 'people-outline' },
+  { key: 'jobs', label: 'Jobs', icon: 'briefcase-outline' },
 ];
 
 // ─── Saved Post Item ─────────────────────────────────────────
@@ -45,9 +47,11 @@ const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }
 const SavedPostItem = React.memo(function SavedPostItem({
   post,
   colors,
+  onUnsave,
 }: {
   post: { id: string; content: string; created_at: string; user?: { full_name: string; avatar_url: string; role: string } | null };
   colors: ReturnType<typeof useThemeColors>;
+  onUnsave: (itemId: string, type: 'post' | 'project' | 'club' | 'job') => void;
 }) {
   return (
     <Pressable
@@ -75,7 +79,15 @@ const SavedPostItem = React.memo(function SavedPostItem({
             {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </Text>
         </View>
-        <Ionicons name="bookmark" size={18} color={colors.primary} />
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onUnsave(post.id, 'post');
+          }}
+          hitSlop={8}
+        >
+          <Ionicons name="bookmark" size={18} color={colors.primary} />
+        </Pressable>
       </View>
       <Text style={[styles.cardContent, { color: colors.text }]} numberOfLines={3}>
         {post.content}
@@ -89,9 +101,11 @@ const SavedPostItem = React.memo(function SavedPostItem({
 const SavedProjectItem = React.memo(function SavedProjectItem({
   project,
   colors,
+  onUnsave,
 }: {
   project: { id: string; title: string; description: string; status: string; category?: string; skills?: string[] };
   colors: ReturnType<typeof useThemeColors>;
+  onUnsave: (itemId: string, type: 'post' | 'project' | 'club' | 'job') => void;
 }) {
   return (
     <Pressable
@@ -115,7 +129,15 @@ const SavedProjectItem = React.memo(function SavedProjectItem({
             </Text>
           )}
         </View>
-        <Ionicons name="bookmark" size={18} color={colors.primary} />
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onUnsave(project.id, 'project');
+          }}
+          hitSlop={8}
+        >
+          <Ionicons name="bookmark" size={18} color={colors.primary} />
+        </Pressable>
       </View>
       <Text style={[styles.cardContent, { color: colors.textSecondary }]} numberOfLines={2}>
         {project.description}
@@ -143,9 +165,11 @@ const SavedProjectItem = React.memo(function SavedProjectItem({
 const SavedClubItem = React.memo(function SavedClubItem({
   club,
   colors,
+  onUnsave,
 }: {
   club: { id: string; name: string; description: string; club_type: string; member_count: number };
   colors: ReturnType<typeof useThemeColors>;
+  onUnsave: (itemId: string, type: 'post' | 'project' | 'club' | 'job') => void;
 }) {
   return (
     <Pressable
@@ -167,11 +191,70 @@ const SavedClubItem = React.memo(function SavedClubItem({
             {club.club_type} · {club.member_count} members
           </Text>
         </View>
-        <Ionicons name="bookmark" size={18} color={colors.primary} />
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onUnsave(club.id, 'club');
+          }}
+          hitSlop={8}
+        >
+          <Ionicons name="bookmark" size={18} color={colors.primary} />
+        </Pressable>
       </View>
       <Text style={[styles.cardContent, { color: colors.textSecondary }]} numberOfLines={2}>
         {club.description}
       </Text>
+    </Pressable>
+  );
+});
+
+// ─── Saved Job Item ──────────────────────────────────────────
+
+const SavedJobItem = React.memo(function SavedJobItem({
+  job,
+  colors,
+  onUnsave,
+}: {
+  job: { id: string; title?: string; company?: string; location?: string };
+  colors: ReturnType<typeof useThemeColors>;
+  onUnsave: (itemId: string, type: 'post' | 'project' | 'club' | 'job') => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        Haptics.selectionAsync();
+        router.push(`/job/${job.id}`);
+      }}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        pressed && { backgroundColor: colors.surfaceHover },
+      ]}
+    >
+      <View style={styles.cardHeader}>
+        <View style={[styles.projectIcon, { backgroundColor: colors.primaryLight }]}>
+          <Ionicons name="briefcase" size={18} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.cardAuthor, { color: colors.text }]} numberOfLines={1}>
+            {job.title ?? 'Untitled Job'}
+          </Text>
+          {(job.company || job.location) && (
+            <Text style={[styles.cardMeta, { color: colors.textTertiary }]}>
+              {[job.company, job.location].filter(Boolean).join(' · ')}
+            </Text>
+          )}
+        </View>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onUnsave(job.id, 'job');
+          }}
+          hitSlop={8}
+        >
+          <Ionicons name="bookmark" size={18} color={colors.primary} />
+        </Pressable>
+      </View>
     </Pressable>
   );
 });
@@ -183,6 +266,7 @@ export default function SavedItemsScreen() {
   const insets = useSafeAreaInsets();
   const { identity } = useIdentityContext();
   const userId = identity?.user_id ?? '';
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabKey>('posts');
 
   const {
@@ -198,6 +282,27 @@ export default function SavedItemsScreen() {
     gcTime: 5 * 60_000,
   });
 
+  // ─── Unsave mutation ─────────────────────────────────────
+  const unsaveMut = useMutation({
+    mutationFn: ({ itemId, type }: { itemId: string; type: 'post' | 'project' | 'club' | 'job' }) =>
+      toggleSaveItem(userId, type, itemId),
+    onSuccess: (_res, vars) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.savedItems(userId) });
+    },
+    onError: () => {
+      Alert.alert('Error', 'Failed to unsave item. Please try again.');
+    },
+  });
+
+  const handleUnsave = useCallback(
+    (itemId: string, type: 'post' | 'project' | 'club' | 'job') => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      unsaveMut.mutate({ itemId, type });
+    },
+    [unsaveMut],
+  );
+
   const activeData = useMemo(() => {
     if (!data) return [];
     switch (activeTab) {
@@ -207,25 +312,41 @@ export default function SavedItemsScreen() {
         return data.projects ?? [];
       case 'clubs':
         return data.clubs ?? [];
+      case 'jobs':
+        return []; // Jobs saved items not yet returned by API — placeholder
+      default:
+        return [];
     }
   }, [data, activeTab]);
 
   const renderPost = useCallback(
-    ({ item }: { item: any }) => <SavedPostItem post={item} colors={colors} />,
-    [colors],
+    ({ item }: { item: any }) => <SavedPostItem post={item} colors={colors} onUnsave={handleUnsave} />,
+    [colors, handleUnsave],
   );
 
   const renderProject = useCallback(
-    ({ item }: { item: any }) => <SavedProjectItem project={item} colors={colors} />,
-    [colors],
+    ({ item }: { item: any }) => <SavedProjectItem project={item} colors={colors} onUnsave={handleUnsave} />,
+    [colors, handleUnsave],
   );
 
   const renderClub = useCallback(
-    ({ item }: { item: any }) => <SavedClubItem club={item} colors={colors} />,
-    [colors],
+    ({ item }: { item: any }) => <SavedClubItem club={item} colors={colors} onUnsave={handleUnsave} />,
+    [colors, handleUnsave],
   );
 
-  const renderItem = activeTab === 'posts' ? renderPost : activeTab === 'projects' ? renderProject : renderClub;
+  const renderJob = useCallback(
+    ({ item }: { item: any }) => <SavedJobItem job={item} colors={colors} onUnsave={handleUnsave} />,
+    [colors, handleUnsave],
+  );
+
+  const renderItem =
+    activeTab === 'posts'
+      ? renderPost
+      : activeTab === 'projects'
+        ? renderProject
+        : activeTab === 'jobs'
+          ? renderJob
+          : renderClub;
 
   const keyExtractor = useCallback((item: any) => item.id, []);
 
@@ -234,6 +355,7 @@ export default function SavedItemsScreen() {
       posts: data?.posts?.length ?? 0,
       projects: data?.projects?.length ?? 0,
       clubs: data?.clubs?.length ?? 0,
+      jobs: 0, // Not yet returned by API
     }),
     [data],
   );

@@ -16,19 +16,23 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { getAlumniByDomain } from '@/lib/api/alumni';
 import type { AlumniUser } from '@/lib/api/alumni';
+import { checkConnectionStatus, sendConnectionRequest } from '@/lib/api/social';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
+import { useAuth } from '@/lib/auth-context';
+import { MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
 
 // ─── Graduation year chips ───────────────────────────────────
@@ -41,10 +45,35 @@ const GRAD_YEAR_FILTERS = ['All', ...Array.from({ length: 6 }, (_, i) => String(
 const AlumniCard = React.memo(function AlumniCard({
   alumni,
   colors,
+  currentUserId,
 }: {
   alumni: AlumniUser;
   colors: ReturnType<typeof useThemeColors>;
+  currentUserId: string;
 }) {
+  const queryClient = useQueryClient();
+
+  // Phase 12.9 — Connection status query
+  const { data: connectionStatus } = useQuery({
+    queryKey: MOBILE_QUERY_KEYS.connectionStatus(alumni.id),
+    queryFn: () => checkConnectionStatus(alumni.id),
+    enabled: !!currentUserId && alumni.id !== currentUserId,
+    staleTime: 60_000,
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: () => sendConnectionRequest(alumni.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionStatus(alumni.id) });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (e: any) => Alert.alert('Error', e?.message ?? 'Failed to send connection request.'),
+  });
+
+  const isConnected = connectionStatus === 'accepted';
+  const isPending = connectionStatus === 'pending';
+  const isSelf = alumni.id === currentUserId;
+
   return (
     <Pressable
       onPress={() => {
@@ -109,6 +138,53 @@ const AlumniCard = React.memo(function AlumniCard({
           </Text>
         </View>
       )}
+
+      {/* Phase 12.9 — Connect / Message Actions */}
+      {!isSelf && (
+        <View style={styles.cardActions}>
+          {isConnected ? (
+            <>
+              <View style={[styles.connectedBadge, { backgroundColor: colors.success + '15' }]}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push(`/chat/${alumni.id}` as any);
+                }}
+                style={[styles.messageBtn, { backgroundColor: colors.primary }]}
+              >
+                <Ionicons name="chatbubble-outline" size={14} color="#fff" />
+                <Text style={styles.messageBtnText}>Message</Text>
+              </Pressable>
+            </>
+          ) : isPending ? (
+            <View style={[styles.pendingBadge, { backgroundColor: colors.warning + '15' }]}>
+              <Ionicons name="time-outline" size={14} color={colors.warning} />
+              <Text style={[styles.pendingText, { color: colors.warning }]}>Pending</Text>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                connectMutation.mutate();
+              }}
+              disabled={connectMutation.isPending}
+              style={[styles.connectBtn, { backgroundColor: colors.primary }, connectMutation.isPending && { opacity: 0.6 }]}
+            >
+              {connectMutation.isPending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="person-add-outline" size={14} color="#fff" />
+                  <Text style={styles.connectBtnText}>Connect</Text>
+                </>
+              )}
+            </Pressable>
+          )}
+        </View>
+      )}
     </Pressable>
   );
 });
@@ -119,8 +195,10 @@ export default function AlumniScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { identity, collegeDomain: identityDomain } = useIdentityContext();
+  const { user } = useAuth();
   const userId = identity?.user_id ?? '';
   const collegeDomain = identityDomain ?? '';
+  const currentUserId = user?.id ?? '';
   const { canViewAlumniDirectory } = useFeatureAccess();
   const [search, setSearch] = useState('');
   const [mentorOnly, setMentorOnly] = useState(false);
@@ -158,8 +236,8 @@ export default function AlumniScreen() {
   const mentorCount = (data ?? []).filter((a: AlumniUser) => a.willing_to_mentor).length;
 
   const renderItem = useCallback(
-    ({ item }: { item: AlumniUser }) => <AlumniCard alumni={item} colors={colors} />,
-    [colors],
+    ({ item }: { item: AlumniUser }) => <AlumniCard alumni={item} colors={colors} currentUserId={currentUserId} />,
+    [colors, currentUserId],
   );
 
   const keyExtractor = useCallback((item: AlumniUser) => item.id, []);
@@ -427,5 +505,61 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontFamily: fontFamily.regular,
     textAlign: 'center',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  connectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  connectBtnText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold,
+  },
+  messageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  messageBtnText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold,
+  },
+  connectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  connectedText: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.semiBold,
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  pendingText: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.medium,
   },
 });

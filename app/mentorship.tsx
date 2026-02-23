@@ -16,6 +16,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
+  Alert,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,12 +36,12 @@ import {
   getActiveRelationships,
   updateMentorshipRequestStatus,
   cancelMentorshipRequest,
+  requestMentorship,
   MENTORSHIP_QUERY_KEYS,
 } from '@/lib/api/mentorship';
-import type { Mentor, MentorshipRequest } from '@/lib/api/mentorship';
+import type { Mentor, MentorshipRequest, MentorshipRequestFormData } from '@/lib/api/mentorship';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
-import { QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
 
 // ─── Tab types ───────────────────────────────────────────────
@@ -49,9 +53,13 @@ type TabKey = 'mentors' | 'myRequests' | 'incoming' | 'active';
 const MentorCard = React.memo(function MentorCard({
   mentor,
   colors,
+  canRequest,
+  onRequestMentorship,
 }: {
   mentor: Mentor;
   colors: ReturnType<typeof useThemeColors>;
+  canRequest: boolean;
+  onRequestMentorship?: (mentorId: string) => void;
 }) {
   return (
     <Pressable
@@ -89,6 +97,23 @@ const MentorCard = React.memo(function MentorCard({
             </View>
           )}
         </View>
+      )}
+      {canRequest && (
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onRequestMentorship?.(mentor.id);
+          }}
+          style={({ pressed }) => [
+            styles.requestBtn,
+            { backgroundColor: colors.primary },
+            pressed && { opacity: 0.85 },
+          ]}
+        >
+          <Ionicons name="hand-left-outline" size={16} color="#FFFFFF" />
+          <Text style={styles.requestBtnText}>Request Mentorship</Text>
+        </Pressable>
       )}
     </Pressable>
   );
@@ -251,6 +276,44 @@ export default function MentorshipScreen() {
     onSuccess: invalidateAll,
   });
 
+  // ── Request dialog state ───────────────────────────────────
+  const [requestDialogVisible, setRequestDialogVisible] = useState(false);
+  const [requestMentorId, setRequestMentorId] = useState('');
+  const [requestTopic, setRequestTopic] = useState('');
+  const [requestMessage, setRequestMessage] = useState('');
+
+  const openRequestDialog = useCallback((mentorId: string) => {
+    setRequestMentorId(mentorId);
+    setRequestTopic('');
+    setRequestMessage('');
+    setRequestDialogVisible(true);
+  }, []);
+
+  const requestMut = useMutation({
+    mutationFn: (form: MentorshipRequestFormData) => requestMentorship(userId, collegeDomain, form),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setRequestDialogVisible(false);
+      invalidateAll();
+      Alert.alert('Request Sent', 'Your mentorship request has been sent successfully.');
+    },
+    onError: (err: Error) => {
+      Alert.alert('Error', err.message ?? 'Failed to send request.');
+    },
+  });
+
+  const handleSubmitRequest = useCallback(() => {
+    if (!requestTopic.trim()) {
+      Alert.alert('Topic Required', 'Please enter a topic for mentorship.');
+      return;
+    }
+    requestMut.mutate({
+      mentorId: requestMentorId,
+      topic: requestTopic,
+      message: requestMessage,
+    });
+  }, [requestMentorId, requestTopic, requestMessage, requestMut]);
+
   // ── Resolved data ──────────────────────────────────────────
   const { data, isLoading, isRefetching, refetch } = useMemo(() => {
     switch (activeTab) {
@@ -266,8 +329,15 @@ export default function MentorshipScreen() {
   }, [activeTab, mentorsQuery, myRequestsQuery, incomingQuery, activeRelQuery]);
 
   const renderMentor = useCallback(
-    ({ item }: { item: Mentor }) => <MentorCard mentor={item} colors={colors} />,
-    [colors],
+    ({ item }: { item: Mentor }) => (
+      <MentorCard
+        mentor={item}
+        colors={colors}
+        canRequest={canRequestMentorship}
+        onRequestMentorship={openRequestDialog}
+      />
+    ),
+    [colors, canRequestMentorship, openRequestDialog],
   );
 
   const renderRequest = useCallback(
@@ -356,6 +426,82 @@ export default function MentorshipScreen() {
           }
         />
       )}
+
+      {/* Request Mentorship Dialog */}
+      <Modal
+        visible={requestDialogVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRequestDialogVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setRequestDialogVisible(false)}>
+            <Pressable
+              style={[styles.modalContent, { backgroundColor: colors.surface }]}
+              onPress={(e) => e.stopPropagation?.()}
+            >
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Request Mentorship</Text>
+
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Topic *</Text>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholder="e.g., Career advice, Resume review"
+                placeholderTextColor={colors.textTertiary}
+                value={requestTopic}
+                onChangeText={setRequestTopic}
+                maxLength={100}
+              />
+
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Message (optional)</Text>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  styles.modalTextarea,
+                  { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholder="Introduce yourself and explain what you'd like help with..."
+                placeholderTextColor={colors.textTertiary}
+                value={requestMessage}
+                onChangeText={setRequestMessage}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                maxLength={500}
+              />
+
+              <View style={styles.modalActions}>
+                <Pressable
+                  style={[styles.modalCancelBtn, { borderColor: colors.border }]}
+                  onPress={() => setRequestDialogVisible(false)}
+                >
+                  <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.modalSubmitBtn,
+                    { backgroundColor: colors.primary },
+                    requestMut.isPending && { opacity: 0.6 },
+                  ]}
+                  onPress={handleSubmitRequest}
+                  disabled={requestMut.isPending}
+                >
+                  {requestMut.isPending ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.modalSubmitText}>Send Request</Text>
+                  )}
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -480,5 +626,82 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontFamily: fontFamily.regular,
     textAlign: 'center',
+  },
+  requestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  requestBtnText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 20,
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bold,
+    textAlign: 'center',
+  },
+  modalLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+    marginTop: 4,
+  },
+  modalInput: {
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  modalTextarea: {
+    minHeight: 100,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+  },
+  modalSubmitBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubmitText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold,
   },
 });

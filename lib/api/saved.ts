@@ -6,6 +6,7 @@
 import { withClient } from '../adapters/bind';
 import {
   getSavedItems as _getSavedItems,
+  toggleSaveItem as _toggleSaveItem,
 } from '@clstr/core/api/saved-api';
 
 export type {
@@ -18,3 +19,4 @@ export type {
 } from '@clstr/core/api/saved-api';
 
 export const getSavedItems = withClient(_getSavedItems);
+export const toggleSaveItem = withClient(_toggleSaveItem);

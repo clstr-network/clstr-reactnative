@@ -53,7 +53,7 @@ const ClubCard = React.memo(function ClubCard({
     <Pressable
       onPress={() => {
         Haptics.selectionAsync();
-        router.push(`/user/${club.id}`);
+        router.push(`/club/${club.id}` as any);
       }}
       style={({ pressed }) => [
         styles.card,

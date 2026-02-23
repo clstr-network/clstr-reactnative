@@ -1,7 +1,8 @@
 /**
- * AI Chat Screen — Phase 9.9
+ * AI Chat Screen — Phase 9.9 → Phase 12.14
  *
  * Chat with the AI assistant. Session list + active chat.
+ * Enhanced: message history context, markdown rendering, suggested prompts, typing indicator.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -15,12 +16,14 @@ import {
   ActivityIndicator,
   TextInput,
   KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import Markdown from 'react-native-markdown-display';
 
 import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
@@ -35,6 +38,31 @@ import {
 import type { AIChatSession, AIChatMessage } from '@/lib/api/ai-chat';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { QUERY_KEYS } from '@/lib/query-keys';
+
+// ─── Suggested prompts ──────────────────────────────────────
+
+const SUGGESTED_PROMPTS = [
+  { label: 'Help me with my resume', icon: 'document-text-outline' as keyof typeof Ionicons.glyphMap },
+  { label: 'Suggest project ideas', icon: 'bulb-outline' as keyof typeof Ionicons.glyphMap },
+  { label: 'Prepare for an interview', icon: 'briefcase-outline' as keyof typeof Ionicons.glyphMap },
+  { label: 'Explain a concept', icon: 'school-outline' as keyof typeof Ionicons.glyphMap },
+  { label: 'Write a cover letter', icon: 'create-outline' as keyof typeof Ionicons.glyphMap },
+  { label: 'Study plan for exams', icon: 'calendar-outline' as keyof typeof Ionicons.glyphMap },
+];
+
+// ─── Typing indicator ────────────────────────────────────────
+
+const TypingIndicator = React.memo(function TypingIndicator({ colors }: { colors: ReturnType<typeof useThemeColors> }) {
+  return (
+    <View style={[styles.bubble, styles.bubbleAI, { backgroundColor: colors.surfaceSecondary }]}>
+      <View style={styles.typingRow}>
+        <View style={[styles.typingDot, { backgroundColor: colors.textTertiary }]} />
+        <View style={[styles.typingDot, styles.typingDotDelay1, { backgroundColor: colors.textTertiary }]} />
+        <View style={[styles.typingDot, styles.typingDotDelay2, { backgroundColor: colors.textTertiary }]} />
+      </View>
+    </View>
+  );
+});
 
 // ─── Session List ────────────────────────────────────────────
 
@@ -86,6 +114,48 @@ const ChatBubble = React.memo(function ChatBubble({
   colors: ReturnType<typeof useThemeColors>;
 }) {
   const isUser = message.role === 'user';
+
+  const mdStyles = React.useMemo(
+    () => ({
+      body: {
+        color: isUser ? '#fff' : colors.text,
+        fontSize: fontSize.base,
+        fontFamily: fontFamily.regular,
+        lineHeight: fontSize.base * 1.45,
+      },
+      strong: { fontFamily: fontFamily.bold },
+      em: { fontStyle: 'italic' as const },
+      code_inline: {
+        backgroundColor: isUser ? 'rgba(255,255,255,0.15)' : colors.surfaceSecondary,
+        color: isUser ? '#fff' : colors.primary,
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+        fontSize: fontSize.sm,
+        paddingHorizontal: 4,
+        borderRadius: 4,
+      },
+      fence: {
+        backgroundColor: isUser ? 'rgba(255,255,255,0.1)' : colors.surfaceSecondary,
+        borderRadius: 8,
+        padding: 10,
+        marginVertical: 4,
+      },
+      code_block: {
+        color: isUser ? '#fff' : colors.text,
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+        fontSize: fontSize.sm,
+      },
+      bullet_list: { marginVertical: 4 },
+      ordered_list: { marginVertical: 4 },
+      list_item: { marginVertical: 2 },
+      heading1: { fontFamily: fontFamily.bold, fontSize: fontSize.lg, marginBottom: 4 },
+      heading2: { fontFamily: fontFamily.bold, fontSize: fontSize.body, marginBottom: 4 },
+      heading3: { fontFamily: fontFamily.semiBold, fontSize: fontSize.body, marginBottom: 2 },
+      link: { color: isUser ? '#fff' : colors.primary, textDecorationLine: 'underline' as const },
+      paragraph: { marginTop: 0, marginBottom: 4 },
+    }),
+    [isUser, colors],
+  );
+
   return (
     <View
       style={[
@@ -95,14 +165,11 @@ const ChatBubble = React.memo(function ChatBubble({
           : [styles.bubbleAI, { backgroundColor: colors.surfaceSecondary }],
       ]}
     >
-      <Text
-        style={[
-          styles.bubbleText,
-          { color: isUser ? '#fff' : colors.text },
-        ]}
-      >
-        {message.content}
-      </Text>
+      {isUser ? (
+        <Text style={[styles.bubbleText, { color: '#fff' }]}>{message.content}</Text>
+      ) : (
+        <Markdown style={mdStyles as any}>{message.content}</Markdown>
+      )}
     </View>
   );
 });
@@ -165,10 +232,13 @@ export default function AIChatScreen() {
     mutationFn: async (text: string) => {
       // Save user message
       await saveChatMessage(activeSessionId!, 'user', text);
+      // Build full message history for context
+      const history = messages.map((m) => ({ role: m.role, content: m.content }));
+      history.push({ role: 'user', content: text });
+      // Keep last 20 messages for context window
+      const contextMessages = history.slice(-20);
       // Get AI reply
-      const reply = await sendAIChatMessage([
-        { role: 'user', content: text },
-      ]);
+      const reply = await sendAIChatMessage(contextMessages);
       return reply;
     },
     onSuccess: () => {
@@ -176,13 +246,17 @@ export default function AIChatScreen() {
     },
   });
 
-  const handleSend = () => {
-    const text = input.trim();
-    if (!text || sendMut.isPending) return;
+  const handleSend = useCallback((text?: string) => {
+    const msg = (typeof text === 'string' ? text : input).trim();
+    if (!msg || sendMut.isPending) return;
     setInput('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendMut.mutate(text);
-  };
+    sendMut.mutate(msg);
+  }, [input, sendMut]);
+
+  const handleSuggestedPrompt = useCallback((prompt: string) => {
+    handleSend(prompt);
+  }, [handleSend]);
 
   const renderSessionItem = useCallback(
     ({ item }: { item: AIChatSession }) => (
@@ -246,7 +320,28 @@ export default function AIChatScreen() {
                 <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                   Start a conversation
                 </Text>
+                {/* Suggested prompts */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.promptsRow}
+                  style={{ marginTop: 16, flexGrow: 0 }}
+                >
+                  {SUGGESTED_PROMPTS.map((p) => (
+                    <Pressable
+                      key={p.label}
+                      style={[styles.promptChip, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                      onPress={() => handleSuggestedPrompt(p.label)}
+                    >
+                      <Ionicons name={p.icon as any} size={16} color={colors.primary} />
+                      <Text style={[styles.promptLabel, { color: colors.text }]}>{p.label}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
               </View>
+            }
+            ListFooterComponent={
+              sendMut.isPending ? <TypingIndicator colors={colors} /> : null
             }
           />
         )}
@@ -268,11 +363,11 @@ export default function AIChatScreen() {
               styles.chatInput,
               { color: colors.text, backgroundColor: colors.surfaceSecondary },
             ]}
-            onSubmitEditing={handleSend}
+            onSubmitEditing={() => handleSend()}
             blurOnSubmit={false}
           />
           <Pressable
-            onPress={handleSend}
+            onPress={() => handleSend()}
             disabled={!input.trim() || sendMut.isPending}
             style={[
               styles.sendBtn,
@@ -446,5 +541,44 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontFamily: fontFamily.regular,
     textAlign: 'center',
+  },
+  // Suggested prompts
+  promptsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 8,
+  },
+  promptChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  promptLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+  },
+  // Typing indicator
+  typingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    opacity: 0.5,
+  },
+  typingDotDelay1: {
+    opacity: 0.35,
+  },
+  typingDotDelay2: {
+    opacity: 0.2,
   },
 });

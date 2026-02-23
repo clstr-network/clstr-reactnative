@@ -1,16 +1,18 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform,
-  ActivityIndicator, Alert, Share,
+  ActivityIndicator, Alert, Share, FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
+import PostCard from '@/components/PostCard';
 import { getProfileById, getConnectionCount, blockConnection } from '@/lib/api/profile';
 import type { UserProfile } from '@/lib/api/profile';
 import {
@@ -19,7 +21,9 @@ import {
   removeConnection,
   countMutualConnections,
   getUserPostsCount,
+  getPostsByUser,
 } from '@/lib/api/social';
+import type { GetPostsResponse } from '@/lib/api/social';
 import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 
 import { useAuth } from '@/lib/auth-context';
@@ -63,6 +67,25 @@ export default function UserProfileScreen() {
     queryFn: () => getConnectionCount(id!),
     enabled: !!id,
   });
+
+  // 12.4 — Fetch user's posts (paginated)
+  const postsQ = useInfiniteQuery<GetPostsResponse>({
+    queryKey: ['userPosts', id],
+    queryFn: ({ pageParam }) =>
+      getPostsByUser(id!, { cursor: pageParam as string | null, pageSize: 10 }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => (last.hasMore ? last.nextCursor : undefined),
+    enabled: !!id,
+  });
+
+  const userPosts = postsQ.data?.pages.flatMap((p) => p.posts) ?? [];
+
+  const handlePostPress = useCallback(
+    (postId: string | number) => {
+      router.push({ pathname: '/post/[id]', params: { id: String(postId) } });
+    },
+    [],
+  );
 
   const connectMutation = useMutation({
     mutationFn: () => sendConnectionRequest(id!),
@@ -283,6 +306,112 @@ export default function UserProfileScreen() {
             <Text style={[styles.msgBtnText, { color: isConnected ? colors.text : colors.textTertiary }]}>Message</Text>
           </Pressable>
         </View>
+
+        {/* ─── Skills Section (12.4) ─────────────────────── */}
+        {(profile.skills?.length ?? 0) > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="flash-outline" size={18} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Skills</Text>
+            </View>
+            <View style={styles.chipRow}>
+              {profile.skills!.map((skill, i) => (
+                <View key={skill.id ?? i} style={[styles.skillChip, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                  <Text style={[styles.skillName, { color: colors.text }]}>{skill.name ?? skill.skill_name}</Text>
+                  {!!skill.level && (
+                    <Text style={[styles.skillLevel, { color: colors.textTertiary }]}>{skill.level}</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ─── Education Section (12.4) ──────────────────── */}
+        {(profile.education?.length ?? 0) > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="school-outline" size={18} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Education</Text>
+            </View>
+            {profile.education!.map((edu, i) => (
+              <View key={edu.id ?? i} style={[styles.eduItem, { borderColor: colors.border }]}>
+                <Text style={[styles.eduDegree, { color: colors.text }]}>{edu.degree}</Text>
+                <Text style={[styles.eduSchool, { color: colors.textSecondary }]}>{edu.school ?? edu.institution}</Text>
+                {(edu.start_date || edu.end_date) && (
+                  <Text style={[styles.eduDates, { color: colors.textTertiary }]}>
+                    {edu.start_date ? new Date(edu.start_date).getFullYear() : ''}
+                    {edu.end_date ? ` – ${new Date(edu.end_date).getFullYear()}` : ' – Present'}
+                  </Text>
+                )}
+                {!!edu.description && (
+                  <Text style={[styles.eduDesc, { color: colors.textSecondary }]} numberOfLines={3}>{edu.description}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ─── Experience Section (12.4) ─────────────────── */}
+        {(profile.experience?.length ?? 0) > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="briefcase-outline" size={18} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Experience</Text>
+            </View>
+            {profile.experience!.map((exp, i) => (
+              <View key={exp.id ?? i} style={[styles.eduItem, { borderColor: colors.border }]}>
+                <Text style={[styles.eduDegree, { color: colors.text }]}>{exp.title}</Text>
+                <Text style={[styles.eduSchool, { color: colors.textSecondary }]}>{exp.company}</Text>
+                {(exp.start_date || exp.end_date) && (
+                  <Text style={[styles.eduDates, { color: colors.textTertiary }]}>
+                    {exp.start_date ? new Date(exp.start_date).getFullYear() : ''}
+                    {exp.end_date ? ` – ${new Date(exp.end_date).getFullYear()}` : ' – Present'}
+                  </Text>
+                )}
+                {!!exp.description && (
+                  <Text style={[styles.eduDesc, { color: colors.textSecondary }]} numberOfLines={3}>{exp.description}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ─── Posts Feed (12.4) ─────────────────────────── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="newspaper-outline" size={18} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Activity</Text>
+          </View>
+          {postsQ.isLoading ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ paddingVertical: 20 }} />
+          ) : userPosts.length === 0 ? (
+            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No posts yet</Text>
+          ) : (
+            <>
+              {userPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post as any}
+                  onPress={() => handlePostPress(post.id)}
+                />
+              ))}
+              {postsQ.hasNextPage && (
+                <Pressable
+                  onPress={() => postsQ.fetchNextPage()}
+                  disabled={postsQ.isFetchingNextPage}
+                  style={[styles.loadMoreBtn, { borderColor: colors.border }]}
+                >
+                  {postsQ.isFetchingNextPage ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Text style={[styles.loadMoreText, { color: colors.primary }]}>Load more posts</Text>
+                  )}
+                </Pressable>
+              )}
+            </>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -313,4 +442,20 @@ const styles = StyleSheet.create({
   msgBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 14, borderWidth: 1, gap: 6 },
   msgBtnText: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  // 12.4 — Skills, Education, Posts
+  section: { paddingHorizontal: 16, paddingTop: 20 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
+  sectionTitle: { fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  skillChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
+  skillName: { fontSize: fontSize.sm, fontFamily: fontFamily.medium },
+  skillLevel: { fontSize: fontSize.xs, fontFamily: fontFamily.regular },
+  eduItem: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, gap: 2 },
+  eduDegree: { fontSize: fontSize.body, fontFamily: fontFamily.semiBold },
+  eduSchool: { fontSize: fontSize.sm, fontFamily: fontFamily.regular },
+  eduDates: { fontSize: fontSize.xs, fontFamily: fontFamily.regular, marginTop: 2 },
+  eduDesc: { fontSize: fontSize.sm, fontFamily: fontFamily.regular, marginTop: 4, lineHeight: 18 },
+  emptyText: { fontSize: fontSize.sm, fontFamily: fontFamily.regular, textAlign: 'center', paddingVertical: 20 },
+  loadMoreBtn: { alignItems: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, marginTop: 12 },
+  loadMoreText: { fontSize: fontSize.sm, fontFamily: fontFamily.semiBold },
 });

@@ -68,6 +68,17 @@ export default function EditProfileScreen() {
   const [location, setLocation] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Phase 12.3 — Social Links state
+  const [socialWebsite, setSocialWebsite] = useState('');
+  const [socialLinkedin, setSocialLinkedin] = useState('');
+  const [socialTwitter, setSocialTwitter] = useState('');
+  const [socialFacebook, setSocialFacebook] = useState('');
+  const [socialInstagram, setSocialInstagram] = useState('');
+
+  // Phase 12.3 — Interests state
+  const [interests, setInterests] = useState<string[]>([]);
+  const [newInterest, setNewInterest] = useState('');
+
   // ─── Add-new-item form states ──────────────────────────────
   const [showAddEducation, setShowAddEducation] = useState(false);
   const [newEduSchool, setNewEduSchool] = useState('');
@@ -119,6 +130,15 @@ export default function EditProfileScreen() {
       setMajor(profile.major ?? '');
       setUniversity(profile.university ?? '');
       setLocation(profile.location ?? '');
+      // Phase 12.3 — Seed social links
+      const sl = profile.social_links ?? {};
+      setSocialWebsite(sl.website ?? '');
+      setSocialLinkedin(sl.linkedin ?? '');
+      setSocialTwitter(sl.twitter ?? '');
+      setSocialFacebook(sl.facebook ?? '');
+      setSocialInstagram(sl.instagram ?? '');
+      // Phase 12.3 — Seed interests
+      setInterests(profile.interests ?? []);
     }
   }, [profile]);
 
@@ -144,6 +164,14 @@ export default function EditProfileScreen() {
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try {
+      // Phase 12.3 — Collect social links (filter empty values)
+      const socialLinks: Record<string, string> = {};
+      if (socialWebsite.trim()) socialLinks.website = socialWebsite.trim();
+      if (socialLinkedin.trim()) socialLinks.linkedin = socialLinkedin.trim();
+      if (socialTwitter.trim()) socialLinks.twitter = socialTwitter.trim();
+      if (socialFacebook.trim()) socialLinks.facebook = socialFacebook.trim();
+      if (socialInstagram.trim()) socialLinks.instagram = socialInstagram.trim();
+
       await updateProfileRecord(user.id, {
         full_name: fullName.trim() || undefined,
         headline: headline.trim() || undefined,
@@ -151,6 +179,8 @@ export default function EditProfileScreen() {
         major: major.trim() || undefined,
         university: university.trim() || undefined,
         location: location.trim() || undefined,
+        social_links: Object.keys(socialLinks).length > 0 ? socialLinks : null,
+        interests: interests.length > 0 ? interests : null,
       });
       invalidateProfile();
       Alert.alert('Saved', 'Profile updated successfully.');
@@ -160,7 +190,7 @@ export default function EditProfileScreen() {
     } finally {
       setSaving(false);
     }
-  }, [user, fullName, headline, bio, major, university, location, invalidateProfile]);
+  }, [user, fullName, headline, bio, major, university, location, socialWebsite, socialLinkedin, socialTwitter, socialFacebook, socialInstagram, interests, invalidateProfile]);
 
   // ─── Avatar Upload ──────────────────────────────────────────
   const pickAvatar = useCallback(async () => {
@@ -511,6 +541,92 @@ export default function EditProfileScreen() {
               placeholderTextColor={colors.textTertiary}
             />
           </View>
+        </View>
+
+        {/* Phase 12.3 — Social Links Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Social Links</Text>
+
+          {([
+            { label: 'Website', icon: 'globe-outline' as const, value: socialWebsite, setter: setSocialWebsite, placeholder: 'https://yoursite.com' },
+            { label: 'LinkedIn', icon: 'logo-linkedin' as const, value: socialLinkedin, setter: setSocialLinkedin, placeholder: 'https://linkedin.com/in/...' },
+            { label: 'Twitter / X', icon: 'logo-twitter' as const, value: socialTwitter, setter: setSocialTwitter, placeholder: 'https://twitter.com/...' },
+            { label: 'Facebook', icon: 'logo-facebook' as const, value: socialFacebook, setter: setSocialFacebook, placeholder: 'https://facebook.com/...' },
+            { label: 'Instagram', icon: 'logo-instagram' as const, value: socialInstagram, setter: setSocialInstagram, placeholder: 'https://instagram.com/...' },
+          ] as const).map((link) => (
+            <View key={link.label} style={styles.fieldGroup}>
+              <View style={styles.socialLabelRow}>
+                <Ionicons name={link.icon as any} size={16} color={colors.textSecondary} />
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary, marginBottom: 0 }]}>{link.label}</Text>
+              </View>
+              <TextInput
+                style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
+                value={link.value}
+                onChangeText={link.setter}
+                placeholder={link.placeholder}
+                placeholderTextColor={colors.textTertiary}
+                autoCapitalize="none"
+                keyboardType="url"
+              />
+            </View>
+          ))}
+        </View>
+
+        {/* Phase 12.3 — Interests Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Interests</Text>
+            <Text style={[styles.interestCount, { color: colors.textTertiary }]}>{interests.length}/20</Text>
+          </View>
+          <View style={styles.interestInputRow}>
+            <TextInput
+              style={[styles.input, { flex: 1, color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
+              value={newInterest}
+              onChangeText={setNewInterest}
+              placeholder="Add an interest..."
+              placeholderTextColor={colors.textTertiary}
+              onSubmitEditing={() => {
+                const trimmed = newInterest.trim();
+                if (trimmed && interests.length < 20 && !interests.includes(trimmed)) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setInterests([...interests, trimmed]);
+                  setNewInterest('');
+                }
+              }}
+              returnKeyType="done"
+            />
+            <Pressable
+              onPress={() => {
+                const trimmed = newInterest.trim();
+                if (trimmed && interests.length < 20 && !interests.includes(trimmed)) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setInterests([...interests, trimmed]);
+                  setNewInterest('');
+                }
+              }}
+              style={[styles.addInterestBtn, { backgroundColor: colors.tint }]}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </Pressable>
+          </View>
+          {interests.length > 0 && (
+            <View style={styles.interestChipsWrap}>
+              {interests.map((interest) => (
+                <View key={interest} style={[styles.interestChip, { backgroundColor: colors.tint + '15', borderColor: colors.tint + '30' }]}>
+                  <Text style={[styles.interestChipText, { color: colors.tint }]}>{interest}</Text>
+                  <Pressable
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setInterests(interests.filter((i) => i !== interest));
+                    }}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="close-circle" size={16} color={colors.tint} />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Education Section */}
@@ -874,4 +990,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
   },
   skillLevelText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+
+  // Phase 12.3 — Social links
+  socialLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+
+  // Phase 12.3 — Interests
+  interestCount: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  interestInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  addInterestBtn: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  interestChipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  interestChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1,
+  },
+  interestChipText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
 });

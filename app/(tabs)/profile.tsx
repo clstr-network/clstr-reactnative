@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert, ActivityIndicator, Linking,
 } from 'react-native';
@@ -8,12 +8,17 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
+import PostCard from '@/components/PostCard';
 import { useAuth } from '@/lib/auth-context';
 import { getProfile, type Profile } from '@/lib/api';
-import { calculateProfileCompletion, getMissingProfileFields, getConnectionCount, getProfileViewsCount } from '@/lib/api/profile';
-import { getUserPostsCount } from '@/lib/api/social';
+import { calculateProfileCompletion, getMissingProfileFields, getConnectionCount, getProfileViewsCount, getExperiences, getEducation, getSkills } from '@/lib/api/profile';
+import type { ExperienceData, EducationData, SkillData } from '@/lib/api/profile';
+import { getUserPostsCount, getPostsByUser } from '@/lib/api/social';
+import { getMyProjects } from '@/lib/api/projects';
+import type { Project as CollabProject } from '@/lib/api/projects';
 import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
@@ -54,6 +59,47 @@ export default function ProfileScreen() {
     enabled: !!user?.id,
     staleTime: 60_000,
   });
+
+  // ─── 12.2 — Profile Tab State ─────────────────────────────
+  type ProfileTab = 'posts' | 'about' | 'projects';
+  const [profileTab, setProfileTab] = useState<ProfileTab>('posts');
+
+  // 12.2 — User's Posts (paginated)
+  const postsQ = useQuery({
+    queryKey: ['myPosts', user?.id],
+    queryFn: () => getPostsByUser(user!.id, { pageSize: 20 }),
+    enabled: !!user?.id && profileTab === 'posts',
+  });
+  const myPosts = postsQ.data?.posts ?? [];
+
+  // 12.2 — Education
+  const { data: educationList = [] } = useQuery<EducationData[]>({
+    queryKey: ['myEducation', user?.id],
+    queryFn: () => getEducation(user!.id),
+    enabled: !!user?.id && profileTab === 'about',
+  });
+
+  // 12.2 — Experience
+  const { data: experienceList = [] } = useQuery<ExperienceData[]>({
+    queryKey: ['myExperience', user?.id],
+    queryFn: () => getExperiences(user!.id),
+    enabled: !!user?.id && profileTab === 'about',
+  });
+
+  // 12.2 — Skills
+  const { data: skillsList = [] } = useQuery<SkillData[]>({
+    queryKey: ['mySkills', user?.id],
+    queryFn: () => getSkills(user!.id),
+    enabled: !!user?.id && profileTab === 'about',
+  });
+
+  // 12.2 — My Projects
+  const { data: projectsData } = useQuery({
+    queryKey: ['myProjects', user?.id],
+    queryFn: () => getMyProjects(user!.id),
+    enabled: !!user?.id && profileTab === 'projects',
+  });
+  const myProjects = projectsData?.data ?? [];
 
   // Phase 6 — Social links parsing
   const socialLinks = useMemo(() => {
@@ -224,6 +270,169 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {/* ─── 12.2 — Profile 3-Tab Bar ─────────────────────────── */}
+      <View style={[styles.tabBar, { borderColor: colors.border }]}>
+        {(['posts', 'about', 'projects'] as ProfileTab[]).map((tab) => {
+          const active = profileTab === tab;
+          const labels: Record<ProfileTab, string> = { posts: 'Posts', about: 'About', projects: 'Projects' };
+          return (
+            <Pressable
+              key={tab}
+              onPress={() => { Haptics.selectionAsync(); setProfileTab(tab); }}
+              style={[styles.tabBtn, active && { borderBottomColor: colors.tint, borderBottomWidth: 2 }]}
+            >
+              <Text style={[styles.tabBtnText, { color: active ? colors.tint : colors.textTertiary }]}>
+                {labels[tab]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* ─── 12.2 — Tab Content ────────────────────────────────── */}
+      <View style={styles.tabContent}>
+        {profileTab === 'posts' && (
+          <>
+            {postsQ.isLoading ? (
+              <ActivityIndicator size="small" color={colors.tint} style={{ marginTop: 24 }} />
+            ) : myPosts.length === 0 ? (
+              <View style={styles.tabEmpty}>
+                <Ionicons name="document-text-outline" size={40} color={colors.textTertiary} />
+                <Text style={[styles.tabEmptyText, { color: colors.textSecondary }]}>No posts yet</Text>
+                <Pressable onPress={() => router.push('/create-post')} style={[styles.tabEmptyBtn, { backgroundColor: colors.tint }]}>
+                  <Text style={styles.tabEmptyBtnText}>Create Post</Text>
+                </Pressable>
+              </View>
+            ) : (
+              myPosts.map((post: any) => (
+                <PostCard
+                  key={String(post.id)}
+                  post={post}
+                  onPress={() => router.push(`/post/${post.id}` as any)}
+                />
+              ))
+            )}
+          </>
+        )}
+
+        {profileTab === 'about' && (
+          <View style={styles.aboutSection}>
+            {/* Education */}
+            <View style={styles.aboutBlock}>
+              <View style={styles.aboutBlockHeader}>
+                <Ionicons name="school-outline" size={20} color={colors.tint} />
+                <Text style={[styles.aboutBlockTitle, { color: colors.text }]}>Education</Text>
+              </View>
+              {educationList.length === 0 ? (
+                <Text style={[styles.aboutEmpty, { color: colors.textTertiary }]}>No education added</Text>
+              ) : (
+                educationList.map((edu: EducationData, idx: number) => (
+                  <View key={edu.id ?? idx} style={[styles.aboutEntry, { borderColor: colors.border }]}>
+                    <Text style={[styles.aboutEntryTitle, { color: colors.text }]}>{edu.institution ?? 'Institution'}</Text>
+                    {edu.degree && <Text style={[styles.aboutEntrySubtitle, { color: colors.textSecondary }]}>{edu.degree}{edu.field_of_study ? ` · ${edu.field_of_study}` : ''}</Text>}
+                    {(edu.start_date || edu.end_date) && (
+                      <Text style={[styles.aboutEntryDate, { color: colors.textTertiary }]}>
+                        {edu.start_date ? new Date(edu.start_date).getFullYear() : '?'} – {edu.end_date ? new Date(edu.end_date).getFullYear() : 'Present'}
+                      </Text>
+                    )}
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* Experience */}
+            <View style={styles.aboutBlock}>
+              <View style={styles.aboutBlockHeader}>
+                <Ionicons name="briefcase-outline" size={20} color={colors.tint} />
+                <Text style={[styles.aboutBlockTitle, { color: colors.text }]}>Experience</Text>
+              </View>
+              {experienceList.length === 0 ? (
+                <Text style={[styles.aboutEmpty, { color: colors.textTertiary }]}>No experience added</Text>
+              ) : (
+                experienceList.map((exp: ExperienceData, idx: number) => (
+                  <View key={exp.id ?? idx} style={[styles.aboutEntry, { borderColor: colors.border }]}>
+                    <Text style={[styles.aboutEntryTitle, { color: colors.text }]}>{exp.title ?? 'Position'}</Text>
+                    {exp.company && <Text style={[styles.aboutEntrySubtitle, { color: colors.textSecondary }]}>{exp.company}{exp.location ? ` · ${exp.location}` : ''}</Text>}
+                    {(exp.start_date || exp.end_date) && (
+                      <Text style={[styles.aboutEntryDate, { color: colors.textTertiary }]}>
+                        {exp.start_date ? new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '?'} – {exp.end_date ? new Date(exp.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Present'}
+                      </Text>
+                    )}
+                    {exp.description && <Text style={[styles.aboutEntryDesc, { color: colors.textSecondary }]}>{exp.description}</Text>}
+                  </View>
+                ))
+              )}
+            </View>
+
+            {/* Skills */}
+            <View style={styles.aboutBlock}>
+              <View style={styles.aboutBlockHeader}>
+                <Ionicons name="flash-outline" size={20} color={colors.tint} />
+                <Text style={[styles.aboutBlockTitle, { color: colors.text }]}>Skills</Text>
+              </View>
+              {skillsList.length === 0 ? (
+                <Text style={[styles.aboutEmpty, { color: colors.textTertiary }]}>No skills added</Text>
+              ) : (
+                <View style={styles.skillChipsRow}>
+                  {skillsList.map((skill: SkillData, idx: number) => (
+                    <View key={skill.id ?? idx} style={[styles.skillChip, { backgroundColor: colors.tint + '15', borderColor: colors.tint + '30' }]}>
+                      <Text style={[styles.skillChipText, { color: colors.tint }]}>{skill.name}</Text>
+                      {skill.level && <Text style={[styles.skillLevel, { color: colors.textTertiary }]}>{skill.level}</Text>}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {profileTab === 'projects' && (
+          <>
+            {!projectsData ? (
+              <ActivityIndicator size="small" color={colors.tint} style={{ marginTop: 24 }} />
+            ) : myProjects.length === 0 ? (
+              <View style={styles.tabEmpty}>
+                <Ionicons name="rocket-outline" size={40} color={colors.textTertiary} />
+                <Text style={[styles.tabEmptyText, { color: colors.textSecondary }]}>No projects yet</Text>
+                <Pressable onPress={() => router.push('/projects')} style={[styles.tabEmptyBtn, { backgroundColor: colors.tint }]}>
+                  <Text style={styles.tabEmptyBtnText}>Browse Projects</Text>
+                </Pressable>
+              </View>
+            ) : (
+              myProjects.map((proj: any) => (
+                <Pressable
+                  key={proj.id}
+                  onPress={() => router.push(`/project/${proj.id}` as any)}
+                  style={({ pressed }) => [styles.projectCard, { backgroundColor: pressed ? colors.surfaceElevated : colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={styles.projectCardHeader}>
+                    <Text style={[styles.projectTitle, { color: colors.text }]} numberOfLines={1}>{proj.title}</Text>
+                    {proj.status && (
+                      <View style={[styles.projectStatus, { backgroundColor: proj.status === 'open' ? colors.success + '18' : colors.textTertiary + '18' }]}>
+                        <Text style={[styles.projectStatusText, { color: proj.status === 'open' ? colors.success : colors.textTertiary }]}>{proj.status}</Text>
+                      </View>
+                    )}
+                  </View>
+                  {proj.description && <Text style={[styles.projectDesc, { color: colors.textSecondary }]} numberOfLines={2}>{proj.description}</Text>}
+                  {proj.tech_stack && Array.isArray(proj.tech_stack) && proj.tech_stack.length > 0 && (
+                    <View style={styles.techStackRow}>
+                      {proj.tech_stack.slice(0, 4).map((tech: string, i: number) => (
+                        <View key={i} style={[styles.techChip, { backgroundColor: colors.primary + '12' }]}>
+                          <Text style={[styles.techChipText, { color: colors.primary }]}>{tech}</Text>
+                        </View>
+                      ))}
+                      {proj.tech_stack.length > 4 && (
+                        <Text style={[styles.techMore, { color: colors.textTertiary }]}>+{proj.tech_stack.length - 4}</Text>
+                      )}
+                    </View>
+                  )}
+                </Pressable>
+              ))
+            )}
+          </>
+        )}
+      </View>
+
       {/* Phase 6 — Portfolio Link */}
       <Pressable
         onPress={() => { Haptics.selectionAsync(); router.push('/portfolio'); }}
@@ -339,4 +548,45 @@ const styles = StyleSheet.create({
   logoutItem: { marginTop: 12, borderWidth: 0 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   emptyText: { fontSize: 16, fontFamily: 'Inter_400Regular' },
+  /* ─── 12.2 — Tab Bar ─────────────────────────────────────── */
+  tabBar: {
+    flexDirection: 'row', borderBottomWidth: 1,
+    marginTop: 16, marginHorizontal: 16,
+  },
+  tabBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 12,
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
+  },
+  tabBtnText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  tabContent: { minHeight: 200, paddingHorizontal: 16, paddingTop: 12 },
+  tabEmpty: { alignItems: 'center', paddingVertical: 40, gap: 10 },
+  tabEmptyText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
+  tabEmptyBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, marginTop: 6 },
+  tabEmptyBtnText: { color: '#fff', fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  /* ─── About section ────────────────────────────────────── */
+  aboutSection: { gap: 20 },
+  aboutBlock: { gap: 8 },
+  aboutBlockHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  aboutBlockTitle: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  aboutEmpty: { fontSize: 13, fontFamily: 'Inter_400Regular', marginLeft: 28 },
+  aboutEntry: { marginLeft: 28, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth, gap: 2 },
+  aboutEntryTitle: { fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  aboutEntrySubtitle: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  aboutEntryDate: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  aboutEntryDesc: { fontSize: 13, fontFamily: 'Inter_400Regular', marginTop: 4, lineHeight: 19 },
+  skillChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginLeft: 28 },
+  skillChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
+  skillChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  skillLevel: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  /* ─── Project cards ──────────────────────────────────────── */
+  projectCard: { padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 10 },
+  projectCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  projectTitle: { flex: 1, fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  projectStatus: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  projectStatusText: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold', textTransform: 'capitalize' },
+  projectDesc: { fontSize: 13, fontFamily: 'Inter_400Regular', marginTop: 6, lineHeight: 19 },
+  techStackRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  techChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  techChipText: { fontSize: 11, fontWeight: '500', fontFamily: 'Inter_500Medium' },
+  techMore: { fontSize: 11, fontFamily: 'Inter_400Regular', alignSelf: 'center' },
 });

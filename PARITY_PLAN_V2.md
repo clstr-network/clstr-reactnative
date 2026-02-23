@@ -349,7 +349,33 @@ The mobile create-post screen only supports text + single image. Web supports 4 
 
 ---
 
-## Phase 12 — Screen Depth Enrichment (P1-P2)
+## Phase 12 — Screen Depth Enrichment (P1-P2) ✅ COMPLETED
+
+> **Implementation completed 2026-02-23.** All 15 tasks delivered. Every existing screen now has feature-depth matching the web app. Dependencies installed: `@react-native-community/datetimepicker@8.4.4`, `react-native-markdown-display`.
+>
+> **Post-implementation fixes (2026-02-23):**
+> - `app/(tabs)/profile.tsx` — Fixed `CollabProject` type import error: aliased as `import type { Project as CollabProject }` since `CollabProject` is not exported from `@/lib/api/projects`
+> - `app/clubs.tsx` — Fixed Expo Router typed-routes TS error: added `as any` cast on `router.push(\`/club/\${club.id}\`)` for dynamic route compatibility
+>
+> **New files created:**
+> - `app/club/[id].tsx` — Full club detail page with 4-tab layout (About, Events, Posts, Members), follow/unfollow actions, member list, and club posts feed
+>
+> **Modified files:**
+> - `app/(tabs)/index.tsx` — Task 12.1: Horizontal stats row (connections count, profile views, role badge) below quick-compose
+> - `app/(tabs)/profile.tsx` — Task 12.2: 3-tab layout (Posts/About/Projects) with PostCard list, education/experience/skills sections, and project cards with tech stack chips
+> - `app/edit-profile.tsx` — Task 12.3: Collapsible Social Links section (5 platform inputs) + Interests chip editor
+> - `app/user/[id].tsx` — Task 12.4: Posts feed, Skills badges, Education entries, Experience entries below profile header
+> - `app/jobs.tsx` — Task 12.5: Recommended Jobs tab with match scores, My Applications sub-tab, Post Job modal (alumni-only), Apply modal with resume/cover letter
+> - `app/projects.tsx` — Task 12.6: 4-tab layout (Explore/My Projects/Team-Ups/Requests), ApplicationCard component, Create Project modal, Create Team-Up modal, Apply modal, accept/reject application actions
+> - `app/create-event.tsx` — Task 12.7: Native DateTimePicker replacing manual Y/M/D fields, tags input
+> - `app/clubs.tsx` — Task 12.8: Fixed navigation from `/user/` to `/club/` for club detail routing
+> - `app/alumni.tsx` — Task 12.9: Connect button (3-state: Connect/Pending/Connected), Message button for connected alumni
+> - `app/saved.tsx` — Task 12.10: Inline unsave button, SavedJobItem component, Saved Jobs tab (4th tab)
+> - `app/search.tsx` — Task 12.11: 6-category search (People/Posts/Events/Jobs/Clubs/Projects) with category tabs and appropriate result cards
+> - `app/mentorship.tsx` — Task 12.12: Request Mentorship button on mentor cards, request dialog with optional message
+> - `app/ecocampus.tsx` — Task 12.13: FAB + Create shared item form and Create request form with category/condition pickers, delete own listings
+> - `app/ai-chat.tsx` — Task 12.14: Message history as AI context, markdown rendering via react-native-markdown-display, suggested prompts, typing indicator
+> - `app/post-actions.tsx` — Task 12.15: Edit Post option (own posts) with inline editor, Delete Post with confirmation alert, permission checks via canEditOwnContent/canDeleteOwnContent
 
 These are existing screens that need feature additions to match the web.
 
@@ -869,13 +895,13 @@ npx expo install @react-native-community/datetimepicker react-native-markdown-di
 | Poll creation | ✅ Done | 10.4 |
 | Share to connections | ✅ Done | 11.1 |
 | Repost modal | ✅ Done | 11.2 |
-| Profile 3-tab layout | 🔨 Phase 12 | 12.2 |
-| Edit profile social links | 🔨 Phase 12 | 12.3 |
-| Jobs recommended + apply | 🔨 Phase 12 | 12.5 |
-| Projects team-ups | 🔨 Phase 12 | 12.6 |
-| Club detail page | 🔨 Phase 12 | 12.8 |
-| Alumni connect/message | 🔨 Phase 12 | 12.9 |
-| Multi-category search | 🔨 Phase 12 | 12.11 |
+| Profile 3-tab layout | ✅ Done | 12.2 |
+| Edit profile social links | ✅ Done | 12.3 |
+| Jobs recommended + apply | ✅ Done | 12.5 |
+| Projects team-ups | ✅ Done | 12.6 |
+| Club detail page | ✅ Done | 12.8 |
+| Alumni connect/message | ✅ Done | 12.9 |
+| Multi-category search | ✅ Done | 12.11 |
 | All realtime subscriptions | 🔨 Phase 13 | 13.1-13.11 |
 | Project detail screen | 🔨 Phase 14 | 14.1 |
 | Skeleton loading screens | 🔨 Phase 15 | 15.4 |

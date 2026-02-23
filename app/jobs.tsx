@@ -1,9 +1,8 @@
 /**
- * Jobs Screen — Phase 9.1
+ * Jobs Screen — Phase 9.1 → Phase 12.5
  *
- * Browse jobs posted by alumni / organizations.
- * Features: search, filters (type, location, saved), recommended jobs tab.
- * Uses `getJobs()`, `toggleSaveJob()` from `lib/api/jobs`.
+ * Browse, recommended, saved, applications tabs.
+ * Post Job dialog for alumni. Apply dialog.
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -17,6 +16,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
+  Modal,
+  ScrollView,
+  Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,19 +29,29 @@ import * as Haptics from 'expo-haptics';
 
 import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
-import { getJobs, getSavedJobs, toggleSaveJob } from '@/lib/api/jobs';
-import type { Job } from '@/lib/api/jobs';
+import {
+  getJobs,
+  getSavedJobs,
+  toggleSaveJob,
+  getRecommendedJobs,
+  getMyApplications,
+  createJob,
+  applyToJob,
+} from '@/lib/api/jobs';
+import type { Job, JobWithMatchScore, JobApplication, CreateJobInput, ApplyToJobInput } from '@/lib/api/jobs';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { QUERY_KEYS } from '@/lib/query-keys';
 
 // ─── Tab types ───────────────────────────────────────────────
 
-type TabKey = 'browse' | 'saved';
+type TabKey = 'browse' | 'recommended' | 'saved' | 'applications';
 
 const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'browse', label: 'Browse', icon: 'briefcase-outline' },
+  { key: 'recommended', label: 'For You', icon: 'sparkles-outline' },
   { key: 'saved', label: 'Saved', icon: 'bookmark-outline' },
+  { key: 'applications', label: 'Applied', icon: 'paper-plane-outline' },
 ];
 
 const JOB_TYPE_FILTERS = ['All', 'Full-time', 'Part-time', 'Internship', 'Contract', 'Remote'];
@@ -50,11 +63,15 @@ const JobCard = React.memo(function JobCard({
   colors,
   onSave,
   isSaved,
+  matchScore,
+  onApply,
 }: {
   job: Job;
   colors: ReturnType<typeof useThemeColors>;
   onSave: (jobId: string) => void;
   isSaved?: boolean;
+  matchScore?: number;
+  onApply?: () => void;
 }) {
   return (
     <Pressable
@@ -89,6 +106,14 @@ const JobCard = React.memo(function JobCard({
         </Pressable>
       </View>
 
+      {/* Match score badge (12.5) */}
+      {matchScore != null && matchScore > 0 && (
+        <View style={[styles.matchBadge, { backgroundColor: colors.primaryLight }]}>
+          <Ionicons name="sparkles" size={14} color={colors.primary} />
+          <Text style={[styles.matchText, { color: colors.primary }]}>{Math.round(matchScore)}% Match</Text>
+        </View>
+      )}
+
       {job.description && (
         <Text style={[styles.cardDescription, { color: colors.textSecondary }]} numberOfLines={2}>
           {job.description}
@@ -118,6 +143,59 @@ const JobCard = React.memo(function JobCard({
           </View>
         )}
       </View>
+
+      {/* Apply button (12.5) */}
+      {onApply && (
+        <Pressable
+          onPress={onApply}
+          style={[styles.applyBtn, { backgroundColor: colors.primary }]}
+        >
+          <Ionicons name="paper-plane" size={14} color="#fff" />
+          <Text style={styles.applyBtnText}>Quick Apply</Text>
+        </Pressable>
+      )}
+    </Pressable>
+  );
+});
+
+// ─── Application Card (12.5) ─────────────────────────────────
+
+const ApplicationCard = React.memo(function ApplicationCard({
+  app,
+  colors,
+}: {
+  app: JobApplication;
+  colors: ReturnType<typeof useThemeColors>;
+}) {
+  const statusColor =
+    app.status === 'accepted' ? colors.success
+    : app.status === 'rejected' ? (colors as any).error ?? '#ef4444'
+    : colors.warning;
+  const statusLabel = app.status ? app.status.charAt(0).toUpperCase() + app.status.slice(1) : 'Pending';
+
+  return (
+    <Pressable
+      onPress={() => {
+        if (app.job_id) router.push(`/job/${app.job_id}`);
+      }}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
+      <View style={styles.cardHeader}>
+        <View style={[styles.jobIcon, { backgroundColor: colors.primaryLight }]}>
+          <Ionicons name="paper-plane" size={18} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
+            {app.job?.title ?? 'Job Application'}
+          </Text>
+          <Text style={[styles.cardMeta, { color: colors.textTertiary }]} numberOfLines={1}>
+            {app.job?.company_name ?? 'Unknown'} · {app.submitted_at ? new Date(app.submitted_at).toLocaleDateString() : ''}
+          </Text>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+          <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
+        </View>
+      </View>
     </Pressable>
   );
 });
@@ -130,11 +208,29 @@ export default function JobsScreen() {
   const queryClient = useQueryClient();
   const { identity } = useIdentityContext();
   const userId = identity?.user_id ?? '';
-  const { canBrowseJobs, canSaveJobs } = useFeatureAccess();
+  const { canBrowseJobs, canSaveJobs, canPostJobs, canApplyToJobs, canUseAIJobMatching } = useFeatureAccess();
 
   const [activeTab, setActiveTab] = useState<TabKey>('browse');
   const [searchQuery, setSearchQuery] = useState('');
   const [jobTypeFilter, setJobTypeFilter] = useState('All');
+
+  // ── Dialogs ────────────────────────────────────────────────
+  const [showPostJob, setShowPostJob] = useState(false);
+  const [showApply, setShowApply] = useState(false);
+  const [applyJobId, setApplyJobId] = useState<string | null>(null);
+
+  // ── Post Job form state ─────────────────────────────────
+  const [pjTitle, setPjTitle] = useState('');
+  const [pjCompany, setPjCompany] = useState('');
+  const [pjDesc, setPjDesc] = useState('');
+  const [pjLocation, setPjLocation] = useState('');
+  const [pjType, setPjType] = useState('Full-time');
+  const [pjCategory, setPjCategory] = useState('Engineering');
+
+  // ── Apply form state ────────────────────────────────────
+  const [apResumeUrl, setApResumeUrl] = useState('');
+  const [apCover, setApCover] = useState('');
+  const [apPortfolio, setApPortfolio] = useState('');
 
   // ── Browse jobs ────────────────────────────────────────────
   const browseQuery = useQuery({
@@ -153,6 +249,22 @@ export default function JobsScreen() {
     queryKey: QUERY_KEYS.savedJobs,
     queryFn: () => getSavedJobs(),
     enabled: !!userId && canSaveJobs,
+    staleTime: 30_000,
+  });
+
+  // ── Recommended jobs (12.5) ─────────────────────────────────
+  const recommendedQuery = useQuery({
+    queryKey: [...QUERY_KEYS.jobs, 'recommended'],
+    queryFn: () => getRecommendedJobs(),
+    enabled: !!userId && canUseAIJobMatching && activeTab === 'recommended',
+    staleTime: 60_000,
+  });
+
+  // ── My applications (12.5) ──────────────────────────────────
+  const applicationsQuery = useQuery({
+    queryKey: [...QUERY_KEYS.jobs, 'applications'],
+    queryFn: () => getMyApplications(),
+    enabled: !!userId && activeTab === 'applications',
     staleTime: 30_000,
   });
 
@@ -177,24 +289,93 @@ export default function JobsScreen() {
     [saveMutation],
   );
 
+  // ── Create job mutation (12.5) ──────────────────────────────
+  const createJobMut = useMutation({
+    mutationFn: () =>
+      createJob({
+        job_title: pjTitle.trim(),
+        company_name: pjCompany.trim(),
+        description: pjDesc.trim(),
+        location: pjLocation.trim(),
+        job_type: pjType,
+        category: pjCategory,
+      } as CreateJobInput),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowPostJob(false);
+      setPjTitle(''); setPjCompany(''); setPjDesc(''); setPjLocation('');
+      Alert.alert('Success', 'Job posted successfully!');
+    },
+    onError: () => Alert.alert('Error', 'Failed to post job.'),
+  });
+
+  // ── Apply mutation (12.5) ───────────────────────────────────
+  const applyMut = useMutation({
+    mutationFn: () =>
+      applyToJob({
+        job_id: applyJobId!,
+        resume_url: apResumeUrl.trim(),
+        cover_letter: apCover.trim() || undefined,
+        portfolio_url: apPortfolio.trim() || undefined,
+      } as ApplyToJobInput),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.jobs, 'applications'] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowApply(false);
+      setApResumeUrl(''); setApCover(''); setApPortfolio(''); setApplyJobId(null);
+      Alert.alert('Applied!', 'Your application has been submitted.');
+    },
+    onError: () => Alert.alert('Error', 'Failed to submit application.'),
+  });
+
+  const openApplyDialog = useCallback((jobId: string) => {
+    setApplyJobId(jobId);
+    setShowApply(true);
+  }, []);
+
   // ── Resolved data ──────────────────────────────────────────
   const displayJobs = useMemo(() => {
-    let jobs = activeTab === 'saved' ? (savedQuery.data?.jobs ?? []) : (browseQuery.data?.jobs ?? []);
+    let jobs: Job[] = [];
+    if (activeTab === 'saved') jobs = savedQuery.data?.jobs ?? [];
+    else if (activeTab === 'recommended') jobs = (recommendedQuery.data as any)?.jobs ?? [];
+    else jobs = browseQuery.data?.jobs ?? [];
     if (jobTypeFilter !== 'All') {
       jobs = jobs.filter((j: Job) => (j.job_type ?? '').toLowerCase() === jobTypeFilter.toLowerCase());
     }
     return jobs;
-  }, [activeTab, browseQuery.data, savedQuery.data, jobTypeFilter]);
+  }, [activeTab, browseQuery.data, savedQuery.data, recommendedQuery.data, jobTypeFilter]);
 
-  const isLoading = activeTab === 'browse' ? browseQuery.isLoading : savedQuery.isLoading;
-  const isRefetching = activeTab === 'browse' ? browseQuery.isRefetching : savedQuery.isRefetching;
-  const refetch = activeTab === 'browse' ? browseQuery.refetch : savedQuery.refetch;
+  const applications: JobApplication[] = (applicationsQuery.data as any)?.applications ?? [];
+
+  const isLoading =
+    activeTab === 'browse' ? browseQuery.isLoading
+    : activeTab === 'saved' ? savedQuery.isLoading
+    : activeTab === 'recommended' ? recommendedQuery.isLoading
+    : applicationsQuery.isLoading;
+  const isRefetching =
+    activeTab === 'browse' ? browseQuery.isRefetching
+    : activeTab === 'saved' ? savedQuery.isRefetching
+    : activeTab === 'recommended' ? recommendedQuery.isRefetching
+    : applicationsQuery.isRefetching;
+  const refetch =
+    activeTab === 'browse' ? browseQuery.refetch
+    : activeTab === 'saved' ? savedQuery.refetch
+    : activeTab === 'recommended' ? recommendedQuery.refetch
+    : applicationsQuery.refetch;
 
   const renderItem = useCallback(
     ({ item }: { item: Job }) => (
-      <JobCard job={item} colors={colors} onSave={handleSave} isSaved={savedIds.has(item.id)} />
+      <JobCard
+        job={item}
+        colors={colors}
+        onSave={handleSave}
+        isSaved={savedIds.has(item.id)}
+        matchScore={(item as JobWithMatchScore).total_score}
+        onApply={canApplyToJobs ? () => openApplyDialog(item.id) : undefined}
+      />
     ),
-    [colors, handleSave, savedIds],
+    [colors, handleSave, savedIds, canApplyToJobs, openApplyDialog],
   );
 
   const keyExtractor = useCallback((item: Job) => item.id, []);
@@ -310,14 +491,34 @@ export default function JobsScreen() {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      ) : activeTab === 'applications' ? (
+        applications.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Ionicons name="paper-plane-outline" size={56} color={colors.textTertiary} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No applications yet</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+              Jobs you apply to will appear here
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={applications}
+            renderItem={({ item }) => <ApplicationCard app={item} colors={colors} />}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+            }
+          />
+        )
       ) : displayJobs.length === 0 ? (
         <View style={styles.centerContainer}>
           <Ionicons name="briefcase-outline" size={56} color={colors.textTertiary} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            {activeTab === 'saved' ? 'No saved jobs' : 'No jobs found'}
+            {activeTab === 'saved' ? 'No saved jobs' : activeTab === 'recommended' ? 'No recommendations yet' : 'No jobs found'}
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {activeTab === 'saved' ? 'Jobs you save will appear here' : 'Try adjusting your search'}
+            {activeTab === 'saved' ? 'Jobs you save will appear here' : activeTab === 'recommended' ? 'Complete your profile to get AI-matched jobs' : 'Try adjusting your search'}
           </Text>
         </View>
       ) : (
@@ -335,6 +536,167 @@ export default function JobsScreen() {
           }
         />
       )}
+
+      {/* Post Job FAB (alumni only) */}
+      {canPostJobs && (
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowPostJob(true); }}
+          style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 16 }]}
+        >
+          <Ionicons name="add" size={28} color="#fff" />
+        </Pressable>
+      )}
+
+      {/* ── Post Job Modal ─────────────────────────────────── */}
+      <Modal visible={showPostJob} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowPostJob(false)} />
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Post a Job</Text>
+                <Pressable onPress={() => setShowPostJob(false)} hitSlop={8}>
+                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+
+              <TextInput
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
+                placeholder="Job Title *"
+                placeholderTextColor={colors.textTertiary}
+                value={pjTitle}
+                onChangeText={setPjTitle}
+              />
+              <TextInput
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
+                placeholder="Company Name *"
+                placeholderTextColor={colors.textTertiary}
+                value={pjCompany}
+                onChangeText={setPjCompany}
+              />
+              <TextInput
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
+                placeholder="Location"
+                placeholderTextColor={colors.textTertiary}
+                value={pjLocation}
+                onChangeText={setPjLocation}
+              />
+              <TextInput
+                style={[styles.modalTextArea, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
+                placeholder="Job Description *"
+                placeholderTextColor={colors.textTertiary}
+                value={pjDesc}
+                onChangeText={setPjDesc}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+
+              {/* Job Type Picker */}
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Job Type</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modalChipRow}>
+                {['Full-time', 'Part-time', 'Internship', 'Contract', 'Remote'].map((t) => (
+                  <Pressable
+                    key={t}
+                    onPress={() => setPjType(t)}
+                    style={[styles.modalChip, { backgroundColor: pjType === t ? colors.primary : 'transparent', borderColor: pjType === t ? colors.primary : colors.border }]}
+                  >
+                    <Text style={[styles.modalChipText, { color: pjType === t ? '#fff' : colors.textSecondary }]}>{t}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              {/* Category Picker */}
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Category</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modalChipRow}>
+                {['Engineering', 'Design', 'Marketing', 'Business', 'Science', 'Arts', 'Other'].map((c) => (
+                  <Pressable
+                    key={c}
+                    onPress={() => setPjCategory(c)}
+                    style={[styles.modalChip, { backgroundColor: pjCategory === c ? colors.primary : 'transparent', borderColor: pjCategory === c ? colors.primary : colors.border }]}
+                  >
+                    <Text style={[styles.modalChipText, { color: pjCategory === c ? '#fff' : colors.textSecondary }]}>{c}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <Pressable
+                onPress={() => {
+                  if (!pjTitle.trim() || !pjCompany.trim() || !pjDesc.trim()) {
+                    Alert.alert('Missing Fields', 'Title, company, and description are required.');
+                    return;
+                  }
+                  createJobMut.mutate();
+                }}
+                disabled={createJobMut.isPending}
+                style={[styles.modalBtn, { backgroundColor: colors.primary, opacity: createJobMut.isPending ? 0.6 : 1 }]}
+              >
+                <Text style={styles.modalBtnText}>{createJobMut.isPending ? 'Posting...' : 'Post Job'}</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Apply Modal ────────────────────────────────────── */}
+      <Modal visible={showApply} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowApply(false)} />
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Apply to Job</Text>
+                <Pressable onPress={() => setShowApply(false)} hitSlop={8}>
+                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+
+              <TextInput
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
+                placeholder="Resume URL *"
+                placeholderTextColor={colors.textTertiary}
+                value={apResumeUrl}
+                onChangeText={setApResumeUrl}
+                autoCapitalize="none"
+                keyboardType="url"
+              />
+              <TextInput
+                style={[styles.modalTextArea, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
+                placeholder="Cover Letter (optional)"
+                placeholderTextColor={colors.textTertiary}
+                value={apCover}
+                onChangeText={setApCover}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+              <TextInput
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
+                placeholder="Portfolio URL (optional)"
+                placeholderTextColor={colors.textTertiary}
+                value={apPortfolio}
+                onChangeText={setApPortfolio}
+                autoCapitalize="none"
+                keyboardType="url"
+              />
+
+              <Pressable
+                onPress={() => {
+                  if (!apResumeUrl.trim()) {
+                    Alert.alert('Missing Field', 'Resume URL is required.');
+                    return;
+                  }
+                  applyMut.mutate();
+                }}
+                disabled={applyMut.isPending}
+                style={[styles.modalBtn, { backgroundColor: colors.primary, opacity: applyMut.isPending ? 0.6 : 1 }]}
+              >
+                <Text style={styles.modalBtnText}>{applyMut.isPending ? 'Submitting...' : 'Submit Application'}</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -452,5 +814,138 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontFamily: fontFamily.regular,
     textAlign: 'center',
+  },
+  // ── Match / Apply / Status (12.5) ─────────────────────────
+  matchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  matchText: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.semiBold,
+  },
+  applyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginTop: 2,
+  },
+  applyBtnText: {
+    color: '#fff',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.semiBold,
+  },
+  // ── FAB ──────────────────────────────────────────────────
+  fab: {
+    position: 'absolute',
+    right: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  // ── Modal ────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bold,
+  },
+  modalLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    marginBottom: 10,
+  },
+  modalTextArea: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
+    marginBottom: 10,
+    minHeight: 100,
+  },
+  modalChipRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    flexGrow: 0,
+  },
+  modalChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginRight: 6,
+  },
+  modalChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
+  },
+  modalBtn: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  modalBtnText: {
+    color: '#fff',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
   },
 });

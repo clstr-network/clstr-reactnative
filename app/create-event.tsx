@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import * as Haptics from 'expo-haptics';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useThemeColors } from '@/constants/colors';
 import { useAuth } from '@/lib/auth-context';
 import { createEvent } from '@/lib/api/events';
@@ -56,14 +57,52 @@ export default function CreateEventScreen() {
   const [maxAttendees, setMaxAttendees] = useState('');
   const [registrationRequired, setRegistrationRequired] = useState(false);
   const [externalLink, setExternalLink] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
 
-  // Inline date editor state
-  const [showDateEditor, setShowDateEditor] = useState(false);
-  const [dateYear, setDateYear] = useState(() => String(new Date().getFullYear()));
-  const [dateMonth, setDateMonth] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'));
-  const [dateDay, setDateDay] = useState(() => String(new Date().getDate()).padStart(2, '0'));
+  // Native date/time picker state
+  const [dateObj, setDateObj] = useState(() => new Date());
+  const [timeObj, setTimeObj] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const isValid = title.trim().length > 0 && eventDate.length > 0;
+
+  // Tag helpers
+  const addTag = useCallback(() => {
+    const t = tagInput.trim().toLowerCase();
+    if (t && !tags.includes(t) && tags.length < 10) {
+      setTags(prev => [...prev, t]);
+      setTagInput('');
+      Haptics.selectionAsync();
+    }
+  }, [tagInput, tags]);
+
+  const removeTag = useCallback((tag: string) => {
+    setTags(prev => prev.filter(t => t !== tag));
+    Haptics.selectionAsync();
+  }, []);
+
+  // Date/time picker handlers
+  const onDateChange = useCallback((_event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (selected) {
+      setDateObj(selected);
+      const y = selected.getFullYear();
+      const m = String(selected.getMonth() + 1).padStart(2, '0');
+      const d = String(selected.getDate()).padStart(2, '0');
+      setEventDate(`${y}-${m}-${d}`);
+    }
+  }, []);
+
+  const onTimeChange = useCallback((_event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === 'android') setShowTimePicker(false);
+    if (selected) {
+      setTimeObj(selected);
+      const timeStr = selected.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      setEventTime(timeStr);
+    }
+  }, []);
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -79,7 +118,9 @@ export default function CreateEventScreen() {
         max_attendees: maxAttendees ? parseInt(maxAttendees, 10) || undefined : undefined,
         registration_required: registrationRequired,
         external_registration_link: externalLink.trim() || undefined,
+        tags: tags.length > 0 ? tags : undefined,
       }),
+
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events });
@@ -95,16 +136,6 @@ export default function CreateEventScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     createMutation.mutate();
   }, [isValid, user, createMutation]);
-
-  const applyDate = useCallback(() => {
-    const y = parseInt(dateYear, 10);
-    const m = parseInt(dateMonth, 10);
-    const d = parseInt(dateDay, 10);
-    if (y >= 2024 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-      setEventDate(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-    }
-    setShowDateEditor(false);
-  }, [dateYear, dateMonth, dateDay]);
 
   const isBusy = createMutation.isPending;
 
@@ -174,70 +205,56 @@ export default function CreateEventScreen() {
           ))}
         </View>
 
-        {/* Date */}
+        {/* Date — Native Picker */}
         <Text style={[styles.label, { color: colors.text }]}>Date *</Text>
         <Pressable
-          onPress={() => setShowDateEditor(!showDateEditor)}
+          onPress={() => { setShowDatePicker(prev => !prev); Haptics.selectionAsync(); }}
           style={[styles.dateBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Ionicons name="calendar-outline" size={18} color={colors.tint} />
           <Text style={[styles.dateBtnText, { color: colors.text }]}>
             {formatDisplayDate(eventDate) || 'Select date'}
           </Text>
-          <Ionicons name={showDateEditor ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
+          <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
         </Pressable>
 
-        {showDateEditor && (
-          <View style={[styles.dateEditorRow, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-            <View style={styles.dateFieldGroup}>
-              <Text style={[styles.dateFieldLabel, { color: colors.textSecondary }]}>Year</Text>
-              <TextInput
-                style={[styles.dateField, { color: colors.text, borderColor: colors.border }]}
-                value={dateYear}
-                onChangeText={setDateYear}
-                keyboardType="number-pad"
-                maxLength={4}
-              />
-            </View>
-            <View style={styles.dateFieldGroup}>
-              <Text style={[styles.dateFieldLabel, { color: colors.textSecondary }]}>Month</Text>
-              <TextInput
-                style={[styles.dateField, { color: colors.text, borderColor: colors.border }]}
-                value={dateMonth}
-                onChangeText={setDateMonth}
-                keyboardType="number-pad"
-                maxLength={2}
-              />
-            </View>
-            <View style={styles.dateFieldGroup}>
-              <Text style={[styles.dateFieldLabel, { color: colors.textSecondary }]}>Day</Text>
-              <TextInput
-                style={[styles.dateField, { color: colors.text, borderColor: colors.border }]}
-                value={dateDay}
-                onChangeText={setDateDay}
-                keyboardType="number-pad"
-                maxLength={2}
-              />
-            </View>
-            <Pressable
-              onPress={applyDate}
-              style={[styles.dateApplyBtn, { backgroundColor: colors.tint }]}
-            >
-              <Ionicons name="checkmark" size={18} color="#fff" />
-            </Pressable>
+        {showDatePicker && (
+          <View style={[styles.pickerContainer, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+            <DateTimePicker
+              value={dateObj}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={onDateChange}
+              minimumDate={new Date()}
+              themeVariant="dark"
+            />
           </View>
         )}
 
-        {/* Time */}
+        {/* Time — Native Picker */}
         <Text style={[styles.label, { color: colors.text }]}>Time</Text>
-        <TextInput
-          style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
-          placeholder="e.g. 2:00 PM - 4:00 PM"
-          placeholderTextColor={colors.textTertiary}
-          value={eventTime}
-          onChangeText={setEventTime}
-          maxLength={50}
-        />
+        <Pressable
+          onPress={() => { setShowTimePicker(prev => !prev); Haptics.selectionAsync(); }}
+          style={[styles.dateBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <Ionicons name="time-outline" size={18} color={colors.tint} />
+          <Text style={[styles.dateBtnText, { color: eventTime ? colors.text : colors.textTertiary }]}>
+            {eventTime || 'Select time'}
+          </Text>
+          <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
+        </Pressable>
+
+        {showTimePicker && (
+          <View style={[styles.pickerContainer, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+            <DateTimePicker
+              value={timeObj ?? new Date()}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onTimeChange}
+              themeVariant="dark"
+            />
+          </View>
+        )}
 
         {/* Virtual toggle */}
         <View style={styles.switchRow}>
@@ -322,6 +339,41 @@ export default function CreateEventScreen() {
           </>
         )}
 
+        {/* Tags */}
+        <Text style={[styles.label, { color: colors.text }]}>Tags</Text>
+        <View style={styles.tagInputRow}>
+          <TextInput
+            style={[styles.tagInputField, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
+            placeholder="Add tag…"
+            placeholderTextColor={colors.textTertiary}
+            value={tagInput}
+            onChangeText={setTagInput}
+            onSubmitEditing={addTag}
+            returnKeyType="done"
+            maxLength={30}
+          />
+          <Pressable
+            onPress={addTag}
+            style={[styles.tagAddBtn, { backgroundColor: tagInput.trim() ? colors.tint : colors.surfaceSecondary }]}
+          >
+            <Ionicons name="add" size={18} color={tagInput.trim() ? '#fff' : colors.textTertiary} />
+          </Pressable>
+        </View>
+        {tags.length > 0 && (
+          <View style={styles.tagChipRow}>
+            {tags.map(tag => (
+              <Pressable
+                key={tag}
+                onPress={() => removeTag(tag)}
+                style={[styles.tagChip, { backgroundColor: colors.tint + '15', borderColor: colors.tint }]}
+              >
+                <Text style={[styles.tagChipText, { color: colors.tint }]}>#{tag}</Text>
+                <Ionicons name="close-circle" size={14} color={colors.tint} />
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         {/* Description */}
         <Text style={[styles.label, { color: colors.text }]}>Description</Text>
         <TextInput
@@ -375,20 +427,28 @@ const styles = StyleSheet.create({
     borderRadius: 12, borderWidth: 1, gap: 8,
   },
   dateBtnText: { flex: 1, fontSize: 15, fontFamily: 'Inter_400Regular' },
-  dateEditorRow: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 8,
-    padding: 12, borderRadius: 12, borderWidth: 1,
+  pickerContainer: {
+    borderRadius: 12, borderWidth: 1, overflow: 'hidden', padding: 4,
   },
-  dateFieldGroup: { flex: 1, gap: 4 },
-  dateFieldLabel: { fontSize: 11, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  dateField: {
-    fontSize: 15, textAlign: 'center', paddingVertical: 8,
-    borderRadius: 8, borderWidth: 1, fontFamily: 'Inter_400Regular',
+  tagInputRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
   },
-  dateApplyBtn: {
-    width: 36, height: 36, borderRadius: 18,
+  tagInputField: {
+    flex: 1, fontSize: 15, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 12, borderWidth: 1, fontFamily: 'Inter_400Regular',
+  },
+  tagAddBtn: {
+    width: 40, height: 40, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
   },
+  tagChipRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
+  },
+  tagChip: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 14, borderWidth: 1, gap: 4,
+  },
+  tagChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   switchRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 8,

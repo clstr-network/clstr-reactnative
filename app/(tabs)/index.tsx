@@ -11,17 +11,19 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
-import { QUERY_KEYS } from '@/lib/query-keys';
+import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import PostCard from '@/components/PostCard';
 import ShareSheet from '@/components/ShareSheet';
 import RepostSheet from '@/components/RepostSheet';
 import { useFeedSubscription } from '@/lib/hooks/useFeedSubscription';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useNotificationSubscription } from '@/lib/hooks/useNotificationSubscription';
+import { useAuth } from '@/lib/auth-context';
+import { getConnectionCount, getProfileViewsCount } from '@/lib/api/profile';
 import {
   getPosts,
   toggleReaction,
@@ -38,6 +40,7 @@ export default function FeedScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
 
@@ -51,10 +54,27 @@ export default function FeedScreen() {
   const { hasNewPosts, dismissNewPosts } = useFeedSubscription();
 
   // Phase 4 — Role-based permissions
-  const { canCreatePost } = useFeatureAccess();
+  const { canCreatePost, isAlumni, isFaculty, isClub, profileType } = useFeatureAccess();
 
   // F12 — Notification badge
   const { unreadCount } = useNotificationSubscription();
+
+  // Phase 12.1 — Network stats
+  const { data: connectionCount = 0 } = useQuery({
+    queryKey: MOBILE_QUERY_KEYS.connectionCount(user?.id ?? ''),
+    queryFn: () => getConnectionCount(user!.id),
+    enabled: !!user?.id,
+    staleTime: 60_000,
+  });
+
+  const { data: profileViewsCount = 0 } = useQuery({
+    queryKey: ['profileViewsCount', user?.id ?? ''],
+    queryFn: () => getProfileViewsCount(user!.id),
+    enabled: !!user?.id,
+    staleTime: 60_000,
+  });
+
+  const roleBadge = isAlumni ? 'Mentor' : isClub ? 'Club Lead' : isFaculty ? 'Faculty' : null;
 
   // F7 — Infinite query pagination
   const {
@@ -271,6 +291,38 @@ export default function FeedScreen() {
         </Pressable>
       )}
 
+      {/* Phase 12.1 — Network Stats Row */}
+      {user && (
+        <View style={[styles.statsRow, { borderBottomColor: colors.border }]}>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/connections'); }}
+            style={[styles.statCard, { backgroundColor: colors.surface }]}
+          >
+            <Ionicons name="people-outline" size={18} color={colors.tint} />
+            <Text style={[styles.statNum, { color: colors.text }]}>{connectionCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Connections</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
+            style={[styles.statCard, { backgroundColor: colors.surface }]}
+          >
+            <Ionicons name="eye-outline" size={18} color={colors.tint} />
+            <Text style={[styles.statNum, { color: colors.text }]}>{profileViewsCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Profile Views</Text>
+          </Pressable>
+          {roleBadge && (
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
+              <Ionicons
+                name={isAlumni ? 'school-outline' : isClub ? 'shield-outline' : 'ribbon-outline'}
+                size={18}
+                color={colors.accent}
+              />
+              <Text style={[styles.roleBadgeText, { color: colors.accent }]}>{roleBadge}</Text>
+            </View>
+          )}
+        </View>
+      )}
+
       {/* Phase 6 — Sort toggle */}
       <View style={[styles.sortRow, { borderBottomColor: colors.border }]}>
         {(['recent', 'top'] as const).map((s) => (
@@ -467,4 +519,10 @@ const styles = StyleSheet.create({
   sortRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8, borderBottomWidth: 1 },
   sortChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   sortChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  // Phase 12.1 — Stats row styles
+  statsRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 10, borderBottomWidth: 1 },
+  statCard: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, gap: 2 },
+  statNum: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  statLabel: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  roleBadgeText: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', marginTop: 2 },
 });

@@ -16,6 +16,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  Alert,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +36,8 @@ import {
   fetchMySharedItems,
   deleteSharedItem,
   createSharedItemIntent,
+  createSharedItem,
+  createItemRequest,
 } from '@/lib/api/ecocampus';
 import type { SharedItem, ItemRequest } from '@/lib/api/ecocampus';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
@@ -44,10 +51,12 @@ const SharedItemCard = React.memo(function SharedItemCard({
   item,
   colors,
   onClaim,
+  onDelete,
 }: {
   item: SharedItem;
   colors: ReturnType<typeof useThemeColors>;
   onClaim?: (itemId: string) => void;
+  onDelete?: (itemId: string) => void;
 }) {
   return (
     <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -75,17 +84,37 @@ const SharedItemCard = React.memo(function SharedItemCard({
             </Text>
           )}
         </View>
-        {onClaim && item.status === 'available' && (
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onClaim(item.id);
-            }}
-            style={[styles.claimBtn, { backgroundColor: colors.primary }]}
-          >
-            <Text style={styles.claimBtnText}>I'm Interested</Text>
-          </Pressable>
-        )}
+        <View style={styles.cardActionsRow}>
+          {onClaim && item.status === 'available' && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onClaim(item.id);
+              }}
+              style={[styles.claimBtn, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.claimBtnText}>I'm Interested</Text>
+            </Pressable>
+          )}
+          {onDelete && (
+            <Pressable
+              onPress={() => {
+                Alert.alert('Delete Listing', 'Are you sure you want to delete this listing?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => onDelete(item.id),
+                  },
+                ]);
+              }}
+              style={[styles.deleteBtn, { borderColor: colors.danger }]}
+            >
+              <Ionicons name="trash-outline" size={14} color={colors.danger} />
+              <Text style={[styles.deleteBtnText, { color: colors.danger }]}>Delete</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -172,6 +201,80 @@ export default function EcoCampusScreen() {
     },
   });
 
+  const deleteMut = useMutation({
+    mutationFn: (itemId: string) => deleteSharedItem(itemId),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ['eco'] });
+    },
+    onError: (err: Error) => Alert.alert('Error', err.message ?? 'Failed to delete listing.'),
+  });
+
+  // ── Create Item form state ─────────────────────────────────
+  const [showCreateItem, setShowCreateItem] = useState(false);
+  const [itemTitle, setItemTitle] = useState('');
+  const [itemDesc, setItemDesc] = useState('');
+  const [itemCategory, setItemCategory] = useState('');
+  const [itemPrice, setItemPrice] = useState('');
+  const [itemShareType, setItemShareType] = useState<'donate' | 'sell' | 'rent'>('donate');
+
+  const createItemMut = useMutation({
+    mutationFn: () =>
+      createSharedItem({
+        title: itemTitle.trim(),
+        description: itemDesc.trim(),
+        category: itemCategory.trim() || 'General',
+        price: itemShareType === 'donate' ? '0' : itemPrice.trim(),
+        share_type: itemShareType,
+      } as any),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowCreateItem(false);
+      queryClient.invalidateQueries({ queryKey: ['eco'] });
+      Alert.alert('Success', 'Your item has been listed!');
+    },
+    onError: (err: Error) => Alert.alert('Error', err.message ?? 'Failed to create listing.'),
+  });
+
+  const handleCreateItem = useCallback(() => {
+    if (!itemTitle.trim()) {
+      Alert.alert('Title Required', 'Please enter a title for your item.');
+      return;
+    }
+    createItemMut.mutate();
+  }, [itemTitle, createItemMut]);
+
+  // ── Create Request form state ──────────────────────────────
+  const [showCreateRequest, setShowCreateRequest] = useState(false);
+  const [reqItem, setReqItem] = useState('');
+  const [reqDesc, setReqDesc] = useState('');
+  const [reqUrgency, setReqUrgency] = useState('normal');
+
+  const createReqMut = useMutation({
+    mutationFn: () =>
+      createItemRequest({
+        item: reqItem.trim(),
+        description: reqDesc.trim(),
+        urgency: reqUrgency,
+        preference: '',
+      } as any),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowCreateRequest(false);
+      queryClient.invalidateQueries({ queryKey: ['eco'] });
+      Alert.alert('Success', 'Your request has been posted!');
+    },
+    onError: (err: Error) => Alert.alert('Error', err.message ?? 'Failed to create request.'),
+  });
+
+  const handleCreateRequest = useCallback(() => {
+    if (!reqItem.trim()) {
+      Alert.alert('Item Required', 'Please describe what you need.');
+      return;
+    }
+    createReqMut.mutate();
+  }, [reqItem, createReqMut]);
+
   const tabs: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { key: 'items', label: 'Items', icon: 'leaf-outline' },
     { key: 'requests', label: 'Requests', icon: 'hand-left-outline' },
@@ -192,10 +295,11 @@ export default function EcoCampusScreen() {
           item={item}
           colors={colors}
           onClaim={tab === 'items' ? (id) => intentMut.mutate(id) : undefined}
+          onDelete={tab === 'mine' ? (id) => deleteMut.mutate(id) : undefined}
         />
       );
     },
-    [colors, tab, intentMut],
+    [colors, tab, intentMut, deleteMut],
   );
 
   const keyExtractor = useCallback((item: any) => item.id, []);
@@ -278,6 +382,206 @@ export default function EcoCampusScreen() {
           }
         />
       )}
+
+      {/* FAB — Create Item or Request */}
+      {canCreateListing && (
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            if (tab === 'requests') {
+              setReqItem('');
+              setReqDesc('');
+              setReqUrgency('normal');
+              setShowCreateRequest(true);
+            } else {
+              setItemTitle('');
+              setItemDesc('');
+              setItemCategory('');
+              setItemPrice('');
+              setItemShareType('donate');
+              setShowCreateItem(true);
+            }
+          }}
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+        >
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </Pressable>
+      )}
+
+      {/* Create Shared Item Modal */}
+      <Modal visible={showCreateItem} transparent animationType="fade" onRequestClose={() => setShowCreateItem(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowCreateItem(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation?.()}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Share an Item</Text>
+
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Title *</Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
+                  placeholder="e.g., Organic Chemistry Textbook"
+                  placeholderTextColor={colors.textTertiary}
+                  value={itemTitle}
+                  onChangeText={setItemTitle}
+                  maxLength={100}
+                />
+
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Description</Text>
+                <TextInput
+                  style={[styles.modalInput, styles.modalTextarea, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
+                  placeholder="Describe condition, availability, etc."
+                  placeholderTextColor={colors.textTertiary}
+                  value={itemDesc}
+                  onChangeText={setItemDesc}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  maxLength={500}
+                />
+
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Category</Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
+                  placeholder="e.g., Books, Electronics, Clothing"
+                  placeholderTextColor={colors.textTertiary}
+                  value={itemCategory}
+                  onChangeText={setItemCategory}
+                  maxLength={50}
+                />
+
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Share Type</Text>
+                <View style={styles.shareTypeRow}>
+                  {(['donate', 'sell', 'rent'] as const).map((st) => (
+                    <Pressable
+                      key={st}
+                      onPress={() => setItemShareType(st)}
+                      style={[
+                        styles.shareTypeChip,
+                        {
+                          backgroundColor: itemShareType === st ? colors.primary : colors.surfaceSecondary,
+                          borderColor: itemShareType === st ? colors.primary : colors.border,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.shareTypeText,
+                          { color: itemShareType === st ? '#FFFFFF' : colors.textSecondary },
+                        ]}
+                      >
+                        {st.charAt(0).toUpperCase() + st.slice(1)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                {itemShareType !== 'donate' && (
+                  <>
+                    <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Price</Text>
+                    <TextInput
+                      style={[styles.modalInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
+                      placeholder="e.g., $15"
+                      placeholderTextColor={colors.textTertiary}
+                      value={itemPrice}
+                      onChangeText={setItemPrice}
+                      maxLength={20}
+                    />
+                  </>
+                )}
+
+                <View style={styles.modalActions}>
+                  <Pressable style={[styles.modalCancelBtn, { borderColor: colors.border }]} onPress={() => setShowCreateItem(false)}>
+                    <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.modalSubmitBtn, { backgroundColor: colors.primary }, createItemMut.isPending && { opacity: 0.6 }]}
+                    onPress={handleCreateItem}
+                    disabled={createItemMut.isPending}
+                  >
+                    {createItemMut.isPending ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.modalSubmitText}>Post Item</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Create Request Modal */}
+      <Modal visible={showCreateRequest} transparent animationType="fade" onRequestClose={() => setShowCreateRequest(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowCreateRequest(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation?.()}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Request an Item</Text>
+
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>What do you need? *</Text>
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
+                placeholder="e.g., Graphing calculator"
+                placeholderTextColor={colors.textTertiary}
+                value={reqItem}
+                onChangeText={setReqItem}
+                maxLength={100}
+              />
+
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Description</Text>
+              <TextInput
+                style={[styles.modalInput, styles.modalTextarea, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
+                placeholder="Add details about what you're looking for..."
+                placeholderTextColor={colors.textTertiary}
+                value={reqDesc}
+                onChangeText={setReqDesc}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                maxLength={500}
+              />
+
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Urgency</Text>
+              <View style={styles.shareTypeRow}>
+                {(['low', 'normal', 'high'] as const).map((u) => (
+                  <Pressable
+                    key={u}
+                    onPress={() => setReqUrgency(u)}
+                    style={[
+                      styles.shareTypeChip,
+                      {
+                        backgroundColor: reqUrgency === u ? colors.primary : colors.surfaceSecondary,
+                        borderColor: reqUrgency === u ? colors.primary : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.shareTypeText, { color: reqUrgency === u ? '#FFFFFF' : colors.textSecondary }]}>
+                      {u.charAt(0).toUpperCase() + u.slice(1)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <View style={styles.modalActions}>
+                <Pressable style={[styles.modalCancelBtn, { borderColor: colors.border }]} onPress={() => setShowCreateRequest(false)}>
+                  <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalSubmitBtn, { backgroundColor: colors.primary }, createReqMut.isPending && { opacity: 0.6 }]}
+                  onPress={handleCreateRequest}
+                  disabled={createReqMut.isPending}
+                >
+                  {createReqMut.isPending ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.modalSubmitText}>Post Request</Text>
+                  )}
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -384,5 +688,119 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontFamily: fontFamily.regular,
     textAlign: 'center',
+  },
+  cardActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  deleteBtnText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bold,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  modalInput: {
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  modalTextarea: {
+    minHeight: 80,
+  },
+  shareTypeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  shareTypeChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  shareTypeText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.medium,
+  },
+  modalSubmitBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubmitText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold,
   },
 });
