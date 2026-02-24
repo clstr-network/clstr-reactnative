@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert, ActivityIndicator, Linking,
 } from 'react-native';
+import { ProfileSkeleton } from '@/components/Skeletons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -171,9 +172,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={colors.tint} />
-        </View>
+        <ProfileSkeleton />
       </View>
     );
   }
@@ -553,7 +552,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 24, fontWeight: '800', marginTop: 8, fontFamily: 'Inter_800ExtraBold' },
   username: { fontSize: 15, fontFamily: 'Inter_400Regular' },
   bio: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40, marginTop: 4, lineHeight: 20, fontFamily: 'Inter_400Regular' },
-  statsRow: { flexDirection: 'row', marginTop: 20, marginHorizontal: 16, borderRadius: 14, overflow: 'hidden' },
+  statsRow: { flexDirection: 'row', marginTop: 20, marginHorizontal: 16, borderRadius: 12, overflow: 'hidden' },
   statItem: { flex: 1, alignItems: 'center', paddingVertical: 14 },
   statNum: { fontSize: 18, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
   statLabel: { fontSize: 12, marginTop: 2, fontFamily: 'Inter_400Regular' },
@@ -572,12 +571,12 @@ const styles = StyleSheet.create({
   portfolioBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginTop: 16,
-    padding: 14, borderRadius: 14, borderWidth: 1,
+    padding: 14, borderRadius: 12, borderWidth: 1,
   },
   portfolioTitle: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   portfolioSubtitle: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   completionBanner: {
-    marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 14, borderWidth: 1,
+    marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 12, borderWidth: 1,
   },
   completionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   completionText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
@@ -585,7 +584,7 @@ const styles = StyleSheet.create({
   completionBar: { height: 4, borderRadius: 2, marginTop: 10, overflow: 'hidden' },
   completionFill: { height: '100%', borderRadius: 2 },
   menuItem: {
-    flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12,
     borderWidth: 1, gap: 12,
   },
   menuIconBg: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
@@ -624,7 +623,7 @@ const styles = StyleSheet.create({
   skillChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
   skillLevel: { fontSize: 11, fontFamily: 'Inter_400Regular' },
   /* ─── Project cards ──────────────────────────────────────── */
-  projectCard: { padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 10 },
+  projectCard: { padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 10 },
   projectCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   projectTitle: { flex: 1, fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   projectStatus: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },

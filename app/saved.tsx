@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   },
   listContent: { padding: 16, gap: 12 },
   card: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 14,
     gap: 8,

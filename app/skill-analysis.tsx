@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: { padding: 16, gap: 20, paddingBottom: 40 },
   scoreCard: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 24,
     alignItems: 'center',

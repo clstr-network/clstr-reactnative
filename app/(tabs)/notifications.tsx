@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Platform, ActivityIndicator, RefreshControl } from 'react-native';
+import { NotificationsSkeleton } from '@/components/Skeletons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -89,9 +90,7 @@ export default function NotificationsScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.empty}>
-          <ActivityIndicator size="large" color={colors.tint} />
-        </View>
+        <NotificationsSkeleton />
       ) : (
         <FlatList
           data={notifications}

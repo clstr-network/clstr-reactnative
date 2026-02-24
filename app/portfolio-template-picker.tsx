@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   preview: {

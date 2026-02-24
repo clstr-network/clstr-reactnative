@@ -76,7 +76,7 @@ const ClubCard = React.memo(function ClubCard({
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            isFollowing ? onUnfollow(club.id) : onFollow(club.id);
+            if (isFollowing) { onUnfollow(club.id); } else { onFollow(club.id); }
           }}
           style={[
             styles.followBtn,
@@ -123,7 +123,7 @@ export default function ClubsScreen() {
   const { identity, collegeDomain: identityDomain } = useIdentityContext();
   const userId = identity?.user_id ?? '';
   const collegeDomain = identityDomain ?? '';
-  const { canViewClubs, canFollowClub } = useFeatureAccess();
+  const { canViewClubs } = useFeatureAccess();
 
   // Phase 13.5 — Realtime clubs subscription
   useRealtimeMultiSubscription({
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   },
   listContent: { padding: 16, gap: 12 },
   card: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 14,
     gap: 8,

@@ -947,7 +947,7 @@ const styles = StyleSheet.create({
   teamCountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   listContent: { padding: 16, gap: 12 },
   card: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 14,
     gap: 8,

@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   },
   // ── Cards ─────────────────────────────────────────────────
   card: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 14,
     gap: 8,

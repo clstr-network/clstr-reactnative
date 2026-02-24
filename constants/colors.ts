@@ -65,12 +65,12 @@ const dark = {
   primaryLight: 'rgba(255, 255, 255, 0.08)',
   primaryForeground: '#000000',
 
-  // Backgrounds — pure black OLED
+  // Backgrounds — pure black OLED with solid near-black surface (matches web)
   background: '#000000',
-  surface: 'rgba(255, 255, 255, 0.04)',
-  surfaceSecondary: 'rgba(255, 255, 255, 0.06)',
-  surfaceHover: 'rgba(255, 255, 255, 0.08)',
-  surfaceElevated: 'rgba(255, 255, 255, 0.08)',
+  surface: 'rgb(23, 22, 22)',
+  surfaceSecondary: 'rgb(30, 29, 29)',
+  surfaceHover: 'rgb(30, 29, 29)',
+  surfaceElevated: 'rgb(30, 29, 29)',
 
   // Text hierarchy
   text: 'rgba(255, 255, 255, 0.95)',
@@ -116,42 +116,42 @@ export const surfaceTiers = {
     backgroundColor: '#FFFFFF',
     borderColor: '#CBD5E1',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 12,
   },
   /** Tier 2 — Neutral: Feed cards, PostCard, EventCard */
   tier2: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E2E8F0',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 12,
   },
   /** Tier 3 — Quietest: Sidebars, secondary panels */
   tier3: {
     backgroundColor: '#FFFFFF',
     borderColor: '#F1F5F9',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 12,
   },
 } as const;
 
 export const darkSurfaceTiers = {
   tier1: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: 'rgb(23, 22, 22)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 12,
   },
   tier2: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    backgroundColor: 'rgb(23, 22, 22)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 12,
   },
   tier3: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: 'rgb(23, 22, 22)',
     borderColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 12,
   },
 } as const;
 

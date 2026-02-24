@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 16,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 16,
     marginBottom: 20,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     marginHorizontal: 16,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
   },

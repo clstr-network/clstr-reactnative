@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 12,
     maxHeight: 240,
     overflow: 'hidden',
     zIndex: 999,

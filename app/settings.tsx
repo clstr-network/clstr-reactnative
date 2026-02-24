@@ -923,7 +923,7 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     fontFamily: fontFamily.bold,
   },
-  sectionCard: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  sectionCard: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',

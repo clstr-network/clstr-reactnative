@@ -1,5 +1,5 @@
 /**
- * Project Detail Screen — Phase 14.1
+ * Project Detail Screen ï¿½ Phase 14.1
  *
  * Full project detail with cover image, owner info, tech stack, team members,
  * open roles with apply, owner actions (manage applications, close/delete),
@@ -49,7 +49,7 @@ import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { CHANNELS } from '@/lib/channels';
-import Avatar from '@/components/Avatar';
+import { Avatar } from '@/components/Avatar';
 
 // helpers
 
@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
   },
   applySection: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 14,
     gap: 10,

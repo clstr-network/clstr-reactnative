@@ -713,60 +713,82 @@ Already covered in Task 12.8.
 
 ---
 
-## Phase 15 — Design Token & Animation Refinements (P2)
+## Phase 15 — Design Token & Animation Refinements (P2) ✅ COMPLETED
 
-### Task 15.1: Surface Tier Alignment
+### Task 15.1: Surface Tier Alignment ✅
 
-**File**: `constants/colors.ts` (verify)  
+**File**: `constants/colors.ts` (modified)  
 **Effort**: 2 hrs
 
-The web uses `rgb(23, 22, 22)` for surface tiers (solid near-black). Mobile uses `rgba(255,255,255, 0.02–0.06)` (transparent white overlay on black). These produce slightly different visual results.
+The web uses `rgb(23, 22, 22)` for surface tiers (solid near-black). Mobile was using `rgba(255,255,255, 0.02–0.06)` (transparent white overlay on black). These produce slightly different visual results.
 
-**Action**: Test on device; consider switching to solid `rgb(23, 22, 22)` tiers to exactly match web visual appearance.
+**Implemented**:
+- `darkSurfaceTiers` bg changed from `rgba(255,255,255,0.02–0.06)` → `rgb(23, 22, 22)` for all 3 tiers
+- `darkSurfaceTiers` border colors aligned to web opacity tiers (0.12, 0.08, 0.06)
+- `darkSurfaceTiers` borderRadius normalized 14 → 12
+- `surfaceTiers` (light) borderRadius normalized 14 → 12
+- Dark theme `surface` → `rgb(23, 22, 22)`, `surfaceSecondary` → `rgb(30, 29, 29)`, `surfaceHover` → `rgb(30, 29, 29)`, `surfaceElevated` → `rgb(30, 29, 29)`
 
-### Task 15.2: Card Border Radius Normalization
+### Task 15.2: Card Border Radius Normalization ✅
 
-**File**: Various screen files  
+**File**: 20 files across `app/` and `components/`  
 **Effort**: 1 hr
 
-Web uses `rounded-xl` (12px). Mobile uses `borderRadius: 14` and `borderRadius: 24` inconsistently. Normalize all cards to `radius.md` (12px) for web parity.
+Web uses `rounded-xl` (12px). Mobile was using `borderRadius: 14` inconsistently.
 
-### Task 15.3: Micro-Interaction Animations
+**Implemented**: 27 card-level `borderRadius: 14` → `12` replacements across:
+- `app/(auth)/onboarding.tsx` (resultCard, summaryCard)
+- `app/(tabs)/more.tsx` (profileCard, sectionCard)
+- `app/(tabs)/profile.tsx` (statsRow, portfolioBanner, completionBanner, menuItem, projectCard)
+- `app/alumni.tsx`, `app/alumni-invite.tsx`, `app/club/[id].tsx`, `app/clubs.tsx`, `app/ecocampus.tsx` (card styles)
+- `app/edit-profile.tsx` (completionBanner, addForm)
+- `app/jobs.tsx`, `app/mentorship.tsx`, `app/portfolio.tsx`, `app/portfolio-editor.tsx`, `app/portfolio-template-picker.tsx` (card/statusCard)
+- `app/project/[id].tsx`, `app/projects.tsx`, `app/saved.tsx`, `app/settings.tsx`, `app/skill-analysis.tsx` (card/section)
+- `components/Autocomplete.tsx` (dropdown)
+- Preserved non-card radii (buttons, chips, inputs, chat bubbles)
 
-**File**: Various component files  
+### Task 15.3: Micro-Interaction Animations ✅
+
+**File**: `components/AnimatedPressable.tsx` (NEW ~220 lines)  
 **Effort**: 3 hrs
 
-**What to build**:
-- Card press animation (scale 0.98, opacity 0.9) — already on some buttons, add to all cards
-- Icon press pulse animation for reaction/like/save/bookmark
-- Expand/collapse animation for comments section
-- Pull-to-refresh custom animation (optional)
+**Implemented**:
+- `AnimatedPressable` component with 3 presets: `card` (scale 0.98, opacity 0.9), `icon` (scale 0.85), `reaction` (heartbeat pulse scale 1.3)
+- Spring configs matching web's `snappySpring` (stiffness 400, damping 30, mass 0.5)
+- `useExpandCollapse()` hook for animated height toggle (comments section, collapsible panels) with `onContentLayout` measurement
+- Uses `react-native-reanimated` for 60fps native animations
+- Exports: `AnimatedPressable`, `AnimatedPressableProps`, `AnimationVariant`, `useExpandCollapse`
 
-### Task 15.4: Loading Skeleton Screens
+### Task 15.4: Loading Skeleton Screens ✅
 
-**File**: `components/Skeleton.tsx` (NEW) + various screens  
+**File**: `components/Skeletons.tsx` (NEW ~280 lines) + 6 tab screens modified  
 **Effort**: 4 hrs
 
-**What to build**:
-- Shimmer skeleton component (animated gradient)
-- Feed skeleton (3 PostCard placeholders)
-- Profile skeleton, Event skeleton, Job skeleton
-- Replace `ActivityIndicator` with skeletons on all main screens
+**Implemented**:
+- Screen-specific skeleton presets: `FeedSkeleton` (3 post cards with avatar + text + image + action bar), `ProfileSkeleton` (cover + avatar + stats + bio), `EventsSkeleton`, `JobsSkeleton`, `NetworkSkeleton`, `MessagesSkeleton`, `NotificationsSkeleton`
+- Re-exports shared primitives (`Skeleton`, `SkeletonText`, `SkeletonAvatar`, `SkeletonCard`)
+- Replaced fullscreen `ActivityIndicator` spinners with skeletons in all 6 tab screens:
+  - `app/(tabs)/index.tsx` → `FeedSkeleton`
+  - `app/(tabs)/events.tsx` → `EventsSkeleton`
+  - `app/(tabs)/messages.tsx` → `MessagesSkeleton`
+  - `app/(tabs)/notifications.tsx` → `NotificationsSkeleton`
+  - `app/(tabs)/network.tsx` → `NetworkSkeleton`
+  - `app/(tabs)/profile.tsx` → `ProfileSkeleton`
+- Uses shared `Skeleton` shimmer component (react-native-reanimated opacity animation)
 
-**Dependencies**: `react-native-reanimated` (already installed)
+### Task 15.5: Toast/Snackbar System ✅
 
-### Task 15.5: Toast/Snackbar System
-
-**File**: `components/Toast.tsx` (NEW)  
+**Files**: `components/Toast.tsx` (NEW ~140 lines), `lib/toast.ts` (NEW ~90 lines), `app/_layout.tsx` (modified), `packages/shared/src/components/ui/Toast.tsx` (fixed)  
 **Effort**: 2 hrs
 
-**What to build**:
-- Toast notification component matching web's `useToast()` pattern
-- Supports: success, error, warning, info variants
-- Auto-dismiss with configurable duration
-- Undo action support (for hide post, unsave, etc.)
-
-**Dependencies**: `react-native-toast-message` (already installed in packages/shared)
+**Implemented**:
+- Custom OLED-dark toast rendering with 5 variants: `success` (green), `error` (red), `warning` (orange), `info` (blue), `undo` (purple)
+- Each toast has colored left border, icon in tinted circle, title + description
+- `AppToaster` component rendered in root layout inside `GestureHandlerRootView`
+- `lib/toast.ts` convenience API: `toast.success()`, `toast.error()`, `toast.warning()`, `toast.info()`, `toast.undo(title, onUndo)`
+- Undo toast: tap-to-undo with 5s auto-dismiss for hide post, unsave, disconnect, etc.
+- Fixed shared `Toast.tsx`: replaced `require()` dynamic imports with ES `import` (lint fix)
+- Toast config uses `ToastConfigParams` type from react-native-toast-message
 
 ---
 

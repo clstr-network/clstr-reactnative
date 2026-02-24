@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, Platform, RefreshControl, ActivityIndicator, TextInput,
 } from 'react-native';
+import { NetworkSkeleton } from '@/components/Skeletons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -258,9 +259,7 @@ export default function NetworkScreen() {
           )}
         </View>
       ) : isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.tint} />
-        </View>
+        <NetworkSkeleton />
       ) : (
         <FlatList
           data={allItems}

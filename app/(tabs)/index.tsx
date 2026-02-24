@@ -9,6 +9,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { FeedSkeleton } from '@/components/Skeletons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -368,9 +369,7 @@ export default function FeedScreen() {
       )}
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.tint} />
-        </View>
+        <FeedSkeleton />
       ) : (
         <FlatList
           data={posts}

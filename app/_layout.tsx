@@ -34,6 +34,7 @@ import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { IdentityProvider, useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useAppStateRealtimeLifecycle } from '@/lib/app-state';
 import { usePushNotifications } from '@/lib/hooks/usePushNotifications';
+import { AppToaster } from '@/components/Toast';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -208,6 +209,7 @@ export default function RootLayout() {
               <KeyboardProvider>
                 <RootLayoutNav />
               </KeyboardProvider>
+              <AppToaster />
             </GestureHandlerRootView>
           </IdentityProvider>
         </AuthProvider>

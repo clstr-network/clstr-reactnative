@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   durationText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
 
   // Result card (graduation + role)
-  resultCard: { marginTop: 16, borderRadius: 14, borderWidth: 1, padding: 16, gap: 12 },
+  resultCard: { marginTop: 16, borderRadius: 12, borderWidth: 1, padding: 16, gap: 12 },
   resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   resultLabel: { fontSize: 14, fontFamily: 'Inter_400Regular' },
   resultValue: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
   socialInput: { flex: 1, fontSize: 15, padding: 14, borderRadius: 12, borderWidth: 1, fontFamily: 'Inter_400Regular' },
 
   // Summary card
-  summaryCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 6, marginBottom: 8 },
+  summaryCard: { borderRadius: 12, borderWidth: 1, padding: 16, gap: 6, marginBottom: 8 },
   summaryName: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   summaryDetail: { fontSize: 14, fontFamily: 'Inter_400Regular' },
   roleBadgeSmall: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginTop: 4 },

@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.03)',
     padding: 16,
     marginBottom: 12,

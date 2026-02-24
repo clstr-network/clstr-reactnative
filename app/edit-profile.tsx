@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
 
   // Completion banner
   completionBanner: {
-    marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 14, borderWidth: 1,
+    marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 12, borderWidth: 1,
   },
   completionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   completionText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
@@ -955,7 +955,7 @@ const styles = StyleSheet.create({
   addBtnText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
 
   // Add form
-  addForm: { padding: 14, borderRadius: 14, borderWidth: 1, gap: 10, marginBottom: 12 },
+  addForm: { padding: 14, borderRadius: 12, borderWidth: 1, gap: 10, marginBottom: 12 },
   dateRow: { flexDirection: 'row', gap: 10 },
   dateInput: { flex: 1 },
   submitBtn: { alignItems: 'center', paddingVertical: 12, borderRadius: 12, marginTop: 4 },
