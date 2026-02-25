@@ -81,14 +81,14 @@ export default function NetworkScreen() {
   const { data: connections = [], isLoading: loadingConnections } = useQuery({
     queryKey: QUERY_KEYS.network,
     queryFn: getConnections,
-    staleTime: 30_000,       // 30s
+    staleTime: 60_000,       // 60s — realtime handles live updates
     gcTime: 5 * 60 * 1000,   // 5min
   });
 
   const { data: pendingRequests = [], isLoading: loadingPending } = useQuery({
     queryKey: QUERY_KEYS.connectionRequests,
     queryFn: getPendingRequests,
-    staleTime: 10_000,       // 10s — pending requests change more frequently
+    staleTime: 30_000,       // 30s — pending requests have realtime subscription
     gcTime: 5 * 60 * 1000,
   });
 

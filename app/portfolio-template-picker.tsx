@@ -5,7 +5,7 @@
  * Shows "Current" badge on the active template.
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -108,22 +108,24 @@ export default function PortfolioTemplatePickerScreen() {
   const { profile, updateSettings, isLoading } = usePortfolioEditor(userId);
   const currentTemplate = profile?.settings?.template ?? 'minimal';
 
-  const handleSelect = (templateId: TemplateId) => {
+  const handleSelect = useCallback((templateId: TemplateId) => {
     if (templateId === currentTemplate) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     updateSettings({ template: templateId });
     // Navigate back to the editor
     setTimeout(() => router.back(), 300);
-  };
+  }, [currentTemplate, updateSettings]);
 
-  const renderItem = ({ item }: { item: TemplateInfo }) => (
+  const renderItem = useCallback(({ item }: { item: TemplateInfo }) => (
     <TemplateCard
       template={item}
       isCurrent={item.id === currentTemplate}
       colors={colors}
       onSelect={handleSelect}
     />
-  );
+  ), [currentTemplate, colors, handleSelect]);
+
+  const keyExtractor = useCallback((item: TemplateInfo) => item.id, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -152,11 +154,14 @@ export default function PortfolioTemplatePickerScreen() {
         <FlatList
           data={PORTFOLIO_TEMPLATES}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           numColumns={2}
           contentContainerStyle={styles.grid}
           columnWrapperStyle={styles.row}
           showsVerticalScrollIndicator={false}
+          maxToRenderPerBatch={6}
+          windowSize={3}
+          initialNumToRender={6}
           ListHeaderComponent={
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Select a template for your public portfolio page. Your content stays the same.

@@ -83,6 +83,11 @@ export default function NewConversationScreen() {
 
   const keyExtractor = useCallback((item: any) => item.connected_user_id ?? item.id ?? String(Math.random()), []);
 
+  const ItemSeparator = useCallback(
+    () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
+    [colors.border],
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -140,9 +145,9 @@ export default function NewConversationScreen() {
               </Text>
             </View>
           }
-          ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: colors.border }]} />
-          )}
+          ItemSeparatorComponent={ItemSeparator}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
         />
       )}
     </View>

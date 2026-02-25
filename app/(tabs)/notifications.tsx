@@ -28,7 +28,7 @@ export default function NotificationsScreen() {
   const { data: notifications = [], isLoading, refetch, isRefetching } = useQuery<Notification[]>({
     queryKey: QUERY_KEYS.notifications,
     queryFn: getNotifications,
-    staleTime: 15_000,       // 15s — realtime handles live badge updates
+    staleTime: 30_000,       // 30s — realtime handles live badge updates
     gcTime: 5 * 60 * 1000,   // 5min
   });
 

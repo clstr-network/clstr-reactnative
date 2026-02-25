@@ -32,7 +32,7 @@ export default function MessagesScreen() {
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: QUERY_KEYS.conversations,
     queryFn: getConversations,
-    staleTime: 30_000,       // 30s — realtime handles live updates
+    staleTime: 60_000,       // 60s — realtime handles live updates
     gcTime: 5 * 60 * 1000,   // 5min
   });
 

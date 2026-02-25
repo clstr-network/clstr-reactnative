@@ -98,7 +98,7 @@ export default function PostDetailScreen() {
     queryKey: QUERY_KEYS.post(id!),
     queryFn: () => getPostById(id!),
     enabled: !!id,
-    staleTime: 30_000,
+    staleTime: 60_000,
     gcTime: 5 * 60 * 1000,
   });
 
@@ -107,7 +107,6 @@ export default function PostDetailScreen() {
       toggleReaction(postId, type),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
 
@@ -115,7 +114,6 @@ export default function PostDetailScreen() {
     mutationFn: () => toggleSavePost(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
 
@@ -123,7 +121,6 @@ export default function PostDetailScreen() {
     mutationFn: (optionIndex: number) => voteOnPoll(id!, optionIndex),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
 

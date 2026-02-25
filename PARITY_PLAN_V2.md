@@ -132,10 +132,10 @@ Observed likely drift points to fix in a single pass:
 ## 7) Performance Risks
 
 1. ~~Inconsistent key factories (`['literal', ...]` spread across files) -> cache fragmentation.~~ -> *Resolved: All 68 inline arrays migrated to `QUERY_KEYS` / `MOBILE_QUERY_KEYS` registries. Jun 2025.*  
-2. Over-invalidation (`invalidateQueries` too broad) -> unnecessary rerenders and network load.  
-3. Heavy render paths not consistently memoized (`React.memo`, stable callbacks, extracted item renderers).  
-4. FlatList stability risks (inconsistent `keyExtractor`, non-memoized `renderItem`).  
-5. Realtime + polling overlap causing avoidable refetch spikes.
+2. ~~Over-invalidation (`invalidateQueries` too broad) -> unnecessary rerenders and network load.~~ -> *Resolved: Narrowed `post/[id].tsx` mutations to invalidate only `QUERY_KEYS.post(id)` (removed redundant `QUERY_KEYS.feed` from 3 mutations). Feed staleTime raised to 60s since realtime subscription covers live updates. Jul 2025.*  
+3. ~~Heavy render paths not consistently memoized (`React.memo`, stable callbacks, extracted item renderers).~~ -> *Resolved: Full audit confirmed 20+ list-item components already wrapped in `React.memo`. Wrapped remaining unstable callbacks in `useCallback` (portfolio-template-picker). Jul 2025.*  
+4. ~~FlatList stability risks (inconsistent `keyExtractor`, non-memoized `renderItem`).~~ -> *Resolved: Added stable `keyExtractor` callbacks and FlatList perf props (`maxToRenderPerBatch`, `windowSize`, `initialNumToRender`, `removeClippedSubviews`) to `connections.tsx` and `portfolio-template-picker.tsx`. Extracted inline `ItemSeparatorComponent` in `new-conversation.tsx`. Jul 2025.*  
+5. ~~Realtime + polling overlap causing avoidable refetch spikes.~~ -> *Resolved: No `refetchInterval` found anywhere (good). Increased `staleTime` for all realtime-backed queries: feed 30s→60s, messages 30s→60s, notifications 15s→30s, network connections 30s→60s, pending requests 10s→30s, post detail 30s→60s. Jul 2025.*
 
 ---
 
@@ -445,7 +445,41 @@ A comprehensive audit eliminated **all hardcoded `fontFamily: 'Inter_*'` strings
 
 ### ✅ Phase 7: Perf + Quality Gate (Medium) - COMPLETE
 - **Deliverables**: Memoization (`React.memo` applied to list items), invalidation narrowing, TypeScript audit.
-- **Outcome**: Stable scrolling, controlled subscription count, **0 TS errors** in mobile scope.
+- **Outcome**: Stable scrolling, controlled subscription count, **0 TS errors** in mobile scope (`app/`, `lib/`, `components/`).
+
+#### Phase 7 Implementation Audit (Jul 2025)
+
+**Memoization & FlatList Pass:**
+
+| File | Change | Status |
+|------|--------|--------|
+| `app/portfolio-template-picker.tsx` | Wrapped `handleSelect`, `renderItem`, `keyExtractor` in `useCallback`; added `maxToRenderPerBatch={6}`, `windowSize={3}`, `initialNumToRender={6}` | ✅ |
+| `app/connections.tsx` | Extracted stable `keyExtractor` callback; added `maxToRenderPerBatch={10}`, `windowSize={5}`, `initialNumToRender={15}`, `removeClippedSubviews` (Android); added `Platform` import | ✅ |
+| `app/new-conversation.tsx` | Extracted inline `ItemSeparatorComponent` to stable `useCallback`; added `windowSize={5}`, `removeClippedSubviews` (Android) | ✅ |
+| All other FlatList screens | Audited 25+ FlatList usages — all already had stable `keyExtractor`, memoized `renderItem`, and perf props | ✅ (pre-existing) |
+| 20+ list-item components | Confirmed `React.memo` wrapping on PostCard, ConversationItem, ConnectionCard, EventCard, MessageBubble, NotificationItem, etc. | ✅ (pre-existing) |
+
+**Invalidation Narrowing:**
+
+| File | Change | Status |
+|------|--------|--------|
+| `app/post/[id].tsx` | Removed redundant `QUERY_KEYS.feed` invalidation from `reactionMutation`, `saveMutation`, `pollVoteMutation` (3 mutations). Realtime `posts` table subscription still invalidates feed on row changes. | ✅ |
+| `app/(tabs)/index.tsx` | Feed mutations already properly scoped to `QUERY_KEYS.feed` only. No change needed. | ✅ (already correct) |
+
+**staleTime Tuning (realtime-backed queries):**
+
+| File | Query | Old | New | Reason |
+|------|-------|-----|-----|--------|
+| `app/(tabs)/index.tsx` | Feed (infinite) | 30s | 60s | `useFeedSubscription` handles live post/reaction/comment updates |
+| `app/(tabs)/messages.tsx` | Conversations | 30s | 60s | `useMessageSubscription` handles live message updates |
+| `app/(tabs)/notifications.tsx` | Notifications | 15s | 30s | `useNotificationSubscription` handles live badge updates |
+| `app/(tabs)/network.tsx` | Connections | 30s | 60s | Realtime subscription on connections/profiles tables |
+| `app/(tabs)/network.tsx` | Pending requests | 10s | 30s | Realtime subscription covers request changes |
+| `app/post/[id].tsx` | Post detail | 30s | 60s | 6 realtime subscriptions (posts, post_likes, comments, comment_likes, post_shares, saved_items) |
+
+**TypeScript Audit:**
+- `npx tsc --noEmit` — **0 errors** in mobile runtime scope (`app/`, `lib/`, `components/`, `packages/`).
+- Pre-existing errors in `external/clstr-profile-showcase/` (missing deps) and `src/` (legacy web) are out of scope.
 
 ### ⏳ Phase 8: Final Testing & Web Cleanup (Pending)
 - **Deliverables**: Execute the required test plan (deep links, auth idempotency, SecureStore persistence, chat stress test).

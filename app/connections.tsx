@@ -14,6 +14,7 @@ import {
   Pressable,
   ActivityIndicator,
   Image,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,6 +93,8 @@ export default function ConnectionsScreen() {
     [colors, navigateToProfile],
   );
 
+  const keyExtractor = useCallback((item: any) => item.id, []);
+
   // Phase 5 — Club accounts don't have personal connections
   if (isClub) {
     return (
@@ -131,7 +134,7 @@ export default function ConnectionsScreen() {
       ) : (
         <FlatList
           data={connections ?? []}
-          keyExtractor={(item: any) => item.id}
+          keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={[
             styles.list,
@@ -150,6 +153,10 @@ export default function ConnectionsScreen() {
           }
           refreshing={isRefetching}
           onRefresh={refetch}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          initialNumToRender={15}
+          removeClippedSubviews={Platform.OS === 'android'}
         />
       )}
     </View>

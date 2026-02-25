@@ -95,7 +95,7 @@ export default function FeedScreen() {
       return allPages.length; // next page index
     },
     initialPageParam: 0,
-    staleTime: 30_000,       // 30s — feed refreshes frequently via realtime
+    staleTime: 60_000,       // 60s — realtime subscription handles live updates
     gcTime: 5 * 60 * 1000,   // 5min
   });
 
