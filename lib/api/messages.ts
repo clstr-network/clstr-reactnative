@@ -23,6 +23,7 @@ export type {
   MessagingConnectionStatus,
   MessageUser,
   Message,
+  MessageAttachment,
   Conversation,
 } from '@clstr/core/api/messages-api';
 

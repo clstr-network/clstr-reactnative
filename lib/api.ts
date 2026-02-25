@@ -47,6 +47,7 @@ export interface Profile {
   interests?: string[] | null;
   enrollment_year?: string | null;
   course_duration_years?: string | null;
+  last_seen?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -99,6 +100,9 @@ export interface Message {
   is_read: boolean;
   created_at: string;
   college_domain: string | null;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  attachment_name?: string | null;
 }
 
 export interface Conversation {
@@ -665,19 +669,31 @@ export async function getMessages(partnerId: string) {
   }
 }
 
-export async function sendMessage(receiverId: string, content: string) {
+export async function sendMessage(
+  receiverId: string,
+  content: string,
+  attachment?: { url: string; type: string; name: string }
+) {
   try {
     const user = await getAuthUser();
     const collegeDomain = await getUserCollegeDomain();
 
+    const insertPayload: Record<string, any> = {
+      sender_id: user.id,
+      receiver_id: receiverId,
+      content: content || (attachment ? `Sent ${attachment.type.startsWith('image/') ? 'an image' : 'a file'}` : ''),
+      is_read: false,
+      college_domain: collegeDomain,
+    };
+
+    if (attachment) {
+      insertPayload.attachment_url = attachment.url;
+      insertPayload.attachment_type = attachment.type;
+      insertPayload.attachment_name = attachment.name;
+    }
+
     const { data, error } = await from('messages')
-      .insert({
-        sender_id: user.id,
-        receiver_id: receiverId,
-        content,
-        is_read: false,
-        college_domain: collegeDomain,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 

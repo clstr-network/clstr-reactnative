@@ -1,7 +1,7 @@
 /**
  * Search Screen — Phase 8.1 → Phase 12.11
  *
- * Multi-category search: People, Events, Jobs, Clubs, Projects.
+ * Multi-category search: People, Posts, Events, Jobs, Clubs, Projects.
  * Uses `typeaheadSearch()` for profiles + events, direct Supabase for the rest.
  */
 
@@ -51,11 +51,12 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 
 // ─── Search categories ───────────────────────────────────────
 
-type SearchCategory = 'all' | 'people' | 'events' | 'jobs' | 'clubs' | 'projects';
+type SearchCategory = 'all' | 'people' | 'posts' | 'events' | 'jobs' | 'clubs' | 'projects';
 
 const CATEGORIES: { key: SearchCategory; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'all', label: 'All', icon: 'search-outline' },
   { key: 'people', label: 'People', icon: 'person-outline' },
+  { key: 'posts', label: 'Posts', icon: 'document-text-outline' },
   { key: 'events', label: 'Events', icon: 'calendar-outline' },
   { key: 'jobs', label: 'Jobs', icon: 'briefcase-outline' },
   { key: 'clubs', label: 'Clubs', icon: 'people-outline' },
@@ -70,6 +71,7 @@ type SearchResultItem =
   | { type: 'event'; id: string; title: string | null; event_date: string | null; location: string | null; category: string | null; key: string }
   | { type: 'job'; id: string; title: string | null; company: string | null; location: string | null; job_type: string | null; key: string }
   | { type: 'club'; id: string; name: string | null; description: string | null; club_type: string | null; key: string }
+  | { type: 'post'; id: string; content: string | null; author_name: string | null; created_at: string | null; key: string }
   | { type: 'project'; id: string; title: string | null; description: string | null; status: string | null; key: string }
   | { type: 'empty'; key: string; message: string };
 
@@ -91,6 +93,30 @@ export default function SearchScreen() {
     enabled: debouncedQuery.length >= 2 && !!collegeDomain && (category === 'all' || category === 'people' || category === 'events'),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
+  });
+
+  // Posts search
+  const { data: postsData } = useQuery({
+    queryKey: ['search', 'posts', debouncedQuery, collegeDomain],
+    queryFn: async () => {
+      const pattern = `%${debouncedQuery}%`;
+      const { data: rows, error } = await supabase
+        .from('posts')
+        .select('id, content, created_at, profiles!posts_user_id_fkey(full_name)')
+        .eq('college_domain', collegeDomain!.trim().toLowerCase())
+        .ilike('content', pattern)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return (rows ?? []).map((r: any) => ({
+        id: r.id,
+        content: r.content,
+        created_at: r.created_at,
+        author_name: r.profiles?.full_name ?? null,
+      }));
+    },
+    enabled: debouncedQuery.length >= 2 && !!collegeDomain && (category === 'all' || category === 'posts'),
+    staleTime: 60_000,
   });
 
   // Jobs search
@@ -171,6 +197,21 @@ export default function SearchScreen() {
       );
     }
 
+    // Posts
+    if ((category === 'all' || category === 'posts') && postsData && postsData.length > 0) {
+      items.push({ type: 'section', title: 'Posts', key: 'section-posts' });
+      postsData.forEach((p: any) =>
+        items.push({
+          type: 'post' as const,
+          id: p.id,
+          content: p.content,
+          author_name: p.author_name,
+          created_at: p.created_at,
+          key: `post-${p.id}`,
+        }),
+      );
+    }
+
     // Events
     if ((category === 'all' || category === 'events') && data?.events && data.events.length > 0) {
       items.push({ type: 'section', title: 'Events', key: 'section-events' });
@@ -238,12 +279,18 @@ export default function SearchScreen() {
     }
 
     return items;
-  }, [data, jobsData, clubsData, projectsData, debouncedQuery, isLoading, category]);
+  }, [data, postsData, jobsData, clubsData, projectsData, debouncedQuery, isLoading, category]);
 
   const handleProfilePress = useCallback((id: string) => {
     Haptics.selectionAsync();
     Keyboard.dismiss();
     router.push(`/user/${id}`);
+  }, []);
+
+  const handlePostPress = useCallback((id: string) => {
+    Haptics.selectionAsync();
+    Keyboard.dismiss();
+    router.push(`/post/${id}`);
   }, []);
 
   const handleEventPress = useCallback((id: string) => {
@@ -310,6 +357,29 @@ export default function SearchScreen() {
                     {item.headline}
                   </Text>
                 ) : null}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </Pressable>
+          );
+        case 'post':
+          return (
+            <Pressable
+              onPress={() => handlePostPress(item.id)}
+              style={({ pressed }) => [
+                styles.resultRow,
+                { backgroundColor: pressed ? colors.surfaceHover : 'transparent' },
+              ]}
+            >
+              <View style={[styles.eventIcon, { backgroundColor: colors.primaryLight }]}>
+                <Ionicons name="document-text" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.resultTextContainer}>
+                <Text style={[styles.resultName, { color: colors.text }]} numberOfLines={2}>
+                  {item.content ? item.content.slice(0, 100) : 'Untitled Post'}
+                </Text>
+                <Text style={[styles.resultSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {[item.author_name, item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null].filter(Boolean).join(' · ')}
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </Pressable>
@@ -429,7 +499,7 @@ export default function SearchScreen() {
           return null;
       }
     },
-    [colors, handleProfilePress, handleEventPress, handleJobPress, handleClubPress, handleProjectPress],
+    [colors, handleProfilePress, handlePostPress, handleEventPress, handleJobPress, handleClubPress, handleProjectPress],
   );
 
   const keyExtractor = useCallback((item: SearchResultItem) => item.key, []);
@@ -456,7 +526,7 @@ export default function SearchScreen() {
           <TextInput
             ref={inputRef}
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search people, events, jobs, clubs…"
+            placeholder="Search people, posts, events, jobs, clubs…"
             placeholderTextColor={colors.textTertiary}
             value={query}
             onChangeText={setQuery}
@@ -510,7 +580,7 @@ export default function SearchScreen() {
           <Ionicons name="search-outline" size={56} color={colors.textTertiary} />
           <Text style={[styles.promptTitle, { color: colors.text }]}>Search Clstr</Text>
           <Text style={[styles.promptSub, { color: colors.textSecondary }]}>
-            Find people, events, jobs, clubs and projects
+            Find people, posts, events, jobs, clubs and projects
           </Text>
         </View>
       )}

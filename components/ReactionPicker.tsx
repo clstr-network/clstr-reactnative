@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Animated,
   LayoutChangeEvent,
+  Modal,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
@@ -56,6 +57,8 @@ function ReactionPicker({ currentReaction, onReact, compact = false }: ReactionP
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scaleAnims = useRef(REACTIONS.map(() => new Animated.Value(0))).current;
   const trayOpacity = useRef(new Animated.Value(0)).current;
+
+  const [buttonPageY, setButtonPageY] = useState(0);
 
   const activeReaction = currentReaction ? REACTION_MAP[currentReaction] : null;
 
@@ -119,19 +122,14 @@ function ReactionPicker({ currentReaction, onReact, compact = false }: ReactionP
   const handleLayout = useCallback((e: LayoutChangeEvent) => {
     const layout = e.nativeEvent.layout;
     setButtonLayout({ x: layout.x, y: layout.y, width: layout.width, height: layout.height });
+    // Measure page-level Y for modal tray positioning
+    (e.target as any)?.measureInWindow?.((x: number, y: number) => {
+      setButtonPageY(y);
+    });
   }, []);
 
   return (
     <View style={styles.wrapper} onLayout={handleLayout}>
-      {/* Dismiss overlay when tray is visible */}
-      {showTray && (
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={hideReactionTray}
-          // This is mounted in the parent context via absolute positioning
-        />
-      )}
-
       {/* Main like button */}
       <Pressable
         onPress={handleQuickTap}
@@ -154,42 +152,51 @@ function ReactionPicker({ currentReaction, onReact, compact = false }: ReactionP
         )}
       </Pressable>
 
-      {/* Floating reaction tray */}
-      {showTray && (
-        <Animated.View
-          style={[
-            styles.reactionTray,
-            {
-              opacity: trayOpacity,
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              bottom: 44,
-            },
-          ]}
-        >
-          {REACTIONS.map((reaction, i) => (
-            <Animated.View
-              key={reaction.type}
-              style={{
-                transform: [{ scale: scaleAnims[i] }],
-              }}
-            >
-              <Pressable
-                onPress={() => handleSelectReaction(reaction.type)}
-                style={({ pressed }) => [
-                  styles.reactionItem,
-                  pressed && styles.reactionItemPressed,
-                  currentReaction === reaction.type && {
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                  },
-                ]}
+      {/* Fullscreen dismiss modal + floating reaction tray */}
+      <Modal
+        visible={showTray}
+        transparent
+        animationType="none"
+        onRequestClose={hideReactionTray}
+        statusBarTranslucent
+      >
+        <Pressable style={styles.modalOverlay} onPress={hideReactionTray}>
+          <Animated.View
+            style={[
+              styles.reactionTray,
+              {
+                opacity: trayOpacity,
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                top: Math.max(buttonPageY - 56, 60),
+                left: 16,
+              },
+            ]}
+          >
+            {REACTIONS.map((reaction, i) => (
+              <Animated.View
+                key={reaction.type}
+                style={{
+                  transform: [{ scale: scaleAnims[i] }],
+                }}
               >
-                <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
-              </Pressable>
-            </Animated.View>
-          ))}
-        </Animated.View>
-      )}
+                <Pressable
+                  onPress={() => handleSelectReaction(reaction.type)}
+                  style={({ pressed }) => [
+                    styles.reactionItem,
+                    pressed && styles.reactionItemPressed,
+                    currentReaction === reaction.type && {
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                    },
+                  ]}
+                >
+                  <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
+                </Pressable>
+              </Animated.View>
+            ))}
+          </Animated.View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -219,16 +226,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: 'Inter_500Medium',
   },
+  modalOverlay: {
+    flex: 1,
+  },
   reactionTray: {
     position: 'absolute',
-    left: -40,
     flexDirection: 'row',
     borderRadius: 28,
     borderWidth: 1,
     paddingHorizontal: 6,
     paddingVertical: 4,
     gap: 2,
-    zIndex: 100,
     elevation: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },

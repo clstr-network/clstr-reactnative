@@ -20,6 +20,13 @@ export interface MessageUser {
   full_name: string;
   avatar_url: string;
   role: string;
+  last_seen?: string | null;
+}
+
+export interface MessageAttachment {
+  url: string;
+  type: string;  // MIME type
+  name: string;  // original file name
 }
 
 export interface Message {
@@ -30,6 +37,9 @@ export interface Message {
   is_read: boolean;
   created_at: string;
   college_domain?: string;
+  attachment_url?: string | null;
+  attachment_type?: string | null;
+  attachment_name?: string | null;
   sender?: MessageUser;
   receiver?: MessageUser;
 }
@@ -51,7 +61,7 @@ async function fetchProfilePublic(
 ): Promise<MessageUser | null> {
   const { data } = await client
     .from('profiles')
-    .select('id, full_name, avatar_url, role')
+    .select('id, full_name, avatar_url, role, last_seen')
     .eq('id', userId)
     .maybeSingle();
 
@@ -61,6 +71,7 @@ async function fetchProfilePublic(
     full_name: data.full_name || 'Anonymous',
     avatar_url: data.avatar_url || '',
     role: data.role || 'Member',
+    last_seen: data.last_seen ?? null,
   };
 }
 
@@ -193,7 +204,7 @@ export async function getConversations(client: SupabaseClient): Promise<Conversa
     const partnerIds = [...conversationMap.keys()];
     const { data: profiles } = await client
       .from('profiles')
-      .select('id, full_name, avatar_url, role')
+      .select('id, full_name, avatar_url, role, last_seen')
       .in('id', partnerIds);
 
     const profilesMap = new Map(
@@ -216,6 +227,7 @@ export async function getConversations(client: SupabaseClient): Promise<Conversa
           full_name: profile?.full_name || 'Anonymous',
           avatar_url: profile?.avatar_url || '',
           role: profile?.role || 'Member',
+          last_seen: profile?.last_seen ?? null,
         },
         last_message: lastMsg,
         unread_count: unreadCount,
@@ -274,12 +286,13 @@ export async function getMessages(
 export async function sendMessage(
   client: SupabaseClient,
   receiverId: string,
-  content: string
+  content: string,
+  attachment?: MessageAttachment
 ): Promise<Message> {
   try {
     assertValidUuid(receiverId, 'receiverId');
-    if (!content || !content.trim()) {
-      throw new Error('Message content cannot be empty.');
+    if ((!content || !content.trim()) && !attachment) {
+      throw new Error('Message content or attachment is required.');
     }
 
     const userId = await getAuthenticatedUserId(client);
@@ -305,14 +318,22 @@ export async function sendMessage(
       ? normalizeCollegeDomain(senderProfile.college_domain)
       : null;
 
+    const insertPayload: Record<string, any> = {
+      sender_id: userId,
+      receiver_id: receiverId,
+      content: (content || '').trim() || (attachment ? `Sent ${attachment.type.startsWith('image/') ? 'an image' : 'a file'}` : ''),
+      college_domain: collegeDomain,
+    };
+
+    if (attachment) {
+      insertPayload.attachment_url = attachment.url;
+      insertPayload.attachment_type = attachment.type;
+      insertPayload.attachment_name = attachment.name;
+    }
+
     const { data, error } = await client
       .from('messages')
-      .insert({
-        sender_id: userId,
-        receiver_id: receiverId,
-        content: content.trim(),
-        college_domain: collegeDomain,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -398,7 +419,7 @@ export async function getConnectedUsers(client: SupabaseClient): Promise<Message
 
     const { data: profiles } = await client
       .from('profiles')
-      .select('id, full_name, avatar_url, role')
+      .select('id, full_name, avatar_url, role, last_seen')
       .in('id', partnerIds);
 
     return (profiles || []).map((p) => ({
@@ -406,6 +427,7 @@ export async function getConnectedUsers(client: SupabaseClient): Promise<Message
       full_name: p.full_name || 'Anonymous',
       avatar_url: p.avatar_url || '',
       role: p.role || 'Member',
+      last_seen: p.last_seen ?? null,
     }));
   } catch (error) {
     throw createAppError('Failed to load connected users', 'getConnectedUsers', error);

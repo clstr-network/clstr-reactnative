@@ -3,12 +3,14 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { formatRelativeTime } from '@/lib/time';
+import { isUserOnline } from '@/lib/api/messages';
 import Avatar from '@/components/Avatar';
 
 interface Partner {
   full_name?: string;
   avatar_url?: string | null;
   role?: string | null;
+  last_seen?: string | null;
 }
 
 interface LastMessage {
@@ -33,6 +35,7 @@ function ConversationItem({ conversation, onPress }: ConversationItemProps) {
   const partner = conversation.partner;
   const lastMsg = conversation.last_message;
   const unread = conversation.unread_count ?? 0;
+  const online = isUserOnline(partner?.last_seen ?? null);
 
   return (
     <Pressable
@@ -42,7 +45,12 @@ function ConversationItem({ conversation, onPress }: ConversationItemProps) {
         { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface },
       ]}
     >
-      <Avatar uri={partner?.avatar_url} name={partner?.full_name} size="lg" />
+      <View style={styles.avatarWrapper}>
+        <Avatar uri={partner?.avatar_url} name={partner?.full_name} size="lg" />
+        {online && (
+          <View style={[styles.onlineDot, { borderColor: colors.background }]} />
+        )}
+      </View>
 
       <View style={styles.content}>
         <View style={styles.topRow}>
@@ -90,6 +98,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+  },
+  avatarWrapper: {
+    position: 'relative',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 1,
+    right: 1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#22c55e',
+    borderWidth: 2,
   },
   content: {
     flex: 1,

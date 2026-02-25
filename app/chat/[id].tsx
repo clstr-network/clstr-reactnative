@@ -1,6 +1,7 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput, Pressable, Platform
+  View, Text, StyleSheet, FlatList, TextInput, Pressable, Platform, ScrollView,
+  Image, ActivityIndicator, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -8,11 +9,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as Haptics from 'expo-haptics';
+import * as DocumentPicker from 'expo-document-picker';
 import { useThemeColors } from '@/constants/colors';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { useMessageSubscription } from '@/lib/hooks/useMessageSubscription';
+import { isUserOnline } from '@/lib/api/messages';
+import type { MessageAttachment } from '@/lib/api/messages';
+import { useFileUpload } from '@/lib/hooks/useFileUpload';
+import { formatRelativeTime } from '@/lib/time';
 import {
   getMessages,
   getProfile,
@@ -22,6 +28,12 @@ import {
 } from '@/lib/api';
 import { checkConnectionStatus } from '@/lib/api/social';
 
+const SUGGESTED_REPLIES = [
+  "Thanks for letting me know!",
+  "Yes, I'd be interested in learning more.",
+  "Could you send me more details?",
+];
+
 export default function ChatScreen() {
   const { id: partnerId } = useLocalSearchParams<{ id: string }>();
   const colors = useThemeColors();
@@ -30,7 +42,14 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = useState('');
+  const [pendingAttachment, setPendingAttachment] = useState<MessageAttachment | null>(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+
+  const { pickImage, takePhoto, uploadImage, isUploading, progress } = useFileUpload({
+    bucket: 'message-attachments',
+    maxSize: 20 * 1024 * 1024, // 20MB
+  });
 
   // Phase 3.1 — Realtime message subscription (active partner level)
   useMessageSubscription({ activePartnerId: partnerId });
@@ -69,7 +88,8 @@ export default function ChatScreen() {
   }, [partnerId, queryClient]);
 
   const sendMutation = useMutation({
-    mutationFn: (content: string) => sendMessage(partnerId!, content),
+    mutationFn: ({ content, attachment }: { content: string; attachment?: MessageAttachment | null }) =>
+      sendMessage(partnerId!, content, attachment ?? undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.chat(partnerId!) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations });
@@ -77,16 +97,84 @@ export default function ChatScreen() {
   });
 
   const handleSend = useCallback(() => {
-    if (!text.trim() || !partnerId) return;
+    if ((!text.trim() && !pendingAttachment) || !partnerId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const content = text.trim();
     setText('');
-    sendMutation.mutate(content);
+    const attachment = pendingAttachment;
+    setPendingAttachment(null);
+    setShowAttachMenu(false);
+    sendMutation.mutate({ content, attachment });
     inputRef.current?.focus();
-  }, [text, partnerId, sendMutation]);
+  }, [text, partnerId, pendingAttachment, sendMutation]);
+
+  const handleQuickReply = useCallback((reply: string) => {
+    if (!partnerId) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    sendMutation.mutate({ content: reply });
+  }, [partnerId, sendMutation]);
+
+  const showSuggestions = messages.length < 3;
+
+  const handlePickImage = useCallback(async () => {
+    setShowAttachMenu(false);
+    const result = await pickImage();
+    if (!result || result.canceled) return;
+    const asset = result.assets[0];
+    if (!user?.id) return;
+    const url = await uploadImage(asset.uri, user.id, { folder: user.id });
+    if (url) {
+      const name = asset.fileName || `image_${Date.now()}.jpg`;
+      const type = asset.mimeType || 'image/jpeg';
+      setPendingAttachment({ url, type, name });
+    }
+  }, [pickImage, uploadImage, user?.id]);
+
+  const handleTakePhoto = useCallback(async () => {
+    setShowAttachMenu(false);
+    const result = await takePhoto();
+    if (!result || result.canceled) return;
+    const asset = result.assets[0];
+    if (!user?.id) return;
+    const url = await uploadImage(asset.uri, user.id, { folder: user.id });
+    if (url) {
+      const name = `photo_${Date.now()}.jpg`;
+      const type = asset.mimeType || 'image/jpeg';
+      setPendingAttachment({ url, type, name });
+    }
+  }, [takePhoto, uploadImage, user?.id]);
+
+  const handlePickDocument = useCallback(async () => {
+    setShowAttachMenu(false);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      if (!user?.id) return;
+      const url = await uploadImage(asset.uri, user.id, { folder: user.id });
+      if (url) {
+        setPendingAttachment({
+          url,
+          type: asset.mimeType || 'application/octet-stream',
+          name: asset.name || `document_${Date.now()}`,
+        });
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to pick document');
+    }
+  }, [uploadImage, user?.id]);
 
   const renderMessage = useCallback(({ item }: { item: Message }) => {
     const isSelf = item.sender_id === user?.id;
+    const hasImage = item.attachment_url && item.attachment_type?.startsWith('image/');
+    const hasDocument = item.attachment_url && !item.attachment_type?.startsWith('image/');
+    // Hide auto-generated fallback text when attachment is visible
+    const isAutoContent = item.attachment_url && /^Sent (an image|a file)$/.test(item.content || '');
+    const showContent = item.content && !isAutoContent;
+
     return (
       <View style={[styles.msgRow, isSelf && styles.msgRowSelf]}>
         {!isSelf && <Avatar uri={partner?.avatar_url} name={partner?.full_name} size={30} />}
@@ -95,8 +183,26 @@ export default function ChatScreen() {
           isSelf
             ? { backgroundColor: colors.tint, borderBottomRightRadius: 4 }
             : { backgroundColor: colors.surfaceElevated, borderBottomLeftRadius: 4 },
+          hasImage && styles.msgBubbleImage,
         ]}>
-          <Text style={[styles.msgText, { color: isSelf ? '#fff' : colors.text }]}>{item.content}</Text>
+          {hasImage && (
+            <Image
+              source={{ uri: item.attachment_url! }}
+              style={styles.attachmentImage}
+              resizeMode="cover"
+            />
+          )}
+          {hasDocument && (
+            <View style={[styles.documentAttachment, { backgroundColor: isSelf ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }]}>
+              <Ionicons name="document-text-outline" size={20} color={isSelf ? '#fff' : colors.tint} />
+              <Text style={[styles.documentName, { color: isSelf ? '#fff' : colors.text }]} numberOfLines={1}>
+                {item.attachment_name || 'File'}
+              </Text>
+            </View>
+          )}
+          {showContent && (
+            <Text style={[styles.msgText, { color: isSelf ? '#fff' : colors.text }]}>{item.content}</Text>
+          )}
         </View>
       </View>
     );
@@ -141,10 +247,22 @@ export default function ChatScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Avatar uri={partner?.avatar_url} name={partner?.full_name} size={36} />
+        <View style={styles.avatarWrapper}>
+          <Avatar uri={partner?.avatar_url} name={partner?.full_name} size={36} />
+          {partner?.last_seen && isUserOnline(partner.last_seen) && (
+            <View style={[styles.onlineDot, { borderColor: colors.surface }]} />
+          )}
+        </View>
         <View style={styles.headerInfo}>
           <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>
             {partner?.full_name || 'Chat'}
+          </Text>
+          <Text style={[styles.headerStatus, { color: colors.textTertiary }]} numberOfLines={1}>
+            {partner?.last_seen
+              ? isUserOnline(partner.last_seen)
+                ? 'Online'
+                : `Last seen ${formatRelativeTime(partner.last_seen)} ago`
+              : ''}
           </Text>
         </View>
       </View>
@@ -163,7 +281,85 @@ export default function ChatScreen() {
         keyboardShouldPersistTaps="handled"
       />
 
+      {showSuggestions && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.suggestionsRow}
+          style={[styles.suggestionsContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          {SUGGESTED_REPLIES.map((reply) => (
+            <Pressable
+              key={reply}
+              onPress={() => handleQuickReply(reply)}
+              style={({ pressed }) => [
+                styles.suggestionChip,
+                { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text style={[styles.suggestionText, { color: colors.tint }]} numberOfLines={1}>{reply}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Attachment preview strip */}
+      {pendingAttachment && (
+        <View style={[styles.attachmentPreview, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          {pendingAttachment.type.startsWith('image/') ? (
+            <Image source={{ uri: pendingAttachment.url }} style={styles.previewThumb} />
+          ) : (
+            <View style={[styles.previewDocIcon, { backgroundColor: colors.surfaceElevated }]}>
+              <Ionicons name="document-text-outline" size={20} color={colors.tint} />
+            </View>
+          )}
+          <Text style={[styles.previewName, { color: colors.text }]} numberOfLines={1}>
+            {pendingAttachment.name}
+          </Text>
+          <Pressable onPress={() => setPendingAttachment(null)} hitSlop={8}>
+            <Ionicons name="close-circle" size={22} color={colors.textTertiary} />
+          </Pressable>
+        </View>
+      )}
+
+      {/* Upload progress */}
+      {isUploading && (
+        <View style={[styles.uploadBar, { backgroundColor: colors.surface }]}>
+          <ActivityIndicator size="small" color={colors.tint} />
+          <Text style={[styles.uploadText, { color: colors.textSecondary }]}>
+            Uploading... {Math.round(progress * 100)}%
+          </Text>
+        </View>
+      )}
+
+      {/* Attachment menu */}
+      {showAttachMenu && (
+        <View style={[styles.attachMenu, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <Pressable onPress={handlePickImage} style={styles.attachOption}>
+            <Ionicons name="images-outline" size={22} color={colors.tint} />
+            <Text style={[styles.attachOptionText, { color: colors.text }]}>Gallery</Text>
+          </Pressable>
+          <Pressable onPress={handleTakePhoto} style={styles.attachOption}>
+            <Ionicons name="camera-outline" size={22} color={colors.tint} />
+            <Text style={[styles.attachOptionText, { color: colors.text }]}>Camera</Text>
+          </Pressable>
+          <Pressable onPress={handlePickDocument} style={styles.attachOption}>
+            <Ionicons name="document-outline" size={22} color={colors.tint} />
+            <Text style={[styles.attachOptionText, { color: colors.text }]}>Document</Text>
+          </Pressable>
+        </View>
+      )}
+
       <View style={[styles.inputBar, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 8) }]}>
+        <Pressable
+          onPress={() => setShowAttachMenu((v) => !v)}
+          style={({ pressed }) => [styles.attachBtn, pressed && { opacity: 0.7 }]}
+          hitSlop={8}
+        >
+          <Ionicons name={showAttachMenu ? 'close' : 'add-circle-outline'} size={26} color={colors.tint} />
+        </Pressable>
         <TextInput
           ref={inputRef}
           style={[styles.input, { color: colors.text, backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
@@ -179,15 +375,15 @@ export default function ChatScreen() {
         />
         <Pressable
           onPress={handleSend}
-          disabled={!text.trim() || sendMutation.isPending}
+          disabled={(!text.trim() && !pendingAttachment) || sendMutation.isPending}
           style={({ pressed }) => [
             styles.sendBtn,
-            { backgroundColor: text.trim() ? colors.tint : colors.surfaceElevated },
+            { backgroundColor: (text.trim() || pendingAttachment) ? colors.tint : colors.surfaceElevated },
             pressed && { opacity: 0.85 },
           ]}
           hitSlop={8}
         >
-          <Ionicons name="send" size={18} color={text.trim() ? '#fff' : colors.textTertiary} />
+          <Ionicons name="send" size={18} color={(text.trim() || pendingAttachment) ? '#fff' : colors.textTertiary} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -202,20 +398,63 @@ const styles = StyleSheet.create({
   },
   headerInfo: { flex: 1 },
   headerName: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  headerStatus: { fontSize: 12, marginTop: 1, fontFamily: 'Inter_400Regular' },
+  avatarWrapper: { position: 'relative' as const },
+  onlineDot: {
+    position: 'absolute' as const, bottom: 0, right: 0,
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: '#22c55e', borderWidth: 2,
+  },
   msgList: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 8 },
   msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginVertical: 3, maxWidth: '80%' },
   msgRowSelf: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
   msgBubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, maxWidth: '100%' },
+  msgBubbleImage: { paddingHorizontal: 4, paddingTop: 4 },
   msgText: { fontSize: 15, lineHeight: 21, fontFamily: 'Inter_400Regular' },
+  attachmentImage: { width: 200, height: 150, borderRadius: 14, marginBottom: 6 },
+  documentAttachment: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, marginBottom: 6,
+  },
+  documentName: { fontSize: 13, fontFamily: 'Inter_500Medium', flex: 1 },
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 14,
     paddingTop: 8, borderTopWidth: 1,
   },
+  attachBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   input: {
     flex: 1, fontSize: 15, padding: 12, borderRadius: 20, borderWidth: 1,
     maxHeight: 100, fontFamily: 'Inter_400Regular',
   },
   sendBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  suggestionsContainer: { borderTopWidth: 1, paddingVertical: 8 },
+  suggestionsRow: { paddingHorizontal: 14, gap: 8 },
+  suggestionChip: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16,
+    borderWidth: 1,
+  },
+  suggestionText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  attachmentPreview: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1,
+  },
+  previewThumb: { width: 44, height: 44, borderRadius: 8 },
+  previewDocIcon: {
+    width: 44, height: 44, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  previewName: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular' },
+  uploadBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 14, paddingVertical: 6,
+  },
+  uploadText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  attachMenu: {
+    flexDirection: 'row', gap: 16, paddingHorizontal: 14,
+    paddingVertical: 10, borderTopWidth: 1,
+  },
+  attachOption: { alignItems: 'center', gap: 4 },
+  attachOptionText: { fontSize: 11, fontFamily: 'Inter_500Medium' },
   blockedState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, paddingHorizontal: 40 },
   blockedTitle: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold' },
   blockedText: { fontSize: 14, textAlign: 'center', lineHeight: 20, fontFamily: 'Inter_400Regular' },

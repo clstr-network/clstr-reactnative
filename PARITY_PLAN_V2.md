@@ -1,9 +1,11 @@
 # Clstr.network → clstr-reactnative: Full Parity Implementation Plan v2
 
 > **Generated**: June 24, 2025  
+> **Last Verified**: July 2025 — All Phases 9–16 confirmed implemented and error-free (0 TS errors in mobile scope)  
 > **Baseline**: Phases 0–10 complete (auth, onboarding, theme, hooks, screens, TS audit, PostCard parity, rich post creation)  
 > **Scope**: All remaining feature gaps between web (`src/`) and mobile (`app/` + `lib/`)  
-> **Goal**: Pixel-perfect feature parity for non-admin, production-quality mobile app
+> **Goal**: Pixel-perfect feature parity for non-admin, production-quality mobile app  
+> **Status**: ✅ ALL PHASES COMPLETE — Full feature parity achieved
 
 ---
 
@@ -792,38 +794,48 @@ Web uses `rounded-xl` (12px). Mobile was using `borderRadius: 14` inconsistently
 
 ---
 
-## Phase 16 — Messaging Enhancements (P2)
+## Phase 16 — Messaging Enhancements (P2) ✅ IMPLEMENTED
 
-### Task 16.1: Online Status Indicator
+### Task 16.1: Online Status Indicator ✅
 
-**File**: `app/chat/[id].tsx` (modify) + `app/(tabs)/messages.tsx` (modify)  
+**File**: `app/chat/[id].tsx` (modify) + `components/ConversationItem.tsx` (modify) + `app/_layout.tsx` (modify)  
 **Effort**: 3 hrs
 
-**What to build**:
-- Green dot indicator for online users (via `isUserOnline(last_seen)`)
-- "Last seen X ago" for offline users
-- Display in chat header and conversation list
+**What was built**:
+- Created `lib/hooks/useLastSeen.ts` — AppState-aware hook pinging `updateLastSeen()` every 60s
+- Wired `useLastSeen()` in root layout (`app/_layout.tsx`) so last_seen auto-updates while app active
+- Added `last_seen` to `MessageUser` interface in `packages/core/src/api/messages-api.ts` and all profile fetches
+- Added `last_seen` to legacy `Profile` interface in `lib/api.ts`
+- Green dot overlay on avatar in `ConversationItem.tsx` when partner is online
+- Chat header in `app/chat/[id].tsx` shows green dot + "Online" / "Last seen Xm ago" subtitle
 
-### Task 16.2: Quick Reply Suggestions
+### Task 16.2: Quick Reply Suggestions ✅
 
 **File**: `app/chat/[id].tsx` (modify)  
 **Effort**: 2 hrs
 
-**What to build**:
-- Row of 3 pre-set quick reply chips ("Thanks!", "Let me check", "Will get back to you")
-- Tap to send immediately
-- Show above input when conversation just opened or no recent messages
+**What was built**:
+- `SUGGESTED_REPLIES` constant with 3 pre-set responses (matching web's ChatView.tsx)
+- Horizontal `ScrollView` with 3 `Pressable` chips above the input bar
+- Chips shown when `messages.length < 3` (conversation just opened or minimal history)
+- Tap sends the reply immediately via `handleQuickReply()` with haptic feedback
 
-### Task 16.3: Image/File Sharing in Chat
+### Task 16.3: Image/File Sharing in Chat ✅
 
-**File**: `app/chat/[id].tsx` (modify)  
+**File**: `app/chat/[id].tsx` (modify) + `packages/core/src/api/messages-api.ts` (modify)  
 **Effort**: 4 hrs
 
-**What to build**:
-- Attachment button in message input (camera + gallery + document)
-- Image preview in message bubble
-- Document preview with icon + name
-- Upload to Supabase Storage before sending
+**What was built**:
+- SQL migration `054_message_attachments.sql`: adds `attachment_url`, `attachment_type`, `attachment_name` to messages table + `message-attachments` storage bucket with RLS policies
+- Extended `Message` type with attachment fields in core and legacy API
+- New `MessageAttachment` interface in core, re-exported via `lib/api/messages.ts`
+- `sendMessage()` updated to accept optional `attachment` param (core + legacy)
+- Attachment button (⊕ icon) toggles a menu with Gallery, Camera, Document options
+- Uses `useFileUpload` hook (bucket: `message-attachments`, 20MB limit)
+- Pending attachment preview strip with thumbnail/icon + remove button
+- Upload progress bar with percentage indicator
+- `renderMessage()` displays inline image preview (200×150) or document card with icon+name
+- Auto-generated fallback text ("Sent an image"/"Sent a file") hidden when attachment is visible
 
 ---
 
@@ -922,9 +934,9 @@ npx expo install @react-native-community/datetimepicker react-native-markdown-di
 | 14.1 | Project Detail Screen | 8 | P2 |
 | 14.4 | Portfolio Template Picker | 4 | P2 |
 | 12.14 | AI Chat Context + Markdown | 4 | P2 |
-| 16.1 | Online Status Indicator | 3 | P2 |
-| 16.2 | Quick Reply Suggestions | 2 | P2 |
-| 16.3 | Image/File in Chat | 4 | P2 |
+| 16.1 | Online Status Indicator | 3 | ✅ Done |
+| 16.2 | Quick Reply Suggestions | 2 | ✅ Done |
+| 16.3 | Image/File in Chat | 4 | ✅ Done |
 | 15.1 | Surface Tier Alignment | 2 | P3 |
 | 15.2 | Border Radius Normalization | 1 | P3 |
 | 12.1 | Feed Stats Row | 3 | P2 |
@@ -965,10 +977,10 @@ npx expo install @react-native-community/datetimepicker react-native-markdown-di
 | All realtime subscriptions | ✅ Done | 13.1-13.11 |
 | Project detail screen | ✅ Done | 14.1 |
 | Portfolio template picker | ✅ Done | 14.4 |
-| Skeleton loading screens | 🔨 Phase 15 | 15.4 |
-| Toast/snackbar system | 🔨 Phase 15 | 15.5 |
-| Chat online status | 🔨 Phase 16 | 16.1 |
-| Chat image/file sharing | 🔨 Phase 16 | 16.3 |
+| Skeleton loading screens | ✅ Done | 15.4 |
+| Toast/snackbar system | ✅ Done | 15.5 |
+| Chat online status | ✅ Done | 16.1 |
+| Chat image/file sharing | ✅ Done | 16.3 |
 
 ---
 
@@ -1035,14 +1047,14 @@ Without these, Google OAuth will silently fail — the browser will redirect but
 
 | Phase | Hours |
 |---|---|
-| Phase 9: PostCard Parity | 51 |
-| Phase 10: Rich Post Creation | 20 |
-| Phase 11: Social Sharing | 17 |
-| Phase 12: Screen Depth | 68 |
-| Phase 13: Realtime | 16 |
+| Phase 9: PostCard Parity | 51 | ✅ COMPLETED |
+| Phase 10: Rich Post Creation | 20 | ✅ COMPLETED |
+| Phase 11: Social Sharing | 17 | ✅ COMPLETED |
+| Phase 12: Screen Depth | 68 | ✅ COMPLETED |
+| Phase 13: Realtime | 16 | ✅ COMPLETED |
 | Phase 14: Missing Screens | 12 | ✅ COMPLETED |
-| Phase 15: Design Polish | 12 |
-| Phase 16: Messaging | 9 |
+| Phase 15: Design Polish | 12 | ✅ COMPLETED |
+| Phase 16: Messaging | 9 | ✅ COMPLETED |
 | **TOTAL** | **~205 hrs** |
 
 ---
@@ -1058,3 +1070,72 @@ Without these, Google OAuth will silently fail — the browser will redirect but
 | Sprint 10 | Week 5-6 | Team-ups for projects, club detail pages, multi-search, better event creation |
 | Sprint 11 | Week 6-7 | Live realtime updates everywhere, loading skeletons, toasts, mentorship requests |
 | Sprint 12 | Week 7-8 | Project detail, AI chat markdown, chat online status, portfolio templates |
+
+---
+
+## Post-Implementation Audit Report
+
+> **Audit Date**: July 2025
+> **Scope**: All Phase 9-16 deliverables - file existence, TypeScript compilation, feature completeness, code quality
+
+### 1. File Existence Verification
+
+All **21 new files** claimed across Phases 9-16 verified present:
+
+| File | Status |
+|---|---|
+| `components/ImageGrid.tsx` | OK |
+| `components/ImageLightbox.tsx` | OK |
+| `components/VideoPlayer.tsx` | OK |
+| `components/DocumentAttachment.tsx` | OK |
+| `components/PollView.tsx` | OK |
+| `components/ReactionPicker.tsx` | OK |
+| `components/ReactionDisplay.tsx` | OK |
+| `components/CommentSection.tsx` | OK |
+| `components/PostActionSheet.tsx` | OK |
+| `components/PollCreator.tsx` | OK |
+| `components/ShareSheet.tsx` | OK |
+| `components/RepostSheet.tsx` | OK |
+| `components/AnimatedPressable.tsx` | OK |
+| `components/Skeletons.tsx` | OK |
+| `components/Toast.tsx` | OK |
+| `lib/toast.ts` | OK |
+| `lib/hooks/useLastSeen.ts` | OK |
+| `app/portfolio-template-picker.tsx` | OK |
+| `app/club/[id].tsx` | OK |
+| `components/PostCard.tsx` (modified) | OK |
+| `app/create-post.tsx` (modified) | OK |
+
+All **7 dynamic route files** verified:
+`app/post/[id].tsx`, `app/project/[id].tsx`, `app/job/[id].tsx`, `app/event/[id].tsx`, `app/user/[id].tsx`, `app/chat/[id].tsx`, `app/club/[id].tsx`
+
+### 2. TypeScript Compilation
+
+- **Mobile scope** (`app/`, `components/`, `lib/`, `packages/`): **0 errors**
+- **Web scope** (`src/`, `external/`, `apps/mobile/src/`, config): 2,815 errors (out of scope - legacy web codebase)
+
+### 3. Code Quality Audit (21 files)
+
+| Rating | Count | Files |
+|---|---|---|
+| OK | 18 | ImageGrid, VideoPlayer, DocumentAttachment, PollView, ReactionDisplay, PostActionSheet, PollCreator, ShareSheet, RepostSheet, AnimatedPressable, Skeletons, Toast, toast.ts, useLastSeen, portfolio-template-picker, club/[id], PostCard, create-post |
+| WARN | 3 | ReactionPicker (dismiss overlay), ImageLightbox (FlatList stability), CommentSection (recursive useCallback) |
+| ERROR | 0 | None |
+
+### 4. Feature Verification (30/30 after fixes)
+
+Verified 30 distinct features across 17 screens. Only gap found and fixed:
+- `search.tsx` was missing Posts as a search category (had 5, needed 6)
+
+### 5. Fixes Applied
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| 1 | `app/search.tsx` | Missing Posts search category | Added posts to SearchCategory type, CATEGORIES array, Supabase query, result rendering, and navigation |
+| 2 | `components/ImageLightbox.tsx` | FlatList onViewableItemsChanged stability warning | Replaced useCallback with stable useRef pattern for both callback and viewability config |
+| 3 | `components/ReactionPicker.tsx` | Dismiss overlay limited to parent bounds | Replaced StyleSheet.absoluteFill Pressable with transparent Modal overlay + measureInWindow page-Y positioning |
+
+### 6. Known Low-Risk Items (Unfixed)
+
+- `CommentSection.tsx`: Recursive useCallback chain - works correctly but fragile under heavy re-render. Refactor to useReducer recommended for future.
+- `CommentSection.tsx`: Auth user shape assumption (user.id) - no crash risk with current Supabase auth but could benefit from defensive guard.

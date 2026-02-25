@@ -34,6 +34,7 @@ import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { IdentityProvider, useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useAppStateRealtimeLifecycle } from '@/lib/app-state';
 import { usePushNotifications } from '@/lib/hooks/usePushNotifications';
+import { useLastSeen } from '@/lib/hooks/useLastSeen';
 import { AppToaster } from '@/components/Toast';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -84,6 +85,9 @@ function RootLayoutNav() {
 
   // Phase 8.4 — Push notifications: auto-registers token if permission was previously granted
   usePushNotifications();
+
+  // Phase 16.1 — Update last_seen timestamp for online presence
+  useLastSeen();
 
   return (
     <Stack screenOptions={{ headerShown: false, headerBackTitle: 'Back' }}>

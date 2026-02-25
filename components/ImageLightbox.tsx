@@ -4,7 +4,7 @@
  * Swipe left/right to navigate between images, tap to close.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Image,
@@ -15,6 +15,7 @@ import {
   Dimensions,
   FlatList,
   StatusBar,
+  ViewToken,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,14 +34,17 @@ function ImageLightbox({ images, initialIndex = 0, visible, onClose }: ImageLigh
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: any) => {
+  // Stable ref for onViewableItemsChanged to avoid FlatList warning
+  // "Changing onViewableItemsChanged on the fly is not supported"
+  const onViewableItemsChangedRef = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0) {
         setCurrentIndex(viewableItems[0].index ?? 0);
       }
     },
-    [],
   );
+
+  const viewabilityConfigRef = useRef({ itemVisiblePercentThreshold: 50 });
 
   const renderItem = useCallback(
     ({ item }: { item: string }) => (
@@ -90,8 +94,8 @@ function ImageLightbox({ images, initialIndex = 0, visible, onClose }: ImageLigh
             offset: SCREEN_WIDTH * index,
             index,
           })}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+          onViewableItemsChanged={onViewableItemsChangedRef.current}
+          viewabilityConfig={viewabilityConfigRef.current}
         />
 
         {/* Page indicator */}
