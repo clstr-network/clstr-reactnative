@@ -22,6 +22,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/adapters/core-client';
 import { useAuth } from '@/lib/auth-context';
+import { enqueue as enqueueDeepLink } from '@/lib/deep-link-queue';
 
 // ─── Expo Go detection ───────────────────────────────────────
 
@@ -212,12 +213,32 @@ export function usePushNotifications() {
       console.log('[push] Notification received:', notification.request.content.title);
     });
 
-    // User tapped on a notification → deep link routing via expo-router
+    // User tapped on a notification → route via deep link queue (Phase 4)
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
       console.log('[push] Notification tapped:', data);
-      // Deep link is handled automatically by expo-router's linking config
-      // if the notification payload includes a `url` field.
+
+      // Extract URL from notification payload and route through deep link queue
+      if (data?.url && typeof data.url === 'string') {
+        enqueueDeepLink(data.url);
+      } else if (data?.screen && typeof data.screen === 'string') {
+        // Fallback: use screen name as path (e.g., { screen: '/post/123' })
+        enqueueDeepLink(data.screen);
+      } else if (data?.type) {
+        // Map notification types to routes
+        const typeRoutes: Record<string, string> = {
+          message: '/(tabs)/messages',
+          connection_request: '/(tabs)/network',
+          post_like: data.postId ? `/post/${data.postId}` : '/',
+          post_comment: data.postId ? `/post/${data.postId}` : '/',
+          event: data.eventId ? `/event/${data.eventId}` : '/(tabs)/events',
+          mention: data.postId ? `/post/${data.postId}` : '/',
+        };
+        const route = typeRoutes[data.type as string];
+        if (route) {
+          enqueueDeepLink(route);
+        }
+      }
     });
 
     return () => {

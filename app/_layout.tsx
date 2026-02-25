@@ -35,6 +35,7 @@ import { IdentityProvider, useIdentityContext } from '@/lib/contexts/IdentityPro
 import { useAppStateRealtimeLifecycle } from '@/lib/app-state';
 import { usePushNotifications } from '@/lib/hooks/usePushNotifications';
 import { useLastSeen } from '@/lib/hooks/useLastSeen';
+import { useDeepLinkHandler } from '@/lib/hooks/useDeepLinkHandler';
 import { AppToaster } from '@/components/Toast';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -82,6 +83,9 @@ function RootLayoutNav() {
 
   // Phase 3.5 — AppState lifecycle: session refresh + realtime reconnect on foreground
   useAppStateRealtimeLifecycle();
+
+  // Phase 4 — Deep link queue: defers links until nav+auth ready, flushes post-login
+  useDeepLinkHandler();
 
   // Phase 8.4 — Push notifications: auto-registers token if permission was previously granted
   usePushNotifications();

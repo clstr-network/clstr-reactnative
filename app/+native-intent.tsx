@@ -1,9 +1,24 @@
 /**
- * Native deep-link intent handler — Phase 5.4 + Phase 9
+ * Native deep-link intent handler — Phase 4 (Navigation & Deep Link Parity)
  *
  * Converts incoming deep-link paths into Expo Router paths.
  * Handles both custom scheme (`clstr://`) and universal links
  * (`https://clstr.network/...`).
+ *
+ * Cold-start behavior:
+ *   When `initial` is true, the resolved path is returned immediately.
+ *   Expo Router internally defers rendering until the navigation tree
+ *   is ready, so the path is safe to return.
+ *
+ *   For non-auth deep links during cold start, the DeepLinkQueue
+ *   (lib/deep-link-queue.ts) provides an additional safety net:
+ *   if navigation or auth is not yet resolved, the link is held
+ *   and replayed once both conditions are met.
+ *
+ * Background-resume behavior:
+ *   When `initial` is false, the link arrived while the app was
+ *   already running. The resolved path is returned for immediate
+ *   navigation by Expo Router.
  *
  * Routes:
  *   clstr://auth/callback#...      → /auth/callback (token exchange)
@@ -27,12 +42,9 @@
  *   clstr://skill-analysis         → /skill-analysis
  *   clstr://ai-chat                → /ai-chat
  *   clstr://feed                   → /
- *
- * Cold start:
- *   When `initial` is true and the link is NOT an auth callback,
- *   we still return the resolved path — Expo Router handles queuing
- *   until the navigation container is ready.
  */
+
+import { enqueue as enqueueDeepLink } from '@/lib/deep-link-queue';
 
 export function redirectSystemPath({
   path,
@@ -41,7 +53,7 @@ export function redirectSystemPath({
   path: string;
   initial: boolean;
 }): string {
-  // ----- Auth callback (highest priority) -----
+  // ----- Auth callback (highest priority — never queued) -----
   if (path.includes('auth/callback')) {
     return '/auth/callback';
   }
@@ -185,6 +197,15 @@ export function redirectSystemPath({
   // Events list (no ID)
   if (cleanPath === '/events') {
     return '/(tabs)/events';
+  }
+
+  // ----- Cold-start queue integration (Phase 4) -----
+  // For cold-start deep links (initial=true), enqueue the resolved path
+  // into the DeepLinkQueue as a safety net. The queue ensures the link
+  // is replayed after nav tree + auth are both ready.
+  // The path is still returned to Expo Router for normal handling.
+  if (initial && cleanPath && cleanPath !== '/') {
+    enqueueDeepLink(path);
   }
 
   // ----- Fallback -----
