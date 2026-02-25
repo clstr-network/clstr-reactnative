@@ -8,6 +8,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/adapters/core-client';
+import { subscriptionManager } from '@/lib/realtime/subscription-manager';
 import { CHANNELS } from '@/lib/channels';
 import {
   getUserSettings,
@@ -43,28 +44,34 @@ export function useUserSettings(userId?: string) {
     },
   });
 
-  // Realtime subscription for live updates
+  // Realtime subscription for live updates (registered with SubscriptionManager)
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(CHANNELS.userSettings(userId))
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_settings',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: userSettingsQueryKey(userId) });
-        },
-      )
-      .subscribe();
+    const channelName = CHANNELS.userSettings(userId);
+
+    const createChannel = () =>
+      supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_settings',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            queryClient.invalidateQueries({ queryKey: userSettingsQueryKey(userId) });
+          },
+        )
+        .subscribe();
+
+    const channel = createChannel();
+    subscriptionManager.subscribe(channelName, channel, createChannel);
 
     return () => {
-      supabase.removeChannel(channel);
+      subscriptionManager.unsubscribe(channelName);
     };
   }, [queryClient, userId]);
 

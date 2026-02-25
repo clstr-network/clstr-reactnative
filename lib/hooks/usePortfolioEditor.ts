@@ -12,6 +12,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/adapters/core-client';
+import { subscriptionManager } from '@/lib/realtime/subscription-manager';
 import { CHANNELS } from '@/lib/channels';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { updatePortfolioSettings } from '@/lib/api/portfolio';
@@ -98,6 +99,7 @@ export function usePortfolioEditor(userId: string | undefined) {
   }, [rawProfile]);
 
   // 2b. Realtime subscriptions: auto-refetch when profile sub-tables change
+  // All channels registered with SubscriptionManager for reconnect support.
   useEffect(() => {
     if (!userId) return;
 
@@ -108,12 +110,42 @@ export function usePortfolioEditor(userId: string | undefined) {
       'profile_projects',
     ] as const;
 
-    const channels = tables.map((table) =>
+    // Subscribe to each profile sub-table
+    const channelNames: string[] = [];
+    for (const table of tables) {
+      const channelName = CHANNELS.portfolioEditor(table, userId);
+      channelNames.push(channelName);
+
+      const createChannel = () =>
+        supabase
+          .channel(channelName)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table, filter: `profile_id=eq.${userId}` },
+            () => {
+              if (!isDirtyRef.current) {
+                queryClient.invalidateQueries({
+                  queryKey: QUERY_KEYS.portfolioEditorProfile(userId),
+                });
+              }
+            },
+          )
+          .subscribe();
+
+      const channel = createChannel();
+      subscriptionManager.subscribe(channelName, channel, createChannel);
+    }
+
+    // Listen for profiles table changes
+    const profileChannelName = CHANNELS.portfolioEditorProfiles(userId);
+    channelNames.push(profileChannelName);
+
+    const createProfileChannel = () =>
       supabase
-        .channel(CHANNELS.portfolioEditor(table, userId))
+        .channel(profileChannelName)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table, filter: `profile_id=eq.${userId}` },
+          { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
           () => {
             if (!isDirtyRef.current) {
               queryClient.invalidateQueries({
@@ -122,47 +154,38 @@ export function usePortfolioEditor(userId: string | undefined) {
             }
           },
         )
-        .subscribe(),
-    );
+        .subscribe();
 
-    // Listen for profiles table changes
-    const profileChannel = supabase
-      .channel(CHANNELS.portfolioEditorProfiles(userId))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
-        () => {
-          if (!isDirtyRef.current) {
-            queryClient.invalidateQueries({
-              queryKey: QUERY_KEYS.portfolioEditorProfile(userId),
-            });
-          }
-        },
-      )
-      .subscribe();
+    const profileChannel = createProfileChannel();
+    subscriptionManager.subscribe(profileChannelName, profileChannel, createProfileChannel);
 
     // Listen for posts changes
-    const postsChannel = supabase
-      .channel(CHANNELS.portfolioEditorPosts(userId))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'posts', filter: `user_id=eq.${userId}` },
-        () => {
-          if (!isDirtyRef.current) {
-            queryClient.invalidateQueries({
-              queryKey: QUERY_KEYS.portfolioEditorProfile(userId),
-            });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profilePosts(userId) });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profileStats(userId) });
-          }
-        },
-      )
-      .subscribe();
+    const postsChannelName = CHANNELS.portfolioEditorPosts(userId);
+    channelNames.push(postsChannelName);
+
+    const createPostsChannel = () =>
+      supabase
+        .channel(postsChannelName)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'posts', filter: `user_id=eq.${userId}` },
+          () => {
+            if (!isDirtyRef.current) {
+              queryClient.invalidateQueries({
+                queryKey: QUERY_KEYS.portfolioEditorProfile(userId),
+              });
+              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profilePosts(userId) });
+              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profileStats(userId) });
+            }
+          },
+        )
+        .subscribe();
+
+    const postsChannel = createPostsChannel();
+    subscriptionManager.subscribe(postsChannelName, postsChannel, createPostsChannel);
 
     return () => {
-      channels.forEach((ch) => supabase.removeChannel(ch));
-      supabase.removeChannel(profileChannel);
-      supabase.removeChannel(postsChannel);
+      channelNames.forEach((name) => subscriptionManager.unsubscribe(name));
     };
   }, [userId, queryClient]);
 

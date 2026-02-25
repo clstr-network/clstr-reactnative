@@ -11,6 +11,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/adapters/core-client';
+import { subscriptionManager } from '@/lib/realtime/subscription-manager';
 import type { Session } from '@supabase/supabase-js';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { CHANNELS } from '@/lib/channels';
@@ -83,33 +84,39 @@ export function useIdentity() {
     const identity = query.data;
     if (!identity) return;
 
-    const channel = supabase
-      .channel(CHANNELS.profileIdentity())
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${identity.user_id}`,
-        },
-        (payload: Record<string, any>) => {
-          const newRow = payload.new as Record<string, unknown>;
-          const oldRow = payload.old as Record<string, unknown>;
-          if (
-            newRow.role !== oldRow.role ||
-            newRow.email !== oldRow.email ||
-            newRow.college_domain !== oldRow.college_domain ||
-            newRow.is_verified !== oldRow.is_verified
-          ) {
-            queryClient.invalidateQueries({ queryKey: IDENTITY_QUERY_KEY });
-          }
-        },
-      )
-      .subscribe();
+    const channelName = CHANNELS.profileIdentity();
+
+    const createChannel = () =>
+      supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${identity.user_id}`,
+          },
+          (payload: Record<string, any>) => {
+            const newRow = payload.new as Record<string, unknown>;
+            const oldRow = payload.old as Record<string, unknown>;
+            if (
+              newRow.role !== oldRow.role ||
+              newRow.email !== oldRow.email ||
+              newRow.college_domain !== oldRow.college_domain ||
+              newRow.is_verified !== oldRow.is_verified
+            ) {
+              queryClient.invalidateQueries({ queryKey: IDENTITY_QUERY_KEY });
+            }
+          },
+        )
+        .subscribe();
+
+    const channel = createChannel();
+    subscriptionManager.subscribe(channelName, channel, createChannel);
 
     return () => {
-      supabase.removeChannel(channel);
+      subscriptionManager.unsubscribe(channelName);
     };
   }, [query.data, queryClient]);
 

@@ -13,6 +13,7 @@ import * as Linking from 'expo-linking';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { supabase } from './adapters/core-client';
+import { subscriptionManager } from './realtime/subscription-manager';
 import { createProfileRecord, mapUserTypeToRole, sanitizeSocialLinks } from './api/profile';
 import { determineUserRoleFromGraduation, calculateGraduationYear } from '@clstr/core/api/alumni-identification';
 import type { Session, User } from '@supabase/supabase-js';
@@ -176,6 +177,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Tear down all realtime channels before signing out
+    subscriptionManager.unsubscribeAll();
     await supabase.auth.signOut();
   }, []);
 

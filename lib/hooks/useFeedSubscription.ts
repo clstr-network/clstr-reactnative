@@ -32,18 +32,8 @@ export function useFeedSubscription() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [hasNewPosts, setHasNewPosts] = useState(false);
 
-  const subscribe = useCallback(() => {
-    if (!userId) return;
-
-    const channelName = CHANNELS.homeFeed(userId);
-
-    // Tear down existing
-    if (channelRef.current) {
-      subscriptionManager.unsubscribe(channelName);
-      channelRef.current = null;
-    }
-
-    const channel = supabase
+  const createChannel = useCallback((channelName: string, uid: string) => {
+    return supabase
       .channel(channelName)
       .on(
         'postgres_changes',
@@ -51,7 +41,7 @@ export function useFeedSubscription() {
         (payload) => {
           const newPost = payload.new as Record<string, unknown>;
           // Only flag new posts from other users (don't flag your own posts)
-          if (newPost.user_id !== userId) {
+          if (newPost.user_id !== uid) {
             setHasNewPosts(true);
           } else {
             // Own post — just refresh the feed quietly
@@ -76,13 +66,23 @@ export function useFeedSubscription() {
         },
       )
       .subscribe();
+  }, [queryClient]);
 
+  const subscribe = useCallback(() => {
+    if (!userId) return;
+
+    const channelName = CHANNELS.homeFeed(userId);
+
+    // Tear down existing
+    if (channelRef.current) {
+      subscriptionManager.unsubscribe(channelName);
+      channelRef.current = null;
+    }
+
+    const channel = createChannel(channelName, userId);
     channelRef.current = channel;
-    subscriptionManager.subscribe(channelName, channel, () => {
-      subscribe();
-      return channelRef.current!;
-    });
-  }, [userId, queryClient]);
+    subscriptionManager.subscribe(channelName, channel, () => createChannel(channelName, userId));
+  }, [userId, createChannel]);
 
   useEffect(() => {
     subscribe();

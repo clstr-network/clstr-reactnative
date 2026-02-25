@@ -8,6 +8,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/adapters/core-client';
+import { subscriptionManager } from '@/lib/realtime/subscription-manager';
 import { CHANNELS } from '@/lib/channels';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import {
@@ -77,34 +78,42 @@ export function useAIChatMessages(sessionId: string | null) {
     staleTime: 30_000,
   });
 
-  // Realtime subscription for new messages
+  // Realtime subscription for new messages (registered with SubscriptionManager)
   useEffect(() => {
     if (!sessionId) return;
 
-    const channel = supabase
-      .channel(CHANNELS.aiChatMessages(sessionId))
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'ai_chat_messages',
-          filter: `session_id=eq.${sessionId}`,
-        },
-        (payload) => {
-          // Optimistic append if not already in cache
-          queryClient.setQueryData<AIChatMessage[]>(messagesKey(sessionId), (old) => {
-            if (!old) return [payload.new as AIChatMessage];
-            const exists = old.some((m) => m.id === (payload.new as AIChatMessage).id);
-            if (exists) return old;
-            return [...old, payload.new as AIChatMessage];
-          });
-        },
-      )
-      .subscribe();
+    const channelName = CHANNELS.aiChatMessages(sessionId);
+
+    const createChannel = () =>
+      supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'ai_chat_messages',
+            filter: `session_id=eq.${sessionId}`,
+          },
+          (payload) => {
+            // Optimistic append if not already in cache
+            const sid = sessionIdRef.current;
+            if (!sid) return;
+            queryClient.setQueryData<AIChatMessage[]>(messagesKey(sid), (old) => {
+              if (!old) return [payload.new as AIChatMessage];
+              const exists = old.some((m) => m.id === (payload.new as AIChatMessage).id);
+              if (exists) return old;
+              return [...old, payload.new as AIChatMessage];
+            });
+          },
+        )
+        .subscribe();
+
+    const channel = createChannel();
+    subscriptionManager.subscribe(channelName, channel, createChannel);
 
     return () => {
-      supabase.removeChannel(channel);
+      subscriptionManager.unsubscribe(channelName);
     };
   }, [sessionId, queryClient]);
 

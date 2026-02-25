@@ -6,6 +6,7 @@
 export const CHANNELS = {
   // User-scoped
   messages: (userId: string) => `messages:user:${userId}`,
+  notifications: (userId: string) => `notifications:${userId}`,
   userSettings: (userId: string) => `user_settings:${userId}`,
   skillAnalysis: (userId: string) => `skill_analysis:${userId}`,
   pushSubscriptions: (userId: string) => `push_subscriptions:${userId}`,

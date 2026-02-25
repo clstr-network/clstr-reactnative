@@ -48,6 +48,43 @@ export function useMessageSubscription(
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
 
+  const createChannel = useCallback((channelName: string, uid: string, partnerId?: string) => {
+    return supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${uid}`,
+        },
+        (payload) => {
+          const newMessage = payload.new as Record<string, unknown>;
+          if (!newMessage) return;
+
+          const senderId = newMessage.sender_id as string;
+          const receiverId = newMessage.receiver_id as string;
+          const msgPartnerId = senderId === uid ? receiverId : senderId;
+
+          // Always invalidate conversations list
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations });
+
+          // Invalidate unread count
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.unreadMessages });
+
+          // If this is for the currently active chat, refresh messages + mark read
+          if (partnerId && msgPartnerId === partnerId) {
+            queryClient.invalidateQueries({
+              queryKey: QUERY_KEYS.chat(partnerId),
+            });
+            markMessagesAsRead(partnerId).catch(() => {});
+          }
+        },
+      )
+      .subscribe();
+  }, [queryClient]);
+
   const subscribe = useCallback(() => {
     if (!userId) return;
 
@@ -58,48 +95,12 @@ export function useMessageSubscription(
       channelRef.current = null;
     }
 
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${userId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as Record<string, unknown>;
-          if (!newMessage) return;
-
-          const senderId = newMessage.sender_id as string;
-          const receiverId = newMessage.receiver_id as string;
-          const partnerId = senderId === userId ? receiverId : senderId;
-
-          // Always invalidate conversations list
-          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.conversations });
-
-          // Invalidate unread count
-          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.unreadMessages });
-
-          // If this is for the currently active chat, refresh messages + mark read
-          if (activePartnerId && partnerId === activePartnerId) {
-            queryClient.invalidateQueries({
-              queryKey: QUERY_KEYS.chat(activePartnerId),
-            });
-            markMessagesAsRead(activePartnerId).catch(() => {});
-          }
-        },
-      )
-      .subscribe();
-
+    const channel = createChannel(channelName, userId, activePartnerId);
     channelRef.current = channel;
-    subscriptionManager.subscribe(channelName, channel, () => {
-      // Factory for reconnect
-      subscribe();
-      return channelRef.current!;
-    });
-  }, [userId, activePartnerId, queryClient]);
+    subscriptionManager.subscribe(channelName, channel, () =>
+      createChannel(channelName, userId, activePartnerId),
+    );
+  }, [userId, activePartnerId, createChannel]);
 
   useEffect(() => {
     subscribe();

@@ -32,7 +32,7 @@ export function useNotificationSubscription() {
   const subscribe = useCallback(() => {
     if (!userId) return;
 
-    const channelName = `notifications:${userId}`;
+    const channelName = CHANNELS.notifications(userId);
 
     // Tear down existing
     if (channelRef.current) {
@@ -40,30 +40,29 @@ export function useNotificationSubscription() {
       channelRef.current = null;
     }
 
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          // Increment badge count
-          setRealtimeUnreadCount((prev) => prev + 1);
-          // Invalidate notifications cache so the list refreshes when viewed
-          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notifications });
-        },
-      )
-      .subscribe();
+    const createChannel = () =>
+      supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            // Increment badge count
+            setRealtimeUnreadCount((prev) => prev + 1);
+            // Invalidate notifications cache so the list refreshes when viewed
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notifications });
+          },
+        )
+        .subscribe();
 
+    const channel = createChannel();
     channelRef.current = channel;
-    subscriptionManager.subscribe(channelName, channel, () => {
-      subscribe();
-      return channelRef.current!;
-    });
+    subscriptionManager.subscribe(channelName, channel, createChannel);
   }, [userId, queryClient]);
 
   useEffect(() => {
@@ -72,7 +71,7 @@ export function useNotificationSubscription() {
     return () => {
       if (userId) {
         subscriptionManager.unsubscribe(
-          `notifications:${userId}`,
+          CHANNELS.notifications(userId),
         );
         channelRef.current = null;
       }

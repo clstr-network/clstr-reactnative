@@ -8,6 +8,7 @@
 import { useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/adapters/core-client';
+import { subscriptionManager } from '@/lib/realtime/subscription-manager';
 import { CHANNELS } from '@/lib/channels';
 import {
   getOrComputeSkillAnalysis,
@@ -72,28 +73,34 @@ export function useSkillAnalysis(userId?: string): UseSkillAnalysisReturn {
     return computeMutation.mutateAsync();
   }, [computeMutation]);
 
-  // Set up realtime subscription
+  // Set up realtime subscription (registered with SubscriptionManager)
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(CHANNELS.skillAnalysis(userId))
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'skill_analysis',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: skillAnalysisQueryKey(userId) });
-        },
-      )
-      .subscribe();
+    const channelName = CHANNELS.skillAnalysis(userId);
+
+    const createChannel = () =>
+      supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'skill_analysis',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            queryClient.invalidateQueries({ queryKey: skillAnalysisQueryKey(userId) });
+          },
+        )
+        .subscribe();
+
+    const channel = createChannel();
+    subscriptionManager.subscribe(channelName, channel, createChannel);
 
     return () => {
-      supabase.removeChannel(channel);
+      subscriptionManager.unsubscribe(channelName);
     };
   }, [queryClient, userId]);
 
