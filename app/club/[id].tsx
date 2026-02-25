@@ -28,6 +28,7 @@ import { followClubConnection, unfollowClubConnection } from '@/lib/api/clubs';
 import type { ClubProfile } from '@/lib/api/clubs';
 import { supabase } from '@/lib/adapters/core-client';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
 import PostCard from '@/components/PostCard';
@@ -126,6 +127,7 @@ export default function ClubDetailScreen() {
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { identity } = useIdentityContext();
+  const { canJoinClub, canFollowClub } = useFeatureAccess();
   const userId = identity?.user_id ?? '';
   const collegeDomain = identity?.college_domain ?? '';
 
@@ -347,7 +349,8 @@ export default function ClubDetailScreen() {
           </View>
         </View>
 
-        {/* Follow / Unfollow Button */}
+        {/* Phase 5 — Role-aware Club Action Button */}
+        {(canJoinClub || canFollowClub) && (
         <View style={styles.actionRow}>
           <Pressable
             onPress={() => {
@@ -368,10 +371,13 @@ export default function ClubDetailScreen() {
               color={isFollowing ? colors.text : '#fff'}
             />
             <Text style={[styles.actionBtnText, { color: isFollowing ? colors.text : '#fff' }]}>
-              {isFollowing ? 'Following' : 'Follow'}
+              {isFollowing
+                ? (canJoinClub ? 'Joined' : 'Following')
+                : (canJoinClub ? 'Join' : 'Follow')}
             </Text>
           </Pressable>
         </View>
+        )}
 
         {/* Tabs */}
         <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>

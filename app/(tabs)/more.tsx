@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { useThemeColors } from '@/constants/colors';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { getProfile } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/query-keys';
 
@@ -21,40 +22,71 @@ interface MenuItem {
   action?: () => void;
 }
 
-const getMenuSections = (handleSignOut: () => void): { title: string; items: MenuItem[] }[] => [
-  {
-    title: 'Account',
-    items: [
-      { icon: 'person-outline', label: 'My Profile', route: '/(tabs)/profile' },
-      { icon: 'bookmark-outline', label: 'Saved Posts', route: '/saved' },
-      { icon: 'notifications-outline', label: 'Notifications', route: '/(tabs)/notifications' },
-    ],
+/**
+ * Phase 5 — Role-filtered menu sections.
+ * Items are filtered by the feature permission flags so each role
+ * only sees features they can actually access.
+ */
+function buildMenuSections(
+  handleSignOut: () => void,
+  permissions: {
+    canSaveBookmarks: boolean;
+    canBrowseMentors: boolean;
+    canViewProjects: boolean;
+    canBrowseEcoCampus: boolean;
   },
-  {
-    title: 'Features',
-    items: [
-      { icon: 'people-outline', label: 'Mentorship', route: '/mentorship' },
-      { icon: 'briefcase-outline', label: 'CollabHub', route: '/projects' },
-      { icon: 'leaf-outline', label: 'EcoCampus', route: '/ecocampus' },
-      { icon: 'chatbox-outline', label: 'AI Chatbot', route: '/ai-chat' },
-      { icon: 'grid-outline', label: 'Portfolio', route: '/portfolio' },
-    ],
-  },
-  {
+): { title: string; items: MenuItem[] }[] {
+  const accountItems: MenuItem[] = [
+    { icon: 'person-outline', label: 'My Profile', route: '/(tabs)/profile' },
+  ];
+  if (permissions.canSaveBookmarks) {
+    accountItems.push({ icon: 'bookmark-outline', label: 'Saved Posts', route: '/saved' });
+  }
+  accountItems.push({ icon: 'notifications-outline', label: 'Notifications', route: '/(tabs)/notifications' });
+
+  const featureItems: MenuItem[] = [];
+  if (permissions.canBrowseMentors) {
+    featureItems.push({ icon: 'people-outline', label: 'Mentorship', route: '/mentorship' });
+  }
+  if (permissions.canViewProjects) {
+    featureItems.push({ icon: 'briefcase-outline', label: 'CollabHub', route: '/projects' });
+  }
+  if (permissions.canBrowseEcoCampus) {
+    featureItems.push({ icon: 'leaf-outline', label: 'EcoCampus', route: '/ecocampus' });
+  }
+  // AI Chatbot & Portfolio are available to all roles — no gating needed
+  featureItems.push({ icon: 'chatbox-outline', label: 'AI Chatbot', route: '/ai-chat' });
+  featureItems.push({ icon: 'grid-outline', label: 'Portfolio', route: '/portfolio' });
+
+  const sections: { title: string; items: MenuItem[] }[] = [
+    { title: 'Account', items: accountItems },
+  ];
+  if (featureItems.length > 0) {
+    sections.push({ title: 'Features', items: featureItems });
+  }
+  sections.push({
     title: 'Settings',
     items: [
       { icon: 'settings-outline', label: 'Settings', route: '/settings' },
       { icon: 'help-circle-outline', label: 'Help & Support', route: '/settings' },
       { icon: 'log-out-outline', label: 'Sign Out', color: '#EF4444', action: handleSignOut },
     ],
-  },
-];
+  });
+
+  return sections;
+}
 
 export default function MoreScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const { user, signOut } = useAuth();
+  const {
+    canSaveBookmarks,
+    canBrowseMentors,
+    canViewProjects,
+    canBrowseEcoCampus,
+  } = useFeatureAccess();
 
   const { data: profile, isLoading } = useQuery({
     queryKey: QUERY_KEYS.profile(user?.id ?? ''),
@@ -81,7 +113,12 @@ export default function MoreScreen() {
     ]);
   };
 
-  const menuSections = getMenuSections(handleSignOut);
+  const menuSections = buildMenuSections(handleSignOut, {
+    canSaveBookmarks,
+    canBrowseMentors,
+    canViewProjects,
+    canBrowseEcoCampus,
+  });
 
   const handleMenuPress = (item: MenuItem) => {
     Haptics.selectionAsync();

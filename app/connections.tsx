@@ -24,6 +24,7 @@ import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
 import { fontFamily } from '@/constants/typography';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { getConnections } from '@/lib/api/social';
 import { MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 
@@ -31,6 +32,7 @@ export default function ConnectionsScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { identity } = useIdentityContext();
+  const { isClub } = useFeatureAccess();
   const userId = identity?.user_id ?? '';
 
   const {
@@ -41,7 +43,7 @@ export default function ConnectionsScreen() {
   } = useQuery({
     queryKey: MOBILE_QUERY_KEYS.connectionCount(userId),
     queryFn: () => getConnections(),
-    enabled: !!userId,
+    enabled: !!userId && !isClub,
     staleTime: 30_000,
   });
 
@@ -89,6 +91,20 @@ export default function ConnectionsScreen() {
     },
     [colors, navigateToProfile],
   );
+
+  // Phase 5 — Club accounts don't have personal connections
+  if (isClub) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, paddingTop: insets.top }}>
+        <Ionicons name="people-outline" size={56} color={colors.textTertiary} />
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 }}>Not Available</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>Club accounts manage followers instead of connections.</Text>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>

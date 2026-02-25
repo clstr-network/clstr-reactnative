@@ -351,6 +351,29 @@ Observed likely drift points to fix in a single pass:
 - **Deliverables**: Role normalization (`Student`, `Alumni`, `Faculty`, `Club`) and feature visibility parity checks.
 - **Outcome**: Role-based UI and permission behavior matches web rules for non-admin users.
 
+#### Implementation Audit (Completed)
+
+**Architecture**: Two-layer permission system:
+1. **RBAC Layer** (`packages/core/src/api/permissions.ts`): `UserRole` type → `PermissionSet` (20 boolean flags) via `ROLE_PERMISSIONS` record.
+2. **Feature Matrix Layer** (`packages/core/src/api/feature-permissions.ts`): `ProfileType` → `FeaturePermissions` (40+ flags) via `getFeaturePermissions()` + `canAccessRoute()` + `getHiddenNavItems()`.
+3. **Mobile Hook** (`lib/hooks/useFeatureAccess.ts`): Wraps core feature-permissions, exposes all flags + `isStudent/isAlumni/isFaculty/isClub` booleans.
+
+**Files Modified** (7 screens gated):
+
+| Screen | File | Permission Flag(s) | Behavior |
+|---|---|---|---|
+| Create Event | `app/create-event.tsx` | `canCreateEvents` | Blocks non-Faculty/Club with "Access Restricted" |
+| Create Post | `app/create-post.tsx` | `canCreatePost` | Defensive guard (all roles currently allowed) |
+| Saved Items | `app/saved.tsx` | `canSaveBookmarks` | Blocks Club accounts; disables queries when blocked |
+| Connections | `app/connections.tsx` | `isClub` | Blocks Club accounts ("manage followers instead") |
+| Club Detail | `app/club/[id].tsx` | `canJoinClub`, `canFollowClub` | Students: Join/Joined; Alumni: Follow/Following; Club: hidden |
+| Event Detail | `app/event/[id].tsx` | `canAttendEvents` | RSVP button conditionally rendered |
+| More Menu | `app/(tabs)/more.tsx` | `canSaveBookmarks`, `canBrowseMentors`, `canViewProjects`, `canBrowseEcoCampus` | Menu items filtered by role; AI Chat & Portfolio always visible |
+
+**Pattern Applied**: All early-return permission guards placed AFTER React hooks to comply with rules-of-hooks. Query `enabled` flags incorporate permission checks to prevent unnecessary network requests.
+
+**Verification**: 0 TypeScript / lint errors across all 7 files.
+
 ### ✅ Phase 6: UI Brand Parity Pass (Medium) - COMPLETE
 - **Deliverables**: Token-level alignment (`constants/colors.ts`), pure black (`#000000`) dark theme forced.
 - **Outcome**: Consistent visual system across major screens; no desktop-pattern leakage. White-on-white contrast bugs fixed.

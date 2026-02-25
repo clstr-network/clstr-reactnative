@@ -15,6 +15,7 @@ import { getEventById, toggleEventRegistration, type Event } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
 import { CHANNELS } from '@/lib/channels';
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 
 function formatDateBanner(dateStr?: string): { month: string; day: string; weekday: string } {
   if (!dateStr) return { month: '---', day: '--', weekday: '---' };
@@ -32,6 +33,7 @@ export default function EventDetailScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+  const { canAttendEvents } = useFeatureAccess();
 
   // Phase 13.9 — Realtime event detail subscription
   useRealtimeMultiSubscription({
@@ -214,6 +216,8 @@ export default function EventDetailScreen() {
         </View>
       </ScrollView>
 
+      {/* Phase 5 — Only show RSVP if the user's role can attend events */}
+      {canAttendEvents && (
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 16), backgroundColor: colors.surface, borderTopColor: colors.border }]}>
         <Pressable
           onPress={handleRsvp}
@@ -239,6 +243,7 @@ export default function EventDetailScreen() {
           )}
         </Pressable>
       </View>
+      )}
     </View>
   );
 }

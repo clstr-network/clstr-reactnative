@@ -26,6 +26,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useThemeColors } from '@/constants/colors';
 import { useAuth } from '@/lib/auth-context';
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { createPost } from '@/lib/api/social';
 import type { CreatePostPayload } from '@/lib/api/social';
 import { QUERY_KEYS } from '@/lib/query-keys';
@@ -69,6 +70,7 @@ export default function CreatePostScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { canCreatePost } = useFeatureAccess();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
@@ -204,6 +206,20 @@ export default function CreatePostScreen() {
     setActiveTab(tab);
     Haptics.selectionAsync();
   }, []);
+
+  // Phase 5 — Defensive guard: redirect if role cannot create posts
+  if (!canCreatePost) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, paddingTop: insets.top }}>
+        <Ionicons name="lock-closed-outline" size={56} color={colors.textTertiary} />
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 }}>Access Restricted</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>You don't have permission to create posts.</Text>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   // ----- Can Post? -----
   const canPost = content.trim().length > 0 || (activeTab === 'poll' && pollData !== null);

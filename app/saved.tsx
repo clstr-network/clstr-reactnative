@@ -28,6 +28,7 @@ import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { getSavedItems, toggleSaveItem } from '@/lib/api/saved';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
 import { useRealtimeSubscription } from '@/lib/hooks/useRealtimeSubscription';
@@ -267,6 +268,7 @@ export default function SavedItemsScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { identity } = useIdentityContext();
+  const { canSaveBookmarks } = useFeatureAccess();
   const userId = identity?.user_id ?? '';
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabKey>('posts');
@@ -278,7 +280,7 @@ export default function SavedItemsScreen() {
     event: '*',
     filter: `user_id=eq.${userId}`,
     onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.savedItems(userId) }),
-    enabled: !!userId,
+    enabled: !!userId && canSaveBookmarks,
   });
 
   const {
@@ -289,7 +291,7 @@ export default function SavedItemsScreen() {
   } = useQuery({
     queryKey: QUERY_KEYS.savedItems(userId),
     queryFn: () => getSavedItems(userId),
-    enabled: !!userId,
+    enabled: !!userId && canSaveBookmarks,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
   });
@@ -371,6 +373,20 @@ export default function SavedItemsScreen() {
     }),
     [data],
   );
+
+  // Phase 5 — Role gate: Club accounts cannot access saved items (placed after all hooks)
+  if (!canSaveBookmarks) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, paddingTop: insets.top }}>
+        <Ionicons name="bookmark-outline" size={56} color={colors.textTertiary} />
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 }}>Not Available</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>Bookmarks are not available for Club accounts.</Text>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

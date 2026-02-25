@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useThemeColors } from '@/constants/colors';
 import { useAuth } from '@/lib/auth-context';
+import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { createEvent } from '@/lib/api/events';
 import { QUERY_KEYS } from '@/lib/query-keys';
 
@@ -42,6 +43,7 @@ export default function CreateEventScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { canCreateEvents } = useFeatureAccess();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
@@ -138,6 +140,20 @@ export default function CreateEventScreen() {
   }, [isValid, user, createMutation]);
 
   const isBusy = createMutation.isPending;
+
+  // Phase 5 — Role gate: only Faculty & Club can create events (placed after all hooks)
+  if (!canCreateEvents) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, paddingTop: insets.top }}>
+        <Ionicons name="lock-closed-outline" size={56} color={colors.textTertiary} />
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 }}>Access Restricted</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>Only Faculty and Club accounts can create events.</Text>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
