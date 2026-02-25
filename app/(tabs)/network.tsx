@@ -56,7 +56,7 @@ export default function NetworkScreen() {
         filter: `requester_id=eq.${user?.id}`,
         onPayload: () => {
           queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
-          queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectionRequests });
         },
       },
       {
@@ -65,7 +65,7 @@ export default function NetworkScreen() {
         filter: `receiver_id=eq.${user?.id}`,
         onPayload: () => {
           queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
-          queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectionRequests });
         },
       },
     ],
@@ -86,7 +86,7 @@ export default function NetworkScreen() {
   });
 
   const { data: pendingRequests = [], isLoading: loadingPending } = useQuery({
-    queryKey: ['connection-requests'],
+    queryKey: QUERY_KEYS.connectionRequests,
     queryFn: getPendingRequests,
     staleTime: 10_000,       // 10s — pending requests change more frequently
     gcTime: 5 * 60 * 1000,
@@ -99,14 +99,14 @@ export default function NetworkScreen() {
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network });
-      queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectionRequests });
     },
   });
 
   const rejectMutation = useMutation({
     mutationFn: (connectionId: string) => rejectConnection(connectionId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['connection-requests'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectionRequests });
     },
   });
 
@@ -136,7 +136,7 @@ export default function NetworkScreen() {
   const handleRefresh = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.network }),
-      queryClient.invalidateQueries({ queryKey: ['connection-requests'] }),
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.connectionRequests }),
     ]);
   }, [queryClient]);
 

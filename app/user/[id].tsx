@@ -70,7 +70,7 @@ export default function UserProfileScreen() {
 
   // 12.4 — Fetch user's posts (paginated)
   const postsQ = useInfiniteQuery<GetPostsResponse>({
-    queryKey: ['userPosts', id],
+    queryKey: MOBILE_QUERY_KEYS.userPosts(id ?? ''),
     queryFn: ({ pageParam }) =>
       getPostsByUser(id!, { cursor: pageParam as string | null, pageSize: 10 }),
     initialPageParam: null as string | null,

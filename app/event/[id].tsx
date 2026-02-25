@@ -42,7 +42,7 @@ export default function EventDetailScreen() {
         event: '*',
         filter: `id=eq.${id}`,
         onPayload: () => {
-          queryClient.invalidateQueries({ queryKey: ['event', id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.event(id!) });
           queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events });
         },
       },
@@ -51,7 +51,7 @@ export default function EventDetailScreen() {
         event: '*',
         filter: `event_id=eq.${id}`,
         onPayload: () => {
-          queryClient.invalidateQueries({ queryKey: ['event', id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.event(id!) });
           queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events });
         },
       },
@@ -60,7 +60,7 @@ export default function EventDetailScreen() {
   });
 
   const { data: event, isLoading } = useQuery({
-    queryKey: ['event', id],
+    queryKey: QUERY_KEYS.event(id!),
     queryFn: () => getEventById(id!),
     enabled: !!id,
   });
@@ -68,7 +68,7 @@ export default function EventDetailScreen() {
   const rsvpMutation = useMutation({
     mutationFn: () => toggleEventRegistration(id!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.event(id!) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.events });
     },
   });

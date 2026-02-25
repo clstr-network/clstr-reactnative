@@ -28,7 +28,7 @@ import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { typeaheadSearch } from '@/lib/api/search';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
-import { QUERY_KEYS } from '@/lib/query-keys';
+import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
 import { supabase } from '@/lib/adapters/core-client';
@@ -97,7 +97,7 @@ export default function SearchScreen() {
 
   // Posts search
   const { data: postsData } = useQuery({
-    queryKey: ['search', 'posts', debouncedQuery, collegeDomain],
+    queryKey: MOBILE_QUERY_KEYS.search.posts(debouncedQuery, collegeDomain ?? ''),
     queryFn: async () => {
       const pattern = `%${debouncedQuery}%`;
       const { data: rows, error } = await supabase
@@ -121,7 +121,7 @@ export default function SearchScreen() {
 
   // Jobs search
   const { data: jobsData } = useQuery({
-    queryKey: ['search', 'jobs', debouncedQuery, collegeDomain],
+    queryKey: MOBILE_QUERY_KEYS.search.jobs(debouncedQuery, collegeDomain ?? ''),
     queryFn: async () => {
       const pattern = `%${debouncedQuery}%`;
       const { data: rows, error } = await supabase
@@ -140,7 +140,7 @@ export default function SearchScreen() {
 
   // Clubs search
   const { data: clubsData } = useQuery({
-    queryKey: ['search', 'clubs', debouncedQuery, collegeDomain],
+    queryKey: MOBILE_QUERY_KEYS.search.clubs(debouncedQuery, collegeDomain ?? ''),
     queryFn: async () => {
       const pattern = `%${debouncedQuery}%`;
       const { data: rows, error } = await supabase
@@ -159,7 +159,7 @@ export default function SearchScreen() {
 
   // Projects search
   const { data: projectsData } = useQuery({
-    queryKey: ['search', 'projects', debouncedQuery, collegeDomain],
+    queryKey: MOBILE_QUERY_KEYS.search.projects(debouncedQuery, collegeDomain ?? ''),
     queryFn: async () => {
       const pattern = `%${debouncedQuery}%`;
       const { data: rows, error } = await supabase

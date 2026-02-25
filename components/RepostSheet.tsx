@@ -57,7 +57,7 @@ function RepostSheet({
 
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
-    queryClient.invalidateQueries({ queryKey: ['post', postId] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(postId) });
   }, [queryClient, postId]);
 
   /* ─── Reset on close ─── */

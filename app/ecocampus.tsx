@@ -42,6 +42,7 @@ import {
 import type { SharedItem, ItemRequest } from '@/lib/api/ecocampus';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
+import { MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 
 type TabKey = 'items' | 'requests' | 'mine';
 
@@ -170,21 +171,21 @@ export default function EcoCampusScreen() {
   const [tab, setTab] = useState<TabKey>('items');
 
   const itemsQ = useQuery({
-    queryKey: ['eco', 'items', domain],
+    queryKey: MOBILE_QUERY_KEYS.eco.items(domain),
     queryFn: () => fetchSharedItems(),
     enabled: tab === 'items' && canBrowseEcoCampus,
     staleTime: 30_000,
   });
 
   const requestsQ = useQuery({
-    queryKey: ['eco', 'requests', domain],
+    queryKey: MOBILE_QUERY_KEYS.eco.requests(domain),
     queryFn: () => fetchRequests(),
     enabled: tab === 'requests' && canBrowseEcoCampus,
     staleTime: 30_000,
   });
 
   const myQ = useQuery({
-    queryKey: ['eco', 'mine', userId],
+    queryKey: MOBILE_QUERY_KEYS.eco.mine(userId),
     queryFn: () => fetchMySharedItems(),
     enabled: tab === 'mine' && !!userId,
     staleTime: 30_000,
@@ -197,7 +198,7 @@ export default function EcoCampusScreen() {
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ['eco', 'items'] });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.eco.all });
     },
   });
 
@@ -205,7 +206,7 @@ export default function EcoCampusScreen() {
     mutationFn: (itemId: string) => deleteSharedItem(itemId),
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ['eco'] });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.eco.all });
     },
     onError: (err: Error) => Alert.alert('Error', err.message ?? 'Failed to delete listing.'),
   });
@@ -230,7 +231,7 @@ export default function EcoCampusScreen() {
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setShowCreateItem(false);
-      queryClient.invalidateQueries({ queryKey: ['eco'] });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.eco.all });
       Alert.alert('Success', 'Your item has been listed!');
     },
     onError: (err: Error) => Alert.alert('Error', err.message ?? 'Failed to create listing.'),
@@ -261,7 +262,7 @@ export default function EcoCampusScreen() {
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setShowCreateRequest(false);
-      queryClient.invalidateQueries({ queryKey: ['eco'] });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.eco.all });
       Alert.alert('Success', 'Your request has been posted!');
     },
     onError: (err: Error) => Alert.alert('Error', err.message ?? 'Failed to create request.'),

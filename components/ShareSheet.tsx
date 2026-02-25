@@ -30,7 +30,7 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { Avatar } from '@/components/Avatar';
 import { getConnections, sharePostToMultiple } from '@/lib/api/social';
 import { useAuth } from '@/lib/auth-context';
-import { QUERY_KEYS } from '@/lib/query-keys';
+import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 
 /* ─── Types ─── */
 
@@ -92,7 +92,7 @@ function ShareSheet({ visible, onClose, shareData }: ShareSheetProps) {
     data: connections,
     isLoading: connectionsLoading,
   } = useQuery({
-    queryKey: ['connections', 'share-list'],
+    queryKey: MOBILE_QUERY_KEYS.connectionShareList,
     queryFn: () => getConnections(),
     enabled: visible && mode === 'connections',
     staleTime: 60_000,

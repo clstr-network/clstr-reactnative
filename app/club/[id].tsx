@@ -28,7 +28,7 @@ import { followClubConnection, unfollowClubConnection } from '@/lib/api/clubs';
 import type { ClubProfile } from '@/lib/api/clubs';
 import { supabase } from '@/lib/adapters/core-client';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
-import { QUERY_KEYS } from '@/lib/query-keys';
+import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
 import PostCard from '@/components/PostCard';
 import type { Post } from '@/components/PostCard';
@@ -133,7 +133,7 @@ export default function ClubDetailScreen() {
 
   // ── Club profile ──────────────────────────────────────────
   const clubQuery = useQuery({
-    queryKey: ['club-detail', id],
+    queryKey: MOBILE_QUERY_KEYS.clubDetail(id!),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
@@ -170,7 +170,7 @@ export default function ClubDetailScreen() {
 
   // ── Club events ───────────────────────────────────────────
   const eventsQuery = useQuery({
-    queryKey: ['club-events', id],
+    queryKey: MOBILE_QUERY_KEYS.clubEvents(id!),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('events')
@@ -187,7 +187,7 @@ export default function ClubDetailScreen() {
 
   // ── Club posts ────────────────────────────────────────────
   const postsQuery = useQuery({
-    queryKey: ['club-posts', id],
+    queryKey: MOBILE_QUERY_KEYS.clubPosts(id!),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('posts')
@@ -204,7 +204,7 @@ export default function ClubDetailScreen() {
 
   // ── Members (followers) ───────────────────────────────────
   const membersQuery = useQuery({
-    queryKey: ['club-members', id],
+    queryKey: MOBILE_QUERY_KEYS.clubMembers(id!),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('connections')
@@ -232,8 +232,8 @@ export default function ClubDetailScreen() {
     mutationFn: () => followClubConnection({ requesterId: userId, clubId: id!, collegeDomain }),
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ['club-detail', id] });
-      queryClient.invalidateQueries({ queryKey: ['club-members', id] });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.clubDetail(id!) });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.clubMembers(id!) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.clubs });
     },
   });
@@ -242,8 +242,8 @@ export default function ClubDetailScreen() {
     mutationFn: () => unfollowClubConnection({ requesterId: userId, clubId: id! }),
     onSuccess: () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      queryClient.invalidateQueries({ queryKey: ['club-detail', id] });
-      queryClient.invalidateQueries({ queryKey: ['club-members', id] });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.clubDetail(id!) });
+      queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.clubMembers(id!) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.clubs });
     },
   });

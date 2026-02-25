@@ -69,7 +69,7 @@ export default function FeedScreen() {
   });
 
   const { data: profileViewsCount = 0 } = useQuery({
-    queryKey: ['profileViewsCount', user?.id ?? ''],
+    queryKey: MOBILE_QUERY_KEYS.profileViewsCount(user?.id ?? ''),
     queryFn: () => getProfileViewsCount(user!.id),
     enabled: !!user?.id,
     staleTime: 60_000,

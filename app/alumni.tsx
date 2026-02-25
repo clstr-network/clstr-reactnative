@@ -32,7 +32,7 @@ import { checkConnectionStatus, sendConnectionRequest } from '@/lib/api/social';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { useAuth } from '@/lib/auth-context';
-import { MOBILE_QUERY_KEYS } from '@/lib/query-keys';
+import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { Avatar } from '@/components/Avatar';
 import { useRealtimeMultiSubscription } from '@/lib/hooks/useRealtimeSubscription';
 import { CHANNELS } from '@/lib/channels';
@@ -215,26 +215,26 @@ export default function AlumniScreen() {
         table: 'connections',
         event: '*',
         onPayload: () => {
-          queryClient.invalidateQueries({ queryKey: ['alumni', collegeDomain, userId] });
-          queryClient.invalidateQueries({ queryKey: ['connectionStatus'] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.alumni(collegeDomain, userId) });
+          queryClient.invalidateQueries({ queryKey: MOBILE_QUERY_KEYS.connectionStatus(userId) });
         },
       },
       {
         table: 'profiles',
         event: '*',
-        onPayload: () => queryClient.invalidateQueries({ queryKey: ['alumni', collegeDomain, userId] }),
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.alumni(collegeDomain, userId) }),
       },
       {
         table: 'alumni_profiles',
         event: '*',
-        onPayload: () => queryClient.invalidateQueries({ queryKey: ['alumni', collegeDomain, userId] }),
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.alumni(collegeDomain, userId) }),
       },
     ],
     enabled: !!userId && !!collegeDomain,
   });
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
-    queryKey: ['alumni', collegeDomain, userId],
+    queryKey: QUERY_KEYS.alumni(collegeDomain, userId),
     queryFn: () => getAlumniByDomain(collegeDomain, userId),
     enabled: !!userId && !!collegeDomain && canViewAlumniDirectory,
     staleTime: 60_000,

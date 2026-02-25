@@ -60,7 +60,7 @@ export default function ProfileScreen() {
         event: '*',
         filter: `profile_id=eq.${user?.id}`,
         onPayload: () => {
-          queryClient.invalidateQueries({ queryKey: ['profile-views', user?.id ?? ''] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profileViews(user?.id ?? '') });
         },
       },
       {
@@ -100,7 +100,7 @@ export default function ProfileScreen() {
 
   // Phase 6 — Profile views count (web parity)
   const { data: profileViewsCount = 0 } = useQuery({
-    queryKey: ['profile-views', user?.id ?? ''],
+    queryKey: QUERY_KEYS.profileViews(user?.id ?? ''),
     queryFn: () => getProfileViewsCount(user!.id),
     enabled: !!user?.id,
     staleTime: 60_000,
@@ -112,7 +112,7 @@ export default function ProfileScreen() {
 
   // 12.2 — User's Posts (paginated)
   const postsQ = useQuery({
-    queryKey: ['myPosts', user?.id],
+    queryKey: MOBILE_QUERY_KEYS.myPosts(user?.id ?? ''),
     queryFn: () => getPostsByUser(user!.id, { pageSize: 20 }),
     enabled: !!user?.id && profileTab === 'posts',
   });
@@ -120,28 +120,28 @@ export default function ProfileScreen() {
 
   // 12.2 — Education
   const { data: educationList = [] } = useQuery<EducationData[]>({
-    queryKey: ['myEducation', user?.id],
+    queryKey: MOBILE_QUERY_KEYS.myEducation(user?.id ?? ''),
     queryFn: () => getEducation(user!.id),
     enabled: !!user?.id && profileTab === 'about',
   });
 
   // 12.2 — Experience
   const { data: experienceList = [] } = useQuery<ExperienceData[]>({
-    queryKey: ['myExperience', user?.id],
+    queryKey: MOBILE_QUERY_KEYS.myExperience(user?.id ?? ''),
     queryFn: () => getExperiences(user!.id),
     enabled: !!user?.id && profileTab === 'about',
   });
 
   // 12.2 — Skills
   const { data: skillsList = [] } = useQuery<SkillData[]>({
-    queryKey: ['mySkills', user?.id],
+    queryKey: MOBILE_QUERY_KEYS.mySkills(user?.id ?? ''),
     queryFn: () => getSkills(user!.id),
     enabled: !!user?.id && profileTab === 'about',
   });
 
   // 12.2 — My Projects
   const { data: projectsData } = useQuery({
-    queryKey: ['myProjects', user?.id],
+    queryKey: MOBILE_QUERY_KEYS.myProjects(user?.id ?? ''),
     queryFn: () => getMyProjects(user!.id),
     enabled: !!user?.id && profileTab === 'projects',
   });

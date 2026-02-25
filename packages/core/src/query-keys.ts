@@ -15,6 +15,11 @@ export const QUERY_KEYS = {
   profilePosts: (id: string) => ['profile-posts', id] as const,
   profileStats: (id: string) => ['profile-stats', id] as const,
 
+  // Post / Event / Comment detail (Phase 2 parity)
+  post: (id: string) => ['post', id] as const,
+  event: (id: string) => ['event', id] as const,
+  comments: (postId: string) => ['comments', postId] as const,
+
   // Messaging
   conversations: ['conversations'] as const,
   chat: (id: string) => ['chat', id] as const,
@@ -34,6 +39,16 @@ export const QUERY_KEYS = {
   // Network
   network: ['network'] as const,
   connections: (id: string) => ['connections', id] as const,
+  connectionRequests: ['connection-requests'] as const,
+
+  // Profile sub-sections (Phase 2 parity)
+  education: (userId: string) => ['education', userId] as const,
+  experience: (userId: string) => ['experience', userId] as const,
+  skills: (userId: string) => ['skills', userId] as const,
+  profileViews: (userId: string) => ['profile-views', userId] as const,
+
+  // Alumni
+  alumni: (domain: string, userId: string) => ['alumni', domain, userId] as const,
 
   // Settings & User
   userSettings: (id: string) => ['userSettings', id] as const,

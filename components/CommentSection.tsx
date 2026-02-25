@@ -73,7 +73,7 @@ function CommentSection({
   /* ─── Data Fetching ─── */
 
   const { data: rawComments = [], isLoading } = useQuery({
-    queryKey: ['comments', postId],
+    queryKey: QUERY_KEYS.comments(postId),
     queryFn: () => getComments(postId),
     enabled: !!postId,
     staleTime: 15_000,
@@ -111,7 +111,7 @@ function CommentSection({
   /* ─── Mutations ─── */
 
   const invalidate = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.comments(postId) });
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
   }, [queryClient, postId]);
 

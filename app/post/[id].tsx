@@ -56,7 +56,7 @@ export default function PostDetailScreen() {
         event: '*',
         filter: `id=eq.${id}`,
         onPayload: () => {
-          queryClient.invalidateQueries({ queryKey: ['post', id] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) });
           queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
         },
       },
@@ -64,37 +64,37 @@ export default function PostDetailScreen() {
         table: 'post_likes',
         event: '*',
         filter: `post_id=eq.${id}`,
-        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) }),
       },
       {
         table: 'comments',
         event: '*',
         filter: `post_id=eq.${id}`,
-        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) }),
       },
       {
         table: 'comment_likes',
         event: '*',
-        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) }),
       },
       {
         table: 'post_shares',
         event: '*',
         filter: `original_post_id=eq.${id}`,
-        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) }),
       },
       {
         table: 'saved_items',
         event: '*',
         filter: user?.id ? `user_id=eq.${user.id}` : undefined,
-        onPayload: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
+        onPayload: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) }),
       },
     ],
     enabled: !!id,
   });
 
   const { data: post } = useQuery({
-    queryKey: ['post', id],
+    queryKey: QUERY_KEYS.post(id!),
     queryFn: () => getPostById(id!),
     enabled: !!id,
     staleTime: 30_000,
@@ -105,7 +105,7 @@ export default function PostDetailScreen() {
     mutationFn: ({ postId, type }: { postId: string; type: ReactionType }) =>
       toggleReaction(postId, type),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
@@ -113,7 +113,7 @@ export default function PostDetailScreen() {
   const saveMutation = useMutation({
     mutationFn: () => toggleSavePost(id!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });
@@ -121,7 +121,7 @@ export default function PostDetailScreen() {
   const pollVoteMutation = useMutation({
     mutationFn: (optionIndex: number) => voteOnPoll(id!, optionIndex),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.post(id!) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed });
     },
   });

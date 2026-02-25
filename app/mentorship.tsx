@@ -260,7 +260,7 @@ export default function MentorshipScreen() {
 
   // ── Mutations ──────────────────────────────────────────────
   const invalidateAll = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['mentorship'] });
+    queryClient.invalidateQueries({ queryKey: MENTORSHIP_QUERY_KEYS.all });
   }, [queryClient]);
 
   const acceptMut = useMutation({

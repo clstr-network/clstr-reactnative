@@ -104,19 +104,19 @@ export default function EditProfileScreen() {
   });
 
   const { data: educationList = [], isLoading: eduLoading } = useQuery<EducationData[]>({
-    queryKey: ['education', user?.id],
+    queryKey: QUERY_KEYS.education(user?.id ?? ''),
     queryFn: () => getEducation(user!.id),
     enabled: !!user?.id,
   });
 
   const { data: experienceList = [], isLoading: expLoading } = useQuery<ExperienceData[]>({
-    queryKey: ['experience', user?.id],
+    queryKey: QUERY_KEYS.experience(user?.id ?? ''),
     queryFn: () => getExperiences(user!.id),
     enabled: !!user?.id,
   });
 
   const { data: skillsList = [], isLoading: skillsLoading } = useQuery<SkillData[]>({
-    queryKey: ['skills', user?.id],
+    queryKey: QUERY_KEYS.skills(user?.id ?? ''),
     queryFn: () => getSkills(user!.id),
     enabled: !!user?.id,
   });
@@ -247,7 +247,7 @@ export default function EditProfileScreen() {
   const addEducationMutation = useMutation({
     mutationFn: (data: EducationData) => addEducation(user!.id, data as any),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['education', user!.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.education(user!.id) });
       invalidateProfile();
       setShowAddEducation(false);
       resetEducationForm();
@@ -258,7 +258,7 @@ export default function EditProfileScreen() {
   const deleteEducationMutation = useMutation({
     mutationFn: (id: string) => deleteEducation(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['education', user!.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.education(user!.id) });
       invalidateProfile();
     },
     onError: (e: any) => Alert.alert('Error', e?.message ?? 'Failed to delete education.'),
@@ -296,7 +296,7 @@ export default function EditProfileScreen() {
   const addExperienceMutation = useMutation({
     mutationFn: (data: ExperienceData) => addExperience(user!.id, data as any),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['experience', user!.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.experience(user!.id) });
       invalidateProfile();
       setShowAddExperience(false);
       resetExperienceForm();
@@ -307,7 +307,7 @@ export default function EditProfileScreen() {
   const deleteExperienceMutation = useMutation({
     mutationFn: (id: string) => deleteExperience(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['experience', user!.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.experience(user!.id) });
       invalidateProfile();
     },
     onError: (e: any) => Alert.alert('Error', e?.message ?? 'Failed to delete experience.'),
@@ -345,7 +345,7 @@ export default function EditProfileScreen() {
   const addSkillMutation = useMutation({
     mutationFn: (data: SkillData) => addSkill(user!.id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['skills', user!.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.skills(user!.id) });
       invalidateProfile();
       setShowAddSkill(false);
       setNewSkillName('');
@@ -357,7 +357,7 @@ export default function EditProfileScreen() {
   const deleteSkillMutation = useMutation({
     mutationFn: (id: string) => deleteSkill(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['skills', user!.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.skills(user!.id) });
       invalidateProfile();
     },
     onError: (e: any) => Alert.alert('Error', e?.message ?? 'Failed to delete skill.'),

@@ -13,7 +13,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useThemeColors } from '@/constants/colors';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
-import { QUERY_KEYS } from '@/lib/query-keys';
+import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import { useMessageSubscription } from '@/lib/hooks/useMessageSubscription';
 import { isUserOnline } from '@/lib/api/messages';
 import type { MessageAttachment } from '@/lib/api/messages';
@@ -56,7 +56,7 @@ export default function ChatScreen() {
 
   // F6 — Connection eligibility check
   const { data: connectionStatus, isLoading: isCheckingConnection } = useQuery({
-    queryKey: ['connectionStatus', partnerId],
+    queryKey: MOBILE_QUERY_KEYS.connectionStatus(partnerId!),
     queryFn: () => checkConnectionStatus(partnerId!),
     enabled: !!partnerId,
     staleTime: 60_000,
