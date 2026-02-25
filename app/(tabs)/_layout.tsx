@@ -24,6 +24,7 @@ import { useNotificationSubscription } from "@/lib/hooks/useNotificationSubscrip
 // Shared notification bell header button (wired into each visible tab)
 // -----------------------------------------------------------------------
 function NotificationBell({ tint, unreadCount }: { tint: string; unreadCount: number }) {
+  const colors = useThemeColors();
   return (
     <Pressable
       onPress={() => router.push("/notifications")}

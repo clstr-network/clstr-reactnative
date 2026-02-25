@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '@/lib/auth-context';
+import { fontSize, fontFamily } from '@/constants/typography';
 
 // ---------------------------------------------------------------------------
 // Google "G" icon — matches web exactly
