@@ -213,14 +213,14 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   title: {
-    fontSize: 24,
-    fontFamily: 'Inter_700Bold',
+    fontSize: fontSize['4xl'],
+    fontFamily: fontFamily.bold,
     color: '#FFFFFF',
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255, 255, 255, 0.60)',
     textAlign: 'center',
   },
@@ -233,8 +233,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   errorText: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.medium,
     color: '#EF4444',
     flex: 1,
   },
@@ -253,8 +253,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   googleButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
     color: '#FFFFFF',
   },
   separatorRow: {
@@ -269,16 +269,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.10)',
   },
   separatorText: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255, 255, 255, 0.60)',
   },
   magicForm: {
     gap: 10,
   },
   inputLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.medium,
     color: '#FFFFFF',
   },
   inputContainer: {
@@ -296,8 +296,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 13,
     paddingHorizontal: 10,
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
     color: '#FFFFFF',
   },
   magicButton: {
@@ -312,8 +312,8 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   magicButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_500Medium',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.medium,
     color: 'rgba(255, 255, 255, 0.80)',
   },
   successContainer: {
@@ -322,13 +322,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   successTitle: {
-    fontSize: 17,
-    fontFamily: 'Inter_600SemiBold',
+    fontSize: fontSize.xl,
+    fontFamily: fontFamily.semiBold,
     color: '#FFFFFF',
   },
   successBody: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255, 255, 255, 0.60)',
     textAlign: 'center',
     lineHeight: 20,
@@ -337,8 +337,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   resendText: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.medium,
     color: 'rgba(255, 255, 255, 0.60)',
     textDecorationLine: 'underline',
   },
@@ -349,13 +349,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   footerText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255, 255, 255, 0.60)',
   },
   footerLink: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.medium,
     color: 'rgba(255, 255, 255, 0.60)',
     textDecorationLine: 'underline',
   },

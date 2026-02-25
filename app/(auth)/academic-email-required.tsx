@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/adapters/core-client';
+import { fontFamily, fontSize } from '@/constants/typography';
 
 export default function AcademicEmailRequiredScreen() {
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -124,21 +125,21 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   brand: {
-    fontSize: 18,
-    fontFamily: 'Inter_600SemiBold',
+    fontSize: fontSize.xl,
+    fontFamily: fontFamily.semiBold,
     color: 'rgba(255,255,255,0.80)',
     letterSpacing: 1,
   },
   heading: {
     fontSize: 26,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: fontFamily.bold,
     color: '#FFFFFF',
     marginTop: 12,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255,255,255,0.70)',
     marginTop: 8,
     textAlign: 'center',
@@ -159,14 +160,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter_600SemiBold',
+    fontSize: fontSize.xl,
+    fontFamily: fontFamily.semiBold,
     color: '#FFFFFF',
     marginBottom: 6,
   },
   cardDescription: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255,255,255,0.70)',
     textAlign: 'center',
   },
@@ -181,15 +182,15 @@ const styles = StyleSheet.create({
 
   // Explanation text
   explanation: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255,255,255,0.70)',
     textAlign: 'center',
     lineHeight: 22,
   },
   domainHighlight: {
     color: 'rgba(255,255,255,0.90)',
-    fontFamily: 'Inter_500Medium',
+    fontFamily: fontFamily.medium,
   },
 
   // Action buttons
@@ -206,8 +207,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
     color: '#FFFFFF',
   },
   outlineButton: {
@@ -220,8 +221,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   outlineButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
     color: '#FFFFFF',
   },
   ghostButton: {
@@ -232,8 +233,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   ghostButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_500Medium',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.medium,
     color: 'rgba(255,255,255,0.80)',
   },
 });

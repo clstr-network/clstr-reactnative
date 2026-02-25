@@ -7,6 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 
 export default function MagicLinkSentScreen() {
   const colors = useThemeColors();
@@ -23,7 +24,7 @@ export default function MagicLinkSentScreen() {
         <Text style={[styles.title, { color: colors.text }]}>Check your inbox</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           We sent a magic sign-in link to{'\n'}
-          <Text style={{ fontFamily: 'Inter_600SemiBold' }}>{params.email ?? 'your email'}</Text>
+          <Text style={{ fontFamily: fontFamily.semiBold }}>{params.email ?? 'your email'}</Text>
         </Text>
         <Text style={[styles.body, { color: colors.textSecondary }]}>
           Click the link in the email to sign in instantly — no password needed.
@@ -53,11 +54,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 24 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingBottom: 80 },
   iconCircle: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  title: { fontSize: 24, fontFamily: 'Inter_700Bold' },
-  subtitle: { fontSize: 15, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 },
-  body: { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20, paddingHorizontal: 16 },
+  title: { fontSize: fontSize['4xl'], fontFamily: fontFamily.bold },
+  subtitle: { fontSize: fontSize.body, fontFamily: fontFamily.regular, textAlign: 'center', lineHeight: 22 },
+  body: { fontSize: fontSize.base, fontFamily: fontFamily.regular, textAlign: 'center', lineHeight: 20, paddingHorizontal: 16 },
   primaryButton: { paddingVertical: 16, borderRadius: 12, alignItems: 'center', width: '100%', marginTop: 12 },
-  primaryButtonText: { fontSize: 16, fontFamily: 'Inter_600SemiBold', color: '#FFFFFF' },
+  primaryButtonText: { fontSize: fontSize.lg, fontFamily: fontFamily.semiBold, color: '#FFFFFF' },
   secondaryButton: { paddingVertical: 12, alignItems: 'center' },
-  secondaryButtonText: { fontSize: 14, fontFamily: 'Inter_500Medium' },
+  secondaryButtonText: { fontSize: fontSize.base, fontFamily: fontFamily.medium },
 });

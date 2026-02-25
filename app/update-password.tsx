@@ -24,7 +24,7 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 import { useThemeColors } from '@/constants/colors';
-import { fontFamily } from '@/constants/typography';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { supabase } from '@/lib/adapters/core-client';
 
 type ScreenState = 'verifying' | 'ready' | 'error';
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
   scrollContent: { paddingHorizontal: 24, alignItems: 'center' },
-  logo: { fontSize: 22, fontFamily: fontFamily.bold, marginBottom: 24 },
+  logo: { fontSize: fontSize['2xl'], fontFamily: fontFamily.bold, marginBottom: 24 },
   card: {
     width: '100%',
     maxWidth: 400,
@@ -292,9 +292,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     padding: 24,
   },
-  cardTitle: { fontSize: 18, fontFamily: fontFamily.bold },
-  cardDesc: { fontSize: 14, fontFamily: fontFamily.regular, marginTop: 4 },
-  label: { fontSize: 14, fontFamily: fontFamily.semiBold, marginTop: 20, marginBottom: 6 },
+  cardTitle: { fontSize: fontSize.xl, fontFamily: fontFamily.bold },
+  cardDesc: { fontSize: fontSize.base, fontFamily: fontFamily.regular, marginTop: 4 },
+  label: { fontSize: fontSize.base, fontFamily: fontFamily.semiBold, marginTop: 20, marginBottom: 6 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -306,11 +306,11 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     paddingHorizontal: 14,
-    fontSize: 15,
+    fontSize: fontSize.body,
     fontFamily: fontFamily.regular,
   },
   eyeButton: { paddingHorizontal: 12 },
-  hint: { fontSize: 12, fontFamily: fontFamily.regular, marginTop: 4 },
+  hint: { fontSize: fontSize.sm, fontFamily: fontFamily.regular, marginTop: 4 },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     gap: 8,
   },
-  submitText: { fontSize: 15, fontFamily: fontFamily.semiBold, color: 'white' },
+  submitText: { fontSize: fontSize.body, fontFamily: fontFamily.semiBold, color: 'white' },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -332,10 +332,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 16,
   },
-  errorBannerText: { fontSize: 13, color: '#ef4444', fontFamily: fontFamily.regular, flex: 1 },
-  loadingText: { fontSize: 14, fontFamily: fontFamily.regular, marginTop: 12 },
-  errorTitle: { fontSize: 18, fontFamily: fontFamily.bold, marginTop: 16 },
-  errorMessage: { fontSize: 14, fontFamily: fontFamily.regular, marginTop: 6, textAlign: 'center', paddingHorizontal: 20 },
+  errorBannerText: { fontSize: fontSize.md, color: '#ef4444', fontFamily: fontFamily.regular, flex: 1 },
+  loadingText: { fontSize: fontSize.base, fontFamily: fontFamily.regular, marginTop: 12 },
+  errorTitle: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, marginTop: 16 },
+  errorMessage: { fontSize: fontSize.base, fontFamily: fontFamily.regular, marginTop: 6, textAlign: 'center', paddingHorizontal: 20 },
   button: {
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -343,5 +343,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 20,
   },
-  buttonText: { fontSize: 15, fontFamily: fontFamily.semiBold },
+  buttonText: { fontSize: fontSize.body, fontFamily: fontFamily.semiBold },
 });

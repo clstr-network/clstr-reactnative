@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { Avatar } from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
 import ImageGrid from '@/components/ImageGrid';
@@ -374,14 +375,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingBottom: 12, borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  headerTitle: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
   postSection: { padding: 16 },
   authorRow: { marginBottom: 14 },
   authorInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  authorName: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  authorMeta: { fontSize: 13, marginTop: 2, fontFamily: 'Inter_400Regular' },
-  postContent: { fontSize: 17, lineHeight: 26, marginBottom: 16, fontFamily: 'Inter_400Regular' },
+  authorName: { fontSize: fontSize.lg, fontWeight: '700', fontFamily: fontFamily.bold },
+  authorMeta: { fontSize: fontSize.md, marginTop: 2, fontFamily: fontFamily.regular },
+  postContent: { fontSize: fontSize.xl, lineHeight: 26, marginBottom: 16, fontFamily: fontFamily.regular },
   mediaSection: {
     marginBottom: 12,
     borderRadius: 12,
@@ -407,13 +408,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  statText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  statText: { fontSize: fontSize.md, fontFamily: fontFamily.regular },
   actionsRow: {
     flexDirection: 'row', gap: 28, paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1,
   },
   actionItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  actionLabel: { fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  actionLabel: { fontSize: fontSize.body, fontWeight: '600', fontFamily: fontFamily.semiBold },
   listContent: { paddingBottom: 40 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 16, fontFamily: 'Inter_400Regular' },
+  emptyText: { fontSize: fontSize.lg, fontFamily: fontFamily.regular },
 });

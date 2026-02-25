@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import Avatar from '@/components/Avatar';
 import RoleBadge from '@/components/RoleBadge';
 import { getEventById, toggleEventRegistration, type Event } from '@/lib/api';
@@ -254,35 +255,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingBottom: 12, borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  headerTitle: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   headerBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   dateBanner: { alignItems: 'center', paddingVertical: 24 },
-  dateMonth: { fontSize: 14, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  dateDay: { fontSize: 48, fontWeight: '800', fontFamily: 'Inter_800ExtraBold', marginTop: -4 },
-  dateWeekday: { fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  dateMonth: { fontSize: fontSize.base, fontWeight: '700', fontFamily: fontFamily.bold },
+  dateDay: { fontSize: 48, fontWeight: '800', fontFamily: fontFamily.extraBold, marginTop: -4 },
+  dateWeekday: { fontSize: fontSize.body, fontWeight: '600', fontFamily: fontFamily.semiBold },
   contentSection: { padding: 16, gap: 12 },
-  title: { fontSize: 24, fontWeight: '800', lineHeight: 32, fontFamily: 'Inter_800ExtraBold' },
+  title: { fontSize: fontSize['4xl'], fontWeight: '800', lineHeight: 32, fontFamily: fontFamily.extraBold },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  infoText: { fontSize: 15, fontFamily: 'Inter_400Regular' },
+  infoText: { fontSize: fontSize.body, fontFamily: fontFamily.regular },
   organizerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14,
     borderTopWidth: 1, borderBottomWidth: 1, marginVertical: 4,
   },
   organizerInfo: { gap: 4 },
-  organizerName: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  sectionLabel: { fontSize: 16, fontWeight: '700', marginTop: 4, fontFamily: 'Inter_700Bold' },
-  description: { fontSize: 15, lineHeight: 24, fontFamily: 'Inter_400Regular' },
+  organizerName: { fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
+  sectionLabel: { fontSize: fontSize.lg, fontWeight: '700', marginTop: 4, fontFamily: fontFamily.bold },
+  description: { fontSize: fontSize.body, lineHeight: 24, fontFamily: fontFamily.regular },
   capacityRow: { gap: 8 },
   progressBg: { height: 8, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4 },
-  capacityText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  capacityText: { fontSize: fontSize.md, fontFamily: fontFamily.regular },
   scrollContent: { paddingBottom: 100 },
   bottomBar: { paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1 },
   rsvpButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: 14, borderRadius: 14, gap: 8,
   },
-  rsvpButtonText: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  rsvpButtonText: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

@@ -22,7 +22,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useThemeColors } from '@/constants/colors';
-import { fontFamily } from '@/constants/typography';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { supabase } from '@/lib/adapters/core-client';
 import { verifyPersonalEmail } from '@/lib/api/email-transition';
 import { QUERY_KEYS } from '@/lib/query-keys';
@@ -188,9 +188,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
-  stateTitle: { fontSize: 20, fontFamily: fontFamily.bold, marginBottom: 8 },
-  stateText: { fontSize: 14, fontFamily: fontFamily.regular, textAlign: 'center', marginBottom: 12 },
-  hint: { fontSize: 12, fontFamily: fontFamily.regular, textAlign: 'center', marginBottom: 16 },
+  stateTitle: { fontSize: fontSize['2xl'], fontFamily: fontFamily.bold, marginBottom: 8 },
+  stateText: { fontSize: fontSize.base, fontFamily: fontFamily.regular, textAlign: 'center', marginBottom: 12 },
+  hint: { fontSize: fontSize.sm, fontFamily: fontFamily.regular, textAlign: 'center', marginBottom: 16 },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
     marginTop: 8,
   },
-  primaryButtonText: { fontSize: 15, fontFamily: fontFamily.semiBold, color: 'white' },
+  primaryButtonText: { fontSize: fontSize.body, fontFamily: fontFamily.semiBold, color: 'white' },
   outlineButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -211,5 +211,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     marginTop: 8,
   },
-  outlineButtonText: { fontSize: 15, fontFamily: fontFamily.semiBold },
+  outlineButtonText: { fontSize: fontSize.body, fontFamily: fontFamily.semiBold },
 });

@@ -19,6 +19,7 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { supabase } from '@/lib/adapters/core-client';
+import { fontFamily, fontSize } from '@/constants/typography';
 import {
   isValidAcademicEmail,
   getDomainFromEmail,
@@ -455,19 +456,19 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    fontSize: 16,
-    fontFamily: 'Inter_500Medium',
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.medium,
     marginTop: 8,
     color: 'rgba(255,255,255,0.60)',
   },
   errorText: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.semiBold,
     color: '#EF4444',
   },
   subText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255,255,255,0.40)',
   },
 });

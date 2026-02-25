@@ -177,9 +177,9 @@ const TeamMemberCard = React.memo(function TeamMemberCard({
         </Text>
       </View>
       {member.is_owner && (
-        <View style={[styles.ownerBadge, { backgroundColor: '#eab30820' }]}>
-          <Ionicons name="star" size={10} color="#eab308" />
-          <Text style={{ fontSize: 10, color: '#eab308', fontFamily: fontFamily.semiBold }}>Owner</Text>
+        <View style={[styles.ownerBadge, { backgroundColor: colors.warning + '20' }]}>
+          <Ionicons name="star" size={10} color={colors.warning} />
+          <Text style={{ fontSize: 10, color: colors.warning, fontFamily: fontFamily.semiBold }}>Owner</Text>
         </View>
       )}
     </Pressable>
@@ -231,7 +231,7 @@ const ApplicationCard = React.memo(function ApplicationCard({
           <Pressable
             onPress={onAccept}
             disabled={isPending}
-            style={[styles.actionBtn, { backgroundColor: '#22c55e' }]}
+            style={[styles.actionBtn, { backgroundColor: colors.success }]}
           >
             {isPending ? (
               <ActivityIndicator size="small" color="#fff" />
@@ -245,7 +245,7 @@ const ApplicationCard = React.memo(function ApplicationCard({
           <Pressable
             onPress={onReject}
             disabled={isPending}
-            style={[styles.actionBtn, { backgroundColor: '#ef4444' }]}
+            style={[styles.actionBtn, { backgroundColor: colors.error }]}
           >
             <Ionicons name="close" size={14} color="#fff" />
             <Text style={styles.actionBtnText}>Reject</Text>
@@ -630,7 +630,7 @@ export default function ProjectDetailScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Tech Stack</Text>
             <View style={styles.tagsRow}>
               {techStack.map((tech: string, idx: number) => (
-                <View key={idx} style={[styles.tag, { backgroundColor: '#3b82f620' }]}>
+                <View key={idx} style={[styles.tag, { backgroundColor: colors.tint + '20' }]}>
                   <Text style={[styles.tagText, { color: '#60a5fa' }]}>{tech}</Text>
                 </View>
               ))}
@@ -644,7 +644,7 @@ export default function ProjectDetailScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Skills Needed</Text>
             <View style={styles.tagsRow}>
               {skills.map((skill: string, idx: number) => (
-                <View key={idx} style={[styles.tag, { backgroundColor: '#8b5cf620' }]}>
+                <View key={idx} style={[styles.tag, { backgroundColor: colors.accent + '20' }]}>
                   <Text style={[styles.tagText, { color: '#a78bfa' }]}>{skill}</Text>
                 </View>
               ))}
@@ -829,10 +829,10 @@ export default function ProjectDetailScreen() {
             <Pressable
               onPress={handleDeleteProject}
               disabled={deleteMut.isPending}
-              style={[styles.ownerActionBtn, { backgroundColor: '#ef444415', borderColor: '#ef444440', marginTop: 8 }]}
+              style={[styles.ownerActionBtn, { backgroundColor: colors.error + '15', borderColor: colors.error + '40', marginTop: 8 }]}
             >
-              <Ionicons name="trash-outline" size={18} color="#ef4444" />
-              <Text style={[styles.ownerActionBtnText, { color: '#ef4444' }]}>
+              <Ionicons name="trash-outline" size={18} color={colors.error} />
+              <Text style={[styles.ownerActionBtnText, { color: colors.error }]}>
                 Delete Project
               </Text>
             </Pressable>

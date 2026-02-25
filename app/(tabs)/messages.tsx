@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import ConversationItem from '@/components/ConversationItem';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { useMessageSubscription } from '@/lib/hooks/useMessageSubscription';
@@ -142,15 +143,15 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   composeBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 28, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
+  title: { fontSize: fontSize['4xl'], fontWeight: '800', fontFamily: fontFamily.extraBold },
   unreadPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-  unreadPillText: { color: '#fff', fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  unreadPillText: { color: '#fff', fontSize: fontSize.sm, fontWeight: '700', fontFamily: fontFamily.bold },
   listContent: { paddingBottom: 100 },
   separator: { height: 1, marginLeft: 80 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  emptySubtext: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  emptyText: { fontSize: fontSize.lg, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  emptySubtext: { fontSize: fontSize.base, fontFamily: fontFamily.regular },
   searchContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 8 : 4, borderRadius: 10, borderWidth: 1, gap: 6 },
-  searchInput: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', padding: 0 },
+  searchInput: { flex: 1, fontSize: fontSize.base, fontFamily: fontFamily.regular, padding: 0 },
 });

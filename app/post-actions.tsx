@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { useAuth } from '@/lib/auth-context';
 import { toggleSavePost, reportPost, deletePost } from '@/lib/api/social';
 import { useRolePermissions } from '@/lib/hooks/useRolePermissions';
@@ -150,5 +151,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 12, paddingHorizontal: 8 },
   actionItem: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 12, paddingVertical: 14, borderRadius: 12 },
   iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  actionLabel: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  actionLabel: { fontSize: fontSize.lg, fontWeight: '600', fontFamily: fontFamily.semiBold },
 });

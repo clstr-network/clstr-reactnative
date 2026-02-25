@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '@/lib/auth-context';
+import { fontFamily, fontSize } from '@/constants/typography';
 
 // ---------------------------------------------------------------------------
 // Google "G" icon — matches web Login page exactly
@@ -132,8 +133,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   logoText: {
-    fontSize: 22,
-    fontFamily: 'Inter_700Bold',
+    fontSize: fontSize['2xl'],
+    fontFamily: fontFamily.bold,
     color: '#FFFFFF',
     marginBottom: 8,
   },
@@ -142,18 +143,18 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 34,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: fontFamily.bold,
     color: '#FFFFFF',
     lineHeight: 40,
   },
   subtitle: {
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255, 255, 255, 0.60)',
   },
   hint: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.base,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255, 255, 255, 0.60)',
   },
   errorContainer: {
@@ -165,8 +166,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   errorText: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.medium,
     color: '#EF4444',
     flex: 1,
   },
@@ -186,13 +187,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   googleButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
+    fontSize: fontSize.body,
+    fontFamily: fontFamily.semiBold,
     color: '#FFFFFF',
   },
   helperText: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255, 255, 255, 0.45)',
     textAlign: 'center',
   },
@@ -204,12 +205,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerLink: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
     color: 'rgba(255, 255, 255, 0.45)',
   },
   footerDivider: {
-    fontSize: 12,
+    fontSize: fontSize.sm,
     color: 'rgba(255, 255, 255, 0.30)',
   },
 });

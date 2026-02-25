@@ -11,6 +11,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
 import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
@@ -397,8 +398,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12, borderBottomWidth: 1,
   },
   headerInfo: { flex: 1 },
-  headerName: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  headerStatus: { fontSize: 12, marginTop: 1, fontFamily: 'Inter_400Regular' },
+  headerName: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
+  headerStatus: { fontSize: fontSize.sm, marginTop: 1, fontFamily: fontFamily.regular },
   avatarWrapper: { position: 'relative' as const },
   onlineDot: {
     position: 'absolute' as const, bottom: 0, right: 0,
@@ -410,21 +411,21 @@ const styles = StyleSheet.create({
   msgRowSelf: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
   msgBubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, maxWidth: '100%' },
   msgBubbleImage: { paddingHorizontal: 4, paddingTop: 4 },
-  msgText: { fontSize: 15, lineHeight: 21, fontFamily: 'Inter_400Regular' },
+  msgText: { fontSize: fontSize.body, lineHeight: 21, fontFamily: fontFamily.regular },
   attachmentImage: { width: 200, height: 150, borderRadius: 14, marginBottom: 6 },
   documentAttachment: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, marginBottom: 6,
   },
-  documentName: { fontSize: 13, fontFamily: 'Inter_500Medium', flex: 1 },
+  documentName: { fontSize: fontSize.md, fontFamily: fontFamily.medium, flex: 1 },
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 14,
     paddingTop: 8, borderTopWidth: 1,
   },
   attachBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   input: {
-    flex: 1, fontSize: 15, padding: 12, borderRadius: 20, borderWidth: 1,
-    maxHeight: 100, fontFamily: 'Inter_400Regular',
+    flex: 1, fontSize: fontSize.body, padding: 12, borderRadius: 20, borderWidth: 1,
+    maxHeight: 100, fontFamily: fontFamily.regular,
   },
   sendBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   suggestionsContainer: { borderTopWidth: 1, paddingVertical: 8 },
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16,
     borderWidth: 1,
   },
-  suggestionText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  suggestionText: { fontSize: fontSize.md, fontFamily: fontFamily.medium },
   attachmentPreview: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1,
@@ -443,21 +444,21 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 8,
     alignItems: 'center', justifyContent: 'center',
   },
-  previewName: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular' },
+  previewName: { flex: 1, fontSize: fontSize.md, fontFamily: fontFamily.regular },
   uploadBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 14, paddingVertical: 6,
   },
-  uploadText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  uploadText: { fontSize: fontSize.sm, fontFamily: fontFamily.regular },
   attachMenu: {
     flexDirection: 'row', gap: 16, paddingHorizontal: 14,
     paddingVertical: 10, borderTopWidth: 1,
   },
   attachOption: { alignItems: 'center', gap: 4 },
-  attachOptionText: { fontSize: 11, fontFamily: 'Inter_500Medium' },
+  attachOptionText: { fontSize: fontSize.xs, fontFamily: fontFamily.medium },
   blockedState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, paddingHorizontal: 40 },
-  blockedTitle: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  blockedText: { fontSize: 14, textAlign: 'center', lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  blockedTitle: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
+  blockedText: { fontSize: fontSize.base, textAlign: 'center', lineHeight: 20, fontFamily: fontFamily.regular },
   blockedBtn: { marginTop: 12, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  blockedBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  blockedBtnText: { color: '#fff', fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
 });

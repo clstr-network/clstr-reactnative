@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
@@ -214,8 +215,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   searchPlaceholder: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
   },
   profileCard: {
     flexDirection: 'row',
@@ -231,12 +232,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 17,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.xl,
   },
   profileRole: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
     marginTop: 2,
   },
   badge: {
@@ -248,15 +249,15 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   badgeText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 10,
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize['2xs'],
   },
   section: {
     marginBottom: 12,
   },
   sectionTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 11,
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginHorizontal: 16,
@@ -281,8 +282,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuItemText: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.base,
   },
   scroll: {},
 });

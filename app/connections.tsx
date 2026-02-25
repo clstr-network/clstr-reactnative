@@ -22,7 +22,7 @@ import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 
 import { useThemeColors } from '@/constants/colors';
-import { fontFamily } from '@/constants/typography';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { getConnections } from '@/lib/api/social';
@@ -97,8 +97,8 @@ export default function ConnectionsScreen() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, paddingTop: insets.top }}>
         <Ionicons name="people-outline" size={56} color={colors.textTertiary} />
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 }}>Not Available</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>Club accounts manage followers instead of connections.</Text>
+        <Text style={{ color: colors.text, fontSize: fontSize.xl, fontWeight: '600', marginTop: 16 }}>Not Available</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: fontSize.base, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>Club accounts manage followers instead of connections.</Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
           <Text style={{ color: '#fff', fontWeight: '600' }}>Go Back</Text>
         </Pressable>
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   backButton: { width: 40, alignItems: 'flex-start' },
-  title: { fontSize: 18, fontFamily: fontFamily.bold },
+  title: { fontSize: fontSize.xl, fontFamily: fontFamily.bold },
   list: { paddingHorizontal: 16 },
   connectionItem: {
     flexDirection: 'row',
@@ -188,15 +188,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitial: {
-    fontSize: 18,
+    fontSize: fontSize.xl,
     fontFamily: fontFamily.semiBold,
     color: 'rgba(255,255,255,0.5)',
   },
   connectionInfo: { flex: 1, marginRight: 8 },
-  name: { fontSize: 15, fontFamily: fontFamily.semiBold },
-  headline: { fontSize: 13, fontFamily: fontFamily.regular, marginTop: 2 },
+  name: { fontSize: fontSize.body, fontFamily: fontFamily.semiBold },
+  headline: { fontSize: fontSize.md, fontFamily: fontFamily.regular, marginTop: 2 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { alignItems: 'center', paddingTop: 80 },
-  emptyText: { fontSize: 16, fontFamily: fontFamily.semiBold, marginTop: 16 },
-  emptySubtext: { fontSize: 13, fontFamily: fontFamily.regular, marginTop: 6, textAlign: 'center', paddingHorizontal: 40 },
+  emptyText: { fontSize: fontSize.lg, fontFamily: fontFamily.semiBold, marginTop: 16 },
+  emptySubtext: { fontSize: fontSize.md, fontFamily: fontFamily.regular, marginTop: 6, textAlign: 'center', paddingHorizontal: 40 },
 });

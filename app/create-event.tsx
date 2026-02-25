@@ -11,6 +11,7 @@ import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollV
 import * as Haptics from 'expo-haptics';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { useAuth } from '@/lib/auth-context';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { createEvent } from '@/lib/api/events';
@@ -146,8 +147,8 @@ export default function CreateEventScreen() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, paddingTop: insets.top }}>
         <Ionicons name="lock-closed-outline" size={56} color={colors.textTertiary} />
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 }}>Access Restricted</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>Only Faculty and Club accounts can create events.</Text>
+        <Text style={{ color: colors.text, fontSize: fontSize.xl, fontWeight: '600', marginTop: 16 }}>Access Restricted</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: fontSize.base, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>Only Faculty and Club accounts can create events.</Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
           <Text style={{ color: '#fff', fontWeight: '600' }}>Go Back</Text>
         </Pressable>
@@ -416,33 +417,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1,
   },
-  cancelText: { fontSize: 16, fontFamily: 'Inter_400Regular' },
-  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  cancelText: { fontSize: fontSize.lg, fontFamily: fontFamily.regular },
+  headerTitle: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
   submitBtn: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 18, minWidth: 70, alignItems: 'center' },
-  submitBtnText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  submitBtnText: { fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, gap: 12, paddingBottom: 100 },
-  label: { fontSize: 14, fontWeight: '700', marginTop: 4, fontFamily: 'Inter_700Bold' },
+  label: { fontSize: fontSize.base, fontWeight: '700', marginTop: 4, fontFamily: fontFamily.bold },
   input: {
-    fontSize: 15, paddingHorizontal: 14, paddingVertical: 12,
-    borderRadius: 12, borderWidth: 1, fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.body, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 12, borderWidth: 1, fontFamily: fontFamily.regular,
   },
   textarea: {
-    fontSize: 15, paddingHorizontal: 14, paddingVertical: 12,
-    borderRadius: 12, borderWidth: 1, minHeight: 120, fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.body, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 12, borderWidth: 1, minHeight: 120, fontFamily: fontFamily.regular,
   },
-  charCount: { fontSize: 12, textAlign: 'right', fontFamily: 'Inter_400Regular' },
+  charCount: { fontSize: fontSize.sm, textAlign: 'right', fontFamily: fontFamily.regular },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   categoryChip: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7,
     borderRadius: 16, borderWidth: 1, gap: 5,
   },
-  categoryLabel: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  categoryLabel: { fontSize: fontSize.md, fontWeight: '600', fontFamily: fontFamily.semiBold },
   dateBtn: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12,
     borderRadius: 12, borderWidth: 1, gap: 8,
   },
-  dateBtnText: { flex: 1, fontSize: 15, fontFamily: 'Inter_400Regular' },
+  dateBtnText: { flex: 1, fontSize: fontSize.body, fontFamily: fontFamily.regular },
   pickerContainer: {
     borderRadius: 12, borderWidth: 1, overflow: 'hidden', padding: 4,
   },
@@ -450,8 +451,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
   },
   tagInputField: {
-    flex: 1, fontSize: 15, paddingHorizontal: 14, paddingVertical: 12,
-    borderRadius: 12, borderWidth: 1, fontFamily: 'Inter_400Regular',
+    flex: 1, fontSize: fontSize.body, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 12, borderWidth: 1, fontFamily: fontFamily.regular,
   },
   tagAddBtn: {
     width: 40, height: 40, borderRadius: 12,
@@ -464,11 +465,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5,
     borderRadius: 14, borderWidth: 1, gap: 4,
   },
-  tagChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  tagChipText: { fontSize: fontSize.md, fontWeight: '600', fontFamily: fontFamily.semiBold },
   switchRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 8,
   },
   switchLabel: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  switchText: { fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  switchText: { fontSize: fontSize.body, fontWeight: '600', fontFamily: fontFamily.semiBold },
 });

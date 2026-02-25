@@ -207,7 +207,7 @@ const ApplicationCard = React.memo(function ApplicationCard({
         <View style={styles.appActions}>
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onAccept(); }}
-            style={[styles.appActionBtn, { backgroundColor: '#22c55e' }]}
+            style={[styles.appActionBtn, { backgroundColor: colors.success }]}
           >
             <Ionicons name="checkmark" size={16} color="#fff" />
             <Text style={styles.appActionText}>Accept</Text>

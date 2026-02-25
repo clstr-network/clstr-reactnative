@@ -25,6 +25,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { useAuth } from '@/lib/auth-context';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { createPost } from '@/lib/api/social';
@@ -212,8 +213,8 @@ export default function CreatePostScreen() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, paddingTop: insets.top }}>
         <Ionicons name="lock-closed-outline" size={56} color={colors.textTertiary} />
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 }}>Access Restricted</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>You don't have permission to create posts.</Text>
+        <Text style={{ color: colors.text, fontSize: fontSize.xl, fontWeight: '600', marginTop: 16 }}>Access Restricted</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: fontSize.base, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>You don't have permission to create posts.</Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
           <Text style={{ color: '#fff', fontWeight: '600' }}>Go Back</Text>
         </Pressable>
@@ -611,21 +612,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1,
   },
-  cancelText: { fontSize: 16, fontFamily: 'Inter_400Regular' },
-  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  cancelText: { fontSize: fontSize.lg, fontFamily: fontFamily.regular },
+  headerTitle: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
   postBtn: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 18, minWidth: 60, alignItems: 'center' },
-  postBtnText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  postBtnText: { fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, gap: 16 },
-  contentInput: { fontSize: 17, lineHeight: 26, minHeight: 120, fontFamily: 'Inter_400Regular' },
-  charCount: { fontSize: 12, textAlign: 'right', fontFamily: 'Inter_400Regular' },
+  contentInput: { fontSize: fontSize.xl, lineHeight: 26, minHeight: 120, fontFamily: fontFamily.regular },
+  charCount: { fontSize: fontSize.sm, textAlign: 'right', fontFamily: fontFamily.regular },
 
   // Progress banner
   progressBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingVertical: 8,
   },
-  progressText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  progressText: { fontSize: fontSize.md, fontFamily: fontFamily.medium },
 
   // Tab switcher
   tabRow: {
@@ -636,7 +637,7 @@ const styles = StyleSheet.create({
     gap: 6, paddingVertical: 8, borderRadius: 10, borderWidth: 1,
     marginHorizontal: 3,
   },
-  tabLabel: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  tabLabel: { fontSize: fontSize.sm, fontWeight: '600', fontFamily: fontFamily.semiBold },
   tabBadge: {
     position: 'absolute', top: -2, right: -6,
     width: 8, height: 8, borderRadius: 4,
@@ -644,7 +645,7 @@ const styles = StyleSheet.create({
 
   // Panel
   panelContainer: { gap: 12 },
-  panelLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
+  panelLabel: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold, marginBottom: 4 },
 
   // Image previews
   imageScrollContent: { gap: 10, paddingVertical: 4 },
@@ -666,8 +667,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   videoInfo: { flex: 1 },
-  videoName: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  videoSize: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  videoName: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  videoSize: { fontSize: fontSize.sm, fontFamily: fontFamily.regular, marginTop: 2 },
 
   // Media buttons
   mediaButtons: { flexDirection: 'row', gap: 10 },
@@ -675,8 +676,8 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 14, borderRadius: 12, borderWidth: 1,
   },
-  mediaBtnText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  hintText: { fontSize: 12, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  mediaBtnText: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  hintText: { fontSize: fontSize.sm, fontFamily: fontFamily.regular, textAlign: 'center' },
 
   // Document
   docCard: {
@@ -684,28 +685,28 @@ const styles = StyleSheet.create({
     padding: 14, borderRadius: 12, borderWidth: 1,
   },
   docInfo: { flex: 1 },
-  docName: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  docSize: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  docName: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  docSize: { fontSize: fontSize.sm, fontFamily: fontFamily.regular, marginTop: 2 },
   docPickerBtn: {
     alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 32, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed',
   },
-  docPickerTitle: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  docPickerHint: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  docPickerTitle: { fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
+  docPickerHint: { fontSize: fontSize.sm, fontFamily: fontFamily.regular },
 
   // Category
-  sectionLabel: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  sectionLabel: { fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   categoryOption: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: 18, borderWidth: 1, gap: 6,
   },
-  categoryLabel: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  categoryLabel: { fontSize: fontSize.md, fontWeight: '600', fontFamily: fontFamily.semiBold },
 
   // Attachment summary
   attachSummary: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1,
   },
-  attachSummaryText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  attachSummaryText: { fontSize: fontSize.md, fontFamily: fontFamily.medium },
 });

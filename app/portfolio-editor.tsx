@@ -28,7 +28,7 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 
 import { useThemeColors } from '@/constants/colors';
-import { fontFamily } from '@/constants/typography';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 import { usePortfolioEditor } from '@/lib/hooks/usePortfolioEditor';
 
@@ -532,7 +532,7 @@ export default function PortfolioEditorScreen() {
             {/* Visibility toggles */}
             {visibilityItems.map(({ key, label }) => (
               <View key={key} style={styles.settingRow}>
-                <Text style={[styles.settingLabel, { color: colors.textSecondary, fontSize: 14 }]}>
+                <Text style={[styles.settingLabel, { color: colors.textSecondary, fontSize: fontSize.base }]}>
                   {label}
                 </Text>
                 <RNSwitch
@@ -573,7 +573,7 @@ export default function PortfolioEditorScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  emptyText: { fontSize: 14, fontFamily: fontFamily.regular, textAlign: 'center' },
+  emptyText: { fontSize: fontSize.base, fontFamily: fontFamily.regular, textAlign: 'center' },
 
   /* Header */
   header: {
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  headerTitle: { fontSize: 17, fontFamily: fontFamily.semiBold, color: 'white' },
+  headerTitle: { fontSize: fontSize.xl, fontFamily: fontFamily.semiBold, color: 'white' },
   saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
   },
-  saveBtnText: { fontSize: 13, fontFamily: fontFamily.semiBold, color: '#000' },
+  saveBtnText: { fontSize: fontSize.md, fontFamily: fontFamily.semiBold, color: '#000' },
 
   scrollView: { flex: 1, paddingHorizontal: 16, paddingTop: 12 },
 
@@ -633,23 +633,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionTitle: { fontSize: 16, fontFamily: fontFamily.semiBold },
+  sectionTitle: { fontSize: fontSize.lg, fontFamily: fontFamily.semiBold },
 
   /* Form fields */
-  fieldLabel: { fontSize: 12, fontFamily: fontFamily.medium, marginBottom: 4, marginTop: 10 },
+  fieldLabel: { fontSize: fontSize.sm, fontFamily: fontFamily.medium, marginBottom: 4, marginTop: 10 },
   input: {
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontFamily: fontFamily.regular,
-    fontSize: 14,
+    fontSize: fontSize.base,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   multilineInput: { minHeight: 100, textAlignVertical: 'top' },
   inlineTitle: {
     flex: 1,
-    fontSize: 15,
+    fontSize: fontSize.body,
     fontFamily: fontFamily.medium,
     paddingVertical: 0,
   },
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
 
   /* Slug */
   slugRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  slugPrefix: { fontSize: 14, fontFamily: fontFamily.regular },
+  slugPrefix: { fontSize: fontSize.base, fontFamily: fontFamily.regular },
   slugInput: {
     flex: 1,
     borderWidth: 1,
@@ -665,13 +665,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontFamily: fontFamily.regular,
-    fontSize: 14,
+    fontSize: fontSize.base,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
 
   /* Switch row */
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  switchLabel: { fontSize: 13, fontFamily: fontFamily.regular },
+  switchLabel: { fontSize: fontSize.md, fontFamily: fontFamily.regular },
 
   /* Skills */
   skillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
@@ -686,8 +686,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
-  skillBadgeText: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontFamily: fontFamily.regular },
-  skillX: { color: 'rgba(255,255,255,0.35)', fontSize: 14 },
+  skillBadgeText: { color: 'rgba(255,255,255,0.8)', fontSize: fontSize.md, fontFamily: fontFamily.regular },
+  skillX: { color: 'rgba(255,255,255,0.35)', fontSize: fontSize.base },
   addSkillRow: { flexDirection: 'row', gap: 8 },
   addSkillBtn: {
     paddingHorizontal: 16,
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addSkillBtnText: { color: 'white', fontSize: 14, fontFamily: fontFamily.medium },
+  addSkillBtnText: { color: 'white', fontSize: fontSize.base, fontFamily: fontFamily.medium },
 
   /* Add button */
   addBtn: {
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     marginTop: 4,
   },
-  addBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontFamily: fontFamily.medium },
+  addBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: fontSize.base, fontFamily: fontFamily.medium },
 
   /* Posts */
   postCard: {
@@ -725,10 +725,10 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
-  postTitle: { fontSize: 14, fontFamily: fontFamily.medium, marginBottom: 4 },
-  postContent: { fontSize: 13, fontFamily: fontFamily.regular },
-  postDate: { fontSize: 11, fontFamily: fontFamily.regular, marginTop: 6 },
-  emptyHint: { fontSize: 13, fontFamily: fontFamily.regular, padding: 12 },
+  postTitle: { fontSize: fontSize.base, fontFamily: fontFamily.medium, marginBottom: 4 },
+  postContent: { fontSize: fontSize.md, fontFamily: fontFamily.regular },
+  postDate: { fontSize: fontSize.xs, fontFamily: fontFamily.regular, marginTop: 6 },
+  emptyHint: { fontSize: fontSize.md, fontFamily: fontFamily.regular, padding: 12 },
 
   /* Settings */
   settingRow: {
@@ -737,8 +737,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 8,
   },
-  settingLabel: { fontSize: 14, fontFamily: fontFamily.medium },
-  settingHint: { fontSize: 11, fontFamily: fontFamily.regular, marginTop: 2 },
+  settingLabel: { fontSize: fontSize.base, fontFamily: fontFamily.medium },
+  settingHint: { fontSize: fontSize.xs, fontFamily: fontFamily.regular, marginTop: 2 },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 4 },
 
   outlineBtn: {
@@ -751,15 +751,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
-  outlineBtnText: { fontSize: 13, fontFamily: fontFamily.medium },
+  outlineBtnText: { fontSize: fontSize.md, fontFamily: fontFamily.medium },
 
   /* Share link */
   shareLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  shareLinkLabel: { fontSize: 13, fontFamily: fontFamily.regular },
-  shareLinkUrl: { fontSize: 18, fontFamily: fontFamily.semiBold, color: 'white', marginBottom: 4 },
-  shareLinkHint: { fontSize: 12, fontFamily: fontFamily.regular, textAlign: 'center' },
+  shareLinkLabel: { fontSize: fontSize.md, fontFamily: fontFamily.regular },
+  shareLinkUrl: { fontSize: fontSize.xl, fontFamily: fontFamily.semiBold, color: 'white', marginBottom: 4 },
+  shareLinkHint: { fontSize: fontSize.sm, fontFamily: fontFamily.regular, textAlign: 'center' },
 
   /* Ghost action */
   ghostAction: { marginTop: 12, paddingVertical: 8 },
-  ghostActionText: { fontSize: 15, fontFamily: fontFamily.medium },
+  ghostActionText: { fontSize: fontSize.body, fontFamily: fontFamily.medium },
 });

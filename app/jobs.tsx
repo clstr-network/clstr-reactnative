@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
   jobTypeFilterList: { flexGrow: 0 },
   jobTypeFilterContent: { paddingHorizontal: 14, paddingVertical: 8, gap: 6 },
   jobTypeChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
-  jobTypeChipText: { fontSize: 12, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  jobTypeChipText: { fontSize: fontSize.sm, fontWeight: '600', fontFamily: fontFamily.semiBold },
   listContent: { padding: 16, gap: 12 },
   card: {
     borderRadius: 12,
@@ -964,7 +964,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   modalChipText: {
-    fontSize: 12,
+    fontSize: fontSize.sm,
     fontWeight: '600',
     fontFamily: fontFamily.semiBold,
   },

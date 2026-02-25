@@ -16,6 +16,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { QUERY_KEYS, MOBILE_QUERY_KEYS } from '@/lib/query-keys';
 import PostCard from '@/components/PostCard';
 import ShareSheet from '@/components/ShareSheet';
@@ -476,9 +477,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   title: {
-    fontSize: 28,
+    fontSize: fontSize['3xl'],
     fontWeight: '800',
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: fontFamily.extraBold,
   },
   composeBtn: {
     width: 38,
@@ -499,29 +500,29 @@ const styles = StyleSheet.create({
   },
   newPostsText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: fontSize.base,
     fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: fontFamily.semiBold,
   },
   listContent: { paddingTop: 8, paddingBottom: 100 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 8 },
   emptyText: {
-    fontSize: 16,
+    fontSize: fontSize.lg,
     fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: fontFamily.semiBold,
   },
-  emptySubtext: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  emptySubtext: { fontSize: fontSize.base, fontFamily: fontFamily.regular },
   quickCompose: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 24, borderWidth: 1, gap: 10 },
   quickComposeAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  quickComposePlaceholder: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  quickComposePlaceholder: { fontSize: fontSize.base, fontFamily: fontFamily.regular },
   sortRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8, borderBottomWidth: 1 },
   sortChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
-  sortChipText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  sortChipText: { fontSize: fontSize.md, fontWeight: '600', fontFamily: fontFamily.semiBold },
   // Phase 12.1 — Stats row styles
   statsRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 10, borderBottomWidth: 1 },
   statCard: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, gap: 2 },
-  statNum: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  statLabel: { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  roleBadgeText: { fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', marginTop: 2 },
+  statNum: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
+  statLabel: { fontSize: fontSize.xs, fontFamily: fontFamily.regular },
+  roleBadgeText: { fontSize: fontSize.md, fontWeight: '700', fontFamily: fontFamily.bold, marginTop: 2 },
 });

@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   currentText: {
-    fontSize: 10,
+    fontSize: fontSize['2xs'],
     fontFamily: fontFamily.semiBold,
   },
   cardDesc: {

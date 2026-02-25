@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/lib/query-keys';
 import { useNotificationSubscription } from '@/lib/hooks/useNotificationSubscription';
@@ -130,12 +131,12 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 24,
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize['3xl'],
   },
   unreadLabel: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
     marginTop: 2,
   },
   markAllBtn: {
@@ -153,7 +154,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.base,
   },
 });

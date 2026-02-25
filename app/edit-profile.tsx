@@ -23,6 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { Avatar } from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
 import { QUERY_KEYS } from '@/lib/query-keys';
@@ -909,8 +910,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingBottom: 12, borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  saveBtn: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  headerTitle: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
+  saveBtn: { fontSize: fontSize.lg, fontWeight: '700', fontFamily: fontFamily.bold },
   scrollContent: { paddingBottom: 40 },
 
   // Completion banner
@@ -918,8 +919,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16, marginTop: 16, padding: 14, borderRadius: 12, borderWidth: 1,
   },
   completionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  completionText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  completionHint: { fontSize: 13, marginTop: 4, marginLeft: 28, fontFamily: 'Inter_400Regular' },
+  completionText: { fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
+  completionHint: { fontSize: fontSize.md, marginTop: 4, marginLeft: 28, fontFamily: fontFamily.regular },
   progressBar: { height: 4, borderRadius: 2, marginTop: 10, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 2 },
 
@@ -933,33 +934,33 @@ const styles = StyleSheet.create({
   },
   avatarActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   avatarBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  avatarBtnText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  avatarBtnText: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold },
 
   // Sections
   section: { paddingHorizontal: 16, paddingTop: 20 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  sectionTitle: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
 
   // Form inputs
   fieldGroup: { marginBottom: 14 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', marginBottom: 6, fontFamily: 'Inter_600SemiBold' },
+  fieldLabel: { fontSize: fontSize.md, fontWeight: '600', marginBottom: 6, fontFamily: fontFamily.semiBold },
   input: {
-    fontSize: 15, padding: 12, borderRadius: 12, borderWidth: 1,
-    fontFamily: 'Inter_400Regular',
+    fontSize: fontSize.body, padding: 12, borderRadius: 12, borderWidth: 1,
+    fontFamily: fontFamily.regular,
   },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
-  charCount: { fontSize: 12, textAlign: 'right', marginTop: 4, fontFamily: 'Inter_400Regular' },
+  charCount: { fontSize: fontSize.sm, textAlign: 'right', marginTop: 4, fontFamily: fontFamily.regular },
 
   // Add button
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
-  addBtnText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  addBtnText: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold },
 
   // Add form
   addForm: { padding: 14, borderRadius: 12, borderWidth: 1, gap: 10, marginBottom: 12 },
   dateRow: { flexDirection: 'row', gap: 10 },
   dateInput: { flex: 1 },
   submitBtn: { alignItems: 'center', paddingVertical: 12, borderRadius: 12, marginTop: 4 },
-  submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  submitBtnText: { color: '#fff', fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
 
   // List items
   listItem: {
@@ -968,11 +969,11 @@ const styles = StyleSheet.create({
   },
   listItemContent: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   listItemText: { flex: 1 },
-  listItemTitle: { fontSize: 15, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  listItemSubtitle: { fontSize: 14, marginTop: 2, fontFamily: 'Inter_400Regular' },
-  listItemDate: { fontSize: 12, marginTop: 2, fontFamily: 'Inter_400Regular' },
+  listItemTitle: { fontSize: fontSize.body, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  listItemSubtitle: { fontSize: fontSize.base, marginTop: 2, fontFamily: fontFamily.regular },
+  listItemDate: { fontSize: fontSize.sm, marginTop: 2, fontFamily: fontFamily.regular },
   deleteBtn: { padding: 4 },
-  emptyListText: { fontSize: 14, textAlign: 'center', paddingVertical: 12, fontFamily: 'Inter_400Regular' },
+  emptyListText: { fontSize: fontSize.base, textAlign: 'center', paddingVertical: 12, fontFamily: fontFamily.regular },
 
   // Skills grid
   skillsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -981,21 +982,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
   },
   skillChipContent: { gap: 2 },
-  skillChipName: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  skillChipLevel: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  skillChipName: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  skillChipLevel: { fontSize: fontSize.xs, fontFamily: fontFamily.regular },
 
   // Skill level selector
   skillLevelRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   skillLevelChip: {
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
   },
-  skillLevelText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  skillLevelText: { fontSize: fontSize.md, fontWeight: '600', fontFamily: fontFamily.semiBold },
 
   // Phase 12.3 — Social links
   socialLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
 
   // Phase 12.3 — Interests
-  interestCount: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  interestCount: { fontSize: fontSize.md, fontFamily: fontFamily.regular },
   interestInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   addInterestBtn: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   interestChipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -1003,5 +1004,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1,
   },
-  interestChipText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  interestChipText: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold },
 });

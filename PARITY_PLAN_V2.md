@@ -374,9 +374,74 @@ Observed likely drift points to fix in a single pass:
 
 **Verification**: 0 TypeScript / lint errors across all 7 files.
 
-### ✅ Phase 6: UI Brand Parity Pass (Medium) - COMPLETE
-- **Deliverables**: Token-level alignment (`constants/colors.ts`), pure black (`#000000`) dark theme forced.
-- **Outcome**: Consistent visual system across major screens; no desktop-pattern leakage. White-on-white contrast bugs fixed.
+### ✅ Phase 6: UI Brand Parity Pass (Medium) - COMPLETE (Deep Audit Done)
+- **Deliverables**: Token-level alignment (`constants/colors.ts` + `constants/typography.ts`), pure black (`#000000`) dark theme forced.
+- **Outcome**: Consistent visual system across all screens; no desktop-pattern leakage. White-on-white contrast bugs fixed.
+
+#### Phase 6 Deep Audit (Completed)
+
+A comprehensive audit eliminated **all hardcoded `fontFamily: 'Inter_*'` strings** and migrated **200+ hardcoded `fontSize` values** to centralized design tokens across **35 screen files**.
+
+**Typography Token Migrations (fontFamily + fontSize):**
+| File | Replacements | Notes |
+|------|-------------|-------|
+| `app/user/[id].tsx` | 10 | fontFamily + fontSize |
+| `app/post/[id].tsx` | 8 | import added |
+| `app/edit-profile.tsx` | 14 | import added, ~20 values |
+| `app/new-conversation.tsx` | 7 | import added |
+| `app/create-post.tsx` | 13 | import added, +inline Access Restricted |
+| `app/help-center.tsx` | 12 | import alias `fontSize as typeFontSize` |
+| `app/post-actions.tsx` | 2 | import added |
+| `app/auth/callback.tsx` | 4 | import added |
+| `app/update-password.tsx` | 9 | fontSize added to import |
+| `app/verify-personal-email.tsx` | 5 | fontSize added to import |
+| `app/saved.tsx` | 2 | inline styles |
+| `app/chat/[id].tsx` | 12 | import added |
+| `app/(tabs)/index.tsx` | 8 | import added |
+| `app/event/[id].tsx` | 9 | import added |
+| `app/create-event.tsx` | 13 | import added, +inline Access Restricted |
+| `app/(auth)/magic-link-sent.tsx` | 6 | import added |
+| `app/(auth)/verify-email.tsx` | 6 | import added |
+| `app/(auth)/signup.tsx` | 12 | import added |
+| `app/(auth)/login.tsx` | 7 | import added |
+| `app/(tabs)/profile.tsx` | 18 | ~24 values tokenized |
+| `app/(tabs)/notifications.tsx` | 4 | import added |
+| `app/(tabs)/network.tsx` | 8 | 7 style blocks |
+| `app/(tabs)/messages.tsx` | 6 | import added |
+| `app/(tabs)/more.tsx` | 7 | import added |
+| `app/(auth)/academic-email-required.tsx` | 8 | import added, ~10 values |
+| `app/(auth)/forgot-password.tsx` | 6 | import added |
+| `app/(auth)/onboarding.tsx` | 12 | import added, ~16 values |
+| `app/(tabs)/events.tsx` | 12 | import added |
+| `app/portfolio-editor.tsx` | 17 | fontSize added, ~22 values |
+| `app/connections.tsx` | 5 | fontSize added, +inline Access Restricted |
+| `app/jobs.tsx` | 2 | fontSize only |
+| `app/portfolio-template-picker.tsx` | 2 | badge text fontSize |
+
+**Color Token Migrations (inline styles):**
+| File | Replacements | Notes |
+|------|-------------|-------|
+| `app/project/[id].tsx` | 6 | warning/success/error/tint/accent colors |
+| `app/projects.tsx` | 1 | tint color |
+| `app/(tabs)/_layout.tsx` | 1 | bellBadge color |
+
+**fontSize Mapping Used:**
+- `28` → `fontSize['4xl']`, `24` → `fontSize['3xl']`, `22/20` → `fontSize['2xl']`
+- `18/17` → `fontSize.xl`, `16` → `fontSize.lg`, `15` → `fontSize.body`
+- `14` → `fontSize.base`, `13` → `fontSize.md`, `12` → `fontSize.sm`
+- `11` → `fontSize.xs`, `10` → `fontSize['2xs']`
+
+**Intentional Keeps (no matching token / decorative sizes):**
+- `80px` — decorative preview letter in portfolio-template-picker
+- `48px` — display date/decorative in event/[id] and skill-analysis
+- `34px` — display title in login
+- `26px` — heading in academic-email-required (between 3xl=24 and 4xl=28)
+- `9px` — tiny tab bar labels in _layout and index
+
+**Deferred (lower priority):**
+- Static `StyleSheet.create` hardcoded hex color values (e.g., notification badge reds, error text, online dot, sign-out red) — these require refactoring to inline style composition since `useThemeColors()` hook values are not available in static stylesheets.
+
+**Verification:** 0 TypeScript errors introduced across all 35 modified files.
 
 ### ✅ Phase 7: Perf + Quality Gate (Medium) - COMPLETE
 - **Deliverables**: Memoization (`React.memo` applied to list items), invalidation narrowing, TypeScript audit.

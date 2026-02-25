@@ -379,8 +379,8 @@ export default function SavedItemsScreen() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, paddingTop: insets.top }}>
         <Ionicons name="bookmark-outline" size={56} color={colors.textTertiary} />
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 }}>Not Available</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>Bookmarks are not available for Club accounts.</Text>
+        <Text style={{ color: colors.text, fontSize: fontSize.xl, fontFamily: fontFamily.semiBold, marginTop: 16 }}>Not Available</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: fontSize.base, fontFamily: fontFamily.regular, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>Bookmarks are not available for Club accounts.</Text>
         <Pressable onPress={() => router.back()} style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}>
           <Text style={{ color: '#fff', fontWeight: '600' }}>Go Back</Text>
         </Pressable>

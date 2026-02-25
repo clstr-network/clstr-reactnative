@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { Avatar } from '@/components/Avatar';
 import { useAuth } from '@/lib/auth-context';
 import { getConnections } from '@/lib/api/social';
@@ -154,13 +155,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingBottom: 12, borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  headerTitle: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1,
   },
-  searchInput: { flex: 1, fontSize: 15, fontFamily: 'Inter_400Regular' },
+  searchInput: { flex: 1, fontSize: fontSize.body, fontFamily: fontFamily.regular },
 
   listContent: { paddingBottom: 40 },
   connectionItem: {
@@ -168,12 +169,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
   },
   connectionInfo: { flex: 1 },
-  connectionName: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  connectionHeadline: { fontSize: 14, marginTop: 2, fontFamily: 'Inter_400Regular' },
+  connectionName: { fontSize: fontSize.lg, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  connectionHeadline: { fontSize: fontSize.base, marginTop: 2, fontFamily: fontFamily.regular },
 
   separator: { height: 1, marginLeft: 72 },
   loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 8 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
-  emptySubtext: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  emptyTitle: { fontSize: fontSize.lg, fontWeight: '600', fontFamily: fontFamily.semiBold },
+  emptySubtext: { fontSize: fontSize.base, fontFamily: fontFamily.regular },
 });

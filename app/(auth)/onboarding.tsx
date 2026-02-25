@@ -27,6 +27,7 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useThemeColors } from '@/constants/colors';
+import { fontFamily, fontSize } from '@/constants/typography';
 import { useAuth, type UserRole } from '@/lib/auth-context';
 import { useFileUpload } from '@/lib/hooks/useFileUpload';
 import { Autocomplete } from '@/components/Autocomplete';
@@ -581,27 +582,27 @@ const styles = StyleSheet.create({
   progressRow: { flexDirection: 'row', gap: 6, marginBottom: 40 },
   progressDot: { flex: 1, height: 4, borderRadius: 2 },
   stepContent: { gap: 12 },
-  stepTitle: { fontSize: 28, fontWeight: '800', fontFamily: 'Inter_800ExtraBold' },
-  stepDesc: { fontSize: 15, lineHeight: 22, marginBottom: 8, fontFamily: 'Inter_400Regular' },
-  input: { fontSize: 16, padding: 16, borderRadius: 14, borderWidth: 1, fontFamily: 'Inter_400Regular' },
+  stepTitle: { fontSize: fontSize['4xl'], fontWeight: '800', fontFamily: fontFamily.extraBold },
+  stepDesc: { fontSize: fontSize.body, lineHeight: 22, marginBottom: 8, fontFamily: fontFamily.regular },
+  input: { fontSize: fontSize.lg, padding: 16, borderRadius: 14, borderWidth: 1, fontFamily: fontFamily.regular },
   bioInput: { minHeight: 120 },
-  fieldLabel: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
+  fieldLabel: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold, marginBottom: 4 },
 
   // Year / Duration selectors
   yearGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   yearChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, minWidth: 68, alignItems: 'center' },
-  yearText: { fontSize: 14, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  yearText: { fontSize: fontSize.base, fontWeight: '600', fontFamily: fontFamily.semiBold },
   durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   durationChip: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  durationText: { fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  durationText: { fontSize: fontSize.body, fontWeight: '700', fontFamily: fontFamily.bold },
 
   // Result card (graduation + role)
   resultCard: { marginTop: 16, borderRadius: 12, borderWidth: 1, padding: 16, gap: 12 },
   resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  resultLabel: { fontSize: 14, fontFamily: 'Inter_400Regular' },
-  resultValue: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  resultLabel: { fontSize: fontSize.base, fontFamily: fontFamily.regular },
+  resultValue: { fontSize: fontSize.lg, fontWeight: '700', fontFamily: fontFamily.bold },
   roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  roleBadgeText: { fontSize: 13, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  roleBadgeText: { fontSize: fontSize.md, fontWeight: '600', fontFamily: fontFamily.semiBold },
 
   // Avatar center
   avatarCenter: { alignItems: 'center', marginTop: 20, marginBottom: 10 },
@@ -609,14 +610,14 @@ const styles = StyleSheet.create({
   // Social links
   socialRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   socialIcon: { width: 24 },
-  socialInput: { flex: 1, fontSize: 15, padding: 14, borderRadius: 12, borderWidth: 1, fontFamily: 'Inter_400Regular' },
+  socialInput: { flex: 1, fontSize: fontSize.body, padding: 14, borderRadius: 12, borderWidth: 1, fontFamily: fontFamily.regular },
 
   // Summary card
   summaryCard: { borderRadius: 12, borderWidth: 1, padding: 16, gap: 6, marginBottom: 8 },
-  summaryName: { fontSize: 18, fontWeight: '700', fontFamily: 'Inter_700Bold' },
-  summaryDetail: { fontSize: 14, fontFamily: 'Inter_400Regular' },
+  summaryName: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
+  summaryDetail: { fontSize: fontSize.base, fontFamily: fontFamily.regular },
   roleBadgeSmall: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginTop: 4 },
-  roleBadgeSmallText: { fontSize: 12, fontWeight: '600', fontFamily: 'Inter_600SemiBold' },
+  roleBadgeSmallText: { fontSize: fontSize.sm, fontWeight: '600', fontFamily: fontFamily.semiBold },
 
   // Bottom bar
   bottomBar: { paddingHorizontal: 24, paddingTop: 12 },
@@ -629,9 +630,9 @@ const styles = StyleSheet.create({
     height: 48, borderRadius: 14, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  nextText: { fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  nextText: { fontSize: fontSize.lg, fontWeight: '700', fontFamily: fontFamily.bold },
   stepIndicator: {
-    textAlign: 'center', fontSize: 12, fontFamily: 'Inter_400Regular',
+    textAlign: 'center', fontSize: fontSize.sm, fontFamily: fontFamily.regular,
     marginTop: 8,
   },
 });

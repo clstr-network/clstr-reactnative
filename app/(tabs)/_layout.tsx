@@ -32,7 +32,7 @@ function NotificationBell({ tint, unreadCount }: { tint: string; unreadCount: nu
     >
       <Ionicons name="notifications-outline" size={22} color={tint} />
       {unreadCount > 0 && (
-        <View style={[styles.bellBadge, { backgroundColor: "#EF4444" }]}>
+        <View style={[styles.bellBadge, { backgroundColor: colors.error }]}>
           <Text style={styles.bellBadgeText}>
             {unreadCount > 99 ? "99+" : String(unreadCount)}
           </Text>

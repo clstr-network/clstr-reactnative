@@ -24,7 +24,7 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 import { useThemeColors } from '@/constants/colors';
-import { fontFamily } from '@/constants/typography';
+import { fontFamily, fontSize as typeFontSize } from '@/constants/typography';
 import { supabase } from '@/lib/adapters/core-client';
 import { useIdentityContext } from '@/lib/contexts/IdentityProvider';
 
@@ -421,13 +421,13 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: typeFontSize.xl,
     fontFamily: fontFamily.semiBold,
     color: 'white',
   },
   scrollView: { flex: 1, paddingHorizontal: 16 },
   subtitle: {
-    fontSize: 14,
+    fontSize: typeFontSize.base,
     fontFamily: fontFamily.regular,
     textAlign: 'center',
     marginTop: 16,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: fontFamily.regular,
-    fontSize: 15,
+    fontSize: typeFontSize.body,
   },
   /* Categories */
   categoriesRow: { marginBottom: 12 },
@@ -461,10 +461,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
   },
-  categoryPillText: { fontSize: 13, fontFamily: fontFamily.medium },
+  categoryPillText: { fontSize: typeFontSize.md, fontFamily: fontFamily.medium },
   /* Filter chip */
   filterChipRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  filterLabel: { fontSize: 12, fontFamily: fontFamily.regular },
+  filterLabel: { fontSize: typeFontSize.sm, fontFamily: fontFamily.regular },
   filterChip: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -472,11 +472,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  filterChipText: { fontSize: 12, fontFamily: fontFamily.medium },
+  filterChipText: { fontSize: typeFontSize.sm, fontFamily: fontFamily.medium },
   /* FAQ */
-  sectionTitle: { fontSize: 17, fontFamily: fontFamily.semiBold, marginBottom: 12 },
-  sectionDesc: { fontSize: 13, fontFamily: fontFamily.regular, marginBottom: 16 },
-  emptyText: { fontSize: 14, fontFamily: fontFamily.regular, textAlign: 'center', paddingVertical: 20 },
+  sectionTitle: { fontSize: typeFontSize.xl, fontFamily: fontFamily.semiBold, marginBottom: 12 },
+  sectionDesc: { fontSize: typeFontSize.md, fontFamily: fontFamily.regular, marginBottom: 16 },
+  emptyText: { fontSize: typeFontSize.base, fontFamily: fontFamily.regular, textAlign: 'center', paddingVertical: 20 },
   faqItem: {
     borderWidth: 1,
     borderRadius: 10,
@@ -490,8 +490,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 14,
   },
-  faqQuestion: { flex: 1, fontSize: 14, fontFamily: fontFamily.medium, marginRight: 8 },
-  faqAnswer: { fontSize: 13, fontFamily: fontFamily.regular, paddingHorizontal: 14, paddingBottom: 14 },
+  faqQuestion: { flex: 1, fontSize: typeFontSize.base, fontFamily: fontFamily.medium, marginRight: 8 },
+  faqAnswer: { fontSize: typeFontSize.md, fontFamily: fontFamily.regular, paddingHorizontal: 14, paddingBottom: 14 },
   /* Contact form */
   formCard: {
     borderWidth: 1,
@@ -499,14 +499,14 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
-  inputLabel: { fontSize: 13, fontFamily: fontFamily.medium, marginBottom: 6, marginTop: 12 },
+  inputLabel: { fontSize: typeFontSize.md, fontFamily: fontFamily.medium, marginBottom: 6, marginTop: 12 },
   textInput: {
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontFamily: fontFamily.regular,
-    fontSize: 14,
+    fontSize: typeFontSize.base,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   textArea: { minHeight: 110 },
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
-  submitButtonText: { fontSize: 15, fontFamily: fontFamily.semiBold, color: 'white' },
+  submitButtonText: { fontSize: typeFontSize.body, fontFamily: fontFamily.semiBold, color: 'white' },
   /* Resources */
   resourcesCard: {
     borderWidth: 1,
@@ -528,8 +528,8 @@ const styles = StyleSheet.create({
     marginTop: 24,
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
-  resourcesTitle: { fontSize: 16, fontFamily: fontFamily.semiBold, marginBottom: 4 },
-  resourcesDesc: { fontSize: 13, fontFamily: fontFamily.regular, textAlign: 'center', marginBottom: 12 },
+  resourcesTitle: { fontSize: typeFontSize.lg, fontFamily: fontFamily.semiBold, marginBottom: 4 },
+  resourcesDesc: { fontSize: typeFontSize.md, fontFamily: fontFamily.regular, textAlign: 'center', marginBottom: 12 },
   emailBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -540,5 +540,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  emailText: { fontSize: 13, fontFamily: fontFamily.medium },
+  emailText: { fontSize: typeFontSize.md, fontFamily: fontFamily.medium },
 });
