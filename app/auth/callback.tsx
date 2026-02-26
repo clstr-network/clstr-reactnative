@@ -28,6 +28,8 @@ import {
 import { isPublicEmailDomainServer } from '@/lib/adapters/college-utils';
 import type { Session } from '@supabase/supabase-js';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 // ---------------------------------------------------------------------------
 // Profile row subset fetched during callback processing
 // ---------------------------------------------------------------------------
@@ -64,6 +66,11 @@ const STATUS_TEXT: Record<StatusPhase, string> = {
 export default function AuthCallbackScreen() {
   const [phase, setPhase] = useState<StatusPhase>('extracting');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  if (AUTH_MODE === 'mock') {
+    router.replace('/');
+    return null;
+  }
 
   useEffect(() => {
     handleCallback();
@@ -176,6 +183,8 @@ export default function AuthCallbackScreen() {
   // Process authenticated user — academic validation, profile, routing
   // =========================================================================
   async function processAuthenticatedUser(session: Session) {
+    if (AUTH_MODE === 'mock') return { success: true };
+
     const user = session.user;
     const userEmail = user.email;
 
@@ -309,7 +318,9 @@ export default function AuthCallbackScreen() {
 
     // No profile or onboarding incomplete → onboarding
     setPhase('redirecting');
-    router.replace('/(auth)/onboarding');
+    if (AUTH_MODE !== 'mock') {
+      router.replace('/(auth)/onboarding');
+    }
   }
 
   // =========================================================================

@@ -12,6 +12,8 @@ import { WifiOff, AlertTriangle } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 import { useNetworkStatus } from '@/hooks/useNetwork';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 type LayoutProps = {
   children: ReactNode;
 };
@@ -185,7 +187,16 @@ const Layout = ({ children }: LayoutProps) => {
   // Wait for profile loading to complete before redirecting to onboarding.
   // OFFLINE FIX: Never redirect when offline — isOnboardingRequired already accounts
   // for error state, but we add an explicit isOnline check as a safety net.
-  if (authState === 'authenticated' && !isProfileLoading && isOnboardingRequired && isOnline && !isPublicRoute && !isOnboardingRoute && !isAuthCallbackRoute) {
+  if (
+    AUTH_MODE !== 'mock' &&
+    authState === 'authenticated' &&
+    !isProfileLoading &&
+    isOnboardingRequired &&
+    isOnline &&
+    !isPublicRoute &&
+    !isOnboardingRoute &&
+    !isAuthCallbackRoute
+  ) {
     return <Navigate to="/onboarding" replace />;
   }
 

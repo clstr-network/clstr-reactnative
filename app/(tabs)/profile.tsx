@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
 import * as Haptics from 'expo-haptics';
 import { useThemeColors, getRoleBadgeColor } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
@@ -201,7 +202,11 @@ export default function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOut();
-          router.replace('/onboarding');
+          if (AUTH_MODE === 'mock') {
+            router.replace('/');
+            return;
+          }
+          router.replace('/(auth)/login');
         },
       },
     ]);

@@ -11,6 +11,8 @@ import {
   ProfileError
 } from '@/lib/profile';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 export type { BasicUserProfile, UserProfile } from '@clstr/shared/types/profile';
 
 /**
@@ -467,7 +469,10 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // - If profile is null because the server confirmed no profile exists (error is null), redirect.
   // - If profile exists but onboarding_complete is false, redirect.
   // - Never redirect when offline or when there's a fetch error.
-  const needsOnboarding = error === null && isOnline !== false && (!profile || profile.onboarding_complete !== true);
+  const needsOnboarding =
+    AUTH_MODE === 'mock'
+      ? false
+      : error === null && isOnline !== false && (!profile || profile.onboarding_complete !== true);
 
   const contextValue = {
     profile,

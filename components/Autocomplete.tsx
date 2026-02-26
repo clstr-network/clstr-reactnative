@@ -7,7 +7,7 @@
  * Phase 2.4a: Onboarding Parity
  */
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -28,10 +28,12 @@ interface AutocompleteOption {
 interface AutocompleteProps {
   /** Available options. */
   options: AutocompleteOption[];
-  /** Currently selected value. */
+  /** Current input value. */
   value: string;
   /** Called when a value is selected. */
   onSelect: (value: string, label: string) => void;
+  /** Called when input text changes. */
+  onChangeText?: (text: string) => void;
   /** Placeholder text. */
   placeholder?: string;
   /** Max visible items in dropdown. */
@@ -52,6 +54,7 @@ export function Autocomplete({
   options,
   value,
   onSelect,
+  onChangeText,
   placeholder = 'Search...',
   maxItems = 6,
   colors,
@@ -68,23 +71,29 @@ export function Autocomplete({
       .slice(0, maxItems);
   }, [query, options, maxItems]);
 
-  const showDropdown = isFocused && filteredOptions.length > 0 && query !== value;
+  useEffect(() => {
+    setQuery(value || '');
+  }, [value]);
+
+  const showDropdown = isFocused && filteredOptions.length > 0;
 
   const handleSelect = useCallback(
     (item: AutocompleteOption) => {
       setQuery(item.label);
       onSelect(item.value, item.label);
+      onChangeText?.(item.label);
       setIsFocused(false);
       Keyboard.dismiss();
     },
-    [onSelect],
+    [onSelect, onChangeText],
   );
 
   const handleClear = useCallback(() => {
     setQuery('');
     onSelect('', '');
+    onChangeText?.('');
     inputRef.current?.focus();
-  }, [onSelect]);
+  }, [onSelect, onChangeText]);
 
   return (
     <View style={styles.container}>
@@ -109,6 +118,7 @@ export function Autocomplete({
           value={query}
           onChangeText={(text) => {
             setQuery(text);
+            onChangeText?.(text);
             if (!isFocused) setIsFocused(true);
           }}
           onFocus={() => setIsFocused(true)}
@@ -149,12 +159,12 @@ export function Autocomplete({
           <FlatList
             data={filteredOptions}
             keyExtractor={(item) => item.value}
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
             nestedScrollEnabled
             style={styles.list}
             renderItem={({ item }) => (
               <Pressable
-                onPress={() => handleSelect(item)}
+                onPressIn={() => handleSelect(item)}
                 style={({ pressed }) => [
                   styles.option,
                   { backgroundColor: pressed ? colors.border : 'transparent' },

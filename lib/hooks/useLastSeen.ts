@@ -12,6 +12,8 @@ import { AppState, type AppStateStatus } from 'react-native';
 import { useAuth } from '@/lib/auth-context';
 import { updateLastSeen } from '@/lib/api/messages';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 export function useLastSeen() {
   const { user } = useAuth();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -32,6 +34,8 @@ export function useLastSeen() {
   }, []);
 
   useEffect(() => {
+    if (AUTH_MODE === 'mock') return;
+
     if (!user?.id) return;
 
     // Start immediately

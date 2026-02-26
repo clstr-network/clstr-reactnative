@@ -38,6 +38,8 @@ import { useLastSeen } from '@/lib/hooks/useLastSeen';
 import { useDeepLinkHandler } from '@/lib/hooks/useDeepLinkHandler';
 import { AppToaster } from '@/components/Toast';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -55,18 +57,25 @@ const AUTH_PUBLIC_ROUTES = new Set([
 ]);
 
 function useProtectedRoute() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    hasCompletedOnboarding,
+  } = useAuth();
   const { needsOnboarding, isLoading: idLoading } = useIdentityContext();
   const segments = useSegments();
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
+    const inAuthGroup = segments[0] === '(auth)';
+    const authRouteName = inAuthGroup ? segments[1] : null;
+
+    if (AUTH_MODE === 'mock') return;
+
     // Wait until both auth and identity are resolved
     if (authLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const authRouteName = inAuthGroup ? segments[1] : null;
     const isPublicAuthRoute = inAuthGroup && !!authRouteName && AUTH_PUBLIC_ROUTES.has(authRouteName);
 
     if (__DEV__) {
@@ -86,14 +95,28 @@ function useProtectedRoute() {
     if (!isAuthenticated && !isPublicAuthRoute) {
       // Unauthenticated users should only stay on public auth screens.
       router.replace('/(auth)/login');
-    } else if (isAuthenticated && !idLoading && needsOnboarding && authRouteName !== 'onboarding') {
+    } else if (
+      isAuthenticated &&
+      !idLoading &&
+      (needsOnboarding || !hasCompletedOnboarding) &&
+      authRouteName !== 'onboarding'
+    ) {
       // Signed in but profile not set up → force onboarding
       router.replace('/(auth)/onboarding');
     } else if (isAuthenticated && !idLoading && !needsOnboarding && inAuthGroup) {
       // Fully set up but still on an auth screen → send to main
       router.replace('/');
     }
-  }, [isAuthenticated, authLoading, idLoading, needsOnboarding, pathname, segments, router]);
+  }, [
+    isAuthenticated,
+    hasCompletedOnboarding,
+    authLoading,
+    idLoading,
+    needsOnboarding,
+    pathname,
+    segments,
+    router,
+  ]);
 }
 
 // ---------------------------------------------------------------------------

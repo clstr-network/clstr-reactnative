@@ -31,6 +31,8 @@ import { QUERY_KEYS } from '@clstr/shared/query-keys';
 import { useProfile } from "@/contexts/ProfileContext";
 import { assertValidUuid } from "@clstr/shared/utils/uuid";
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 const Onboarding = () => {
   const [formData, setFormData] = useState({
     role: "",
@@ -138,6 +140,11 @@ const Onboarding = () => {
   }, [calculatedGraduationYear, formData.graduationYear, autoRole, isStaffRole, staffRoleLabel, formData.role]);
 
   useEffect(() => {
+    if (AUTH_MODE === 'mock') {
+      navigate('/home');
+      return;
+    }
+
     // Check for warnings from auth callback
     const authWarn = sessionStorage.getItem('authWarning');
 

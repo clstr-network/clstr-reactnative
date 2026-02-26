@@ -60,6 +60,17 @@ function isAuthCallback(url: string): boolean {
 function normalizePath(url: string): string {
   let p = url;
 
+  // Handle standard web URLs by stripping origin and keeping only
+  // pathname/search/hash as app-relative route.
+  if (/^https?:\/\//.test(p)) {
+    try {
+      const parsed = new URL(p);
+      p = `${parsed.pathname || '/'}${parsed.search || ''}${parsed.hash || ''}`;
+    } catch {
+      // Continue with fallback normalization below.
+    }
+  }
+
   // Handle Expo Go/dev-client runtime URLs.
   // Examples:
   //   exp://192.168.0.5:8081            -> /
@@ -78,6 +89,24 @@ function normalizePath(url: string): string {
   p = p.replace(/^https?:\/\/(www\.)?clstr\.network/, '');
   // Strip clstr.in prefix (magic-link redirect)
   p = p.replace(/^https?:\/\/(www\.)?clstr\.in/, '');
+
+  // Recover from malformed routes like:
+  //   /http:/localhost:8081/...
+  //   /https://localhost:8081/...
+  // which can happen if an absolute URL was pushed as a route segment.
+  let malformed = p.match(/^\/https?:\/+[^/]+(\/.*)?$/);
+  while (malformed) {
+    p = malformed[1] || '/';
+    malformed = p.match(/^\/https?:\/+[^/]+(\/.*)?$/);
+  }
+
+  // Also recover from single-slash variants: /http:/host/path
+  malformed = p.match(/^\/https?:\/[^/]+(\/.*)?$/);
+  while (malformed) {
+    p = malformed[1] || '/';
+    malformed = p.match(/^\/https?:\/[^/]+(\/.*)?$/);
+  }
+
   // Ensure leading slash
   if (p && !p.startsWith('/')) p = '/' + p;
   return p || '/';

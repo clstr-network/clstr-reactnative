@@ -19,12 +19,35 @@ import { QUERY_KEYS } from '@clstr/shared/query-keys';
 
 const IDENTITY_QUERY_KEY = QUERY_KEYS.identity.context();
 const OPS_STATS_QUERY_KEY = QUERY_KEYS.identity.inviteOpsStats();
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
 
 /**
  * Fetch the canonical identity from the server.
  * Never touches auth.users.email.
  */
 async function fetchIdentity(): Promise<IdentityContext | null> {
+  if (AUTH_MODE === 'mock') {
+    return {
+      user_id: 'mock-user-001',
+      role: 'Student',
+      college_email: 'mockuser@example.com',
+      college_domain: 'mock.dev',
+      personal_email: null,
+      source: 'student',
+      full_name: 'Mock User',
+      avatar_url: null,
+      university: 'Mock University',
+      major: 'UI Development',
+      graduation_year: null,
+      onboarding_complete: true,
+      has_profile: true,
+      is_verified: true,
+      profile_completion: 100,
+      email_transition_status: null,
+      personal_email_verified: false,
+    };
+  }
+
   const { data: session } = await supabase.auth.getSession();
   if (!session.session?.user) return null;
 
@@ -68,6 +91,8 @@ export function useIdentity() {
 
   // Invalidate identity when auth state changes (login/logout)
   useEffect(() => {
+    if (AUTH_MODE === 'mock') return;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session?.user) {
@@ -88,6 +113,8 @@ export function useIdentity() {
   // This closes the 5-minute stale window where useFeatureAccess could
   // return outdated permissions after a role change.
   useEffect(() => {
+    if (AUTH_MODE === 'mock') return;
+
     const identity = query.data;
     if (!identity) return;
 
@@ -144,11 +171,19 @@ export function useIdentity() {
     // â”€â”€ Convenience accessors â”€â”€
 
     /** Is the user authenticated and has a resolved identity? */
-    isAuthenticated: identity !== null,
+    isAuthenticated: AUTH_MODE === 'mock' ? true : identity !== null,
 
     /** Is onboarding still required? Only true when we have a definitive answer.
      *  null identity from network error should NOT trigger onboarding redirect. */
-    needsOnboarding: !query.error && (identity === null || !identity.onboarding_complete),
+    needsOnboarding:
+      AUTH_MODE === 'mock'
+        ? false
+        : !query.error && (identity === null || !identity.onboarding_complete),
+
+    hasCompletedOnboarding:
+      AUTH_MODE === 'mock'
+        ? true
+        : !!identity?.onboarding_complete,
 
     /** Canonical college domain for isolation */
     collegeDomain: identity?.college_domain ?? null,

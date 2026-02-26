@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, Pressable, StyleSheet,
+  View, Text, Pressable, StyleSheet, Button,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -27,7 +27,7 @@ function GoogleIcon({ size = 18 }: { size?: number }) {
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, setMockSession } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,6 +51,11 @@ export default function LoginScreen() {
       setIsSubmitting(false);
     }
   }
+
+  const handleMockLogin = () => {
+    setMockSession();
+    router.replace('/');
+  };
 
   return (
     <KeyboardAvoidingView
@@ -103,6 +108,13 @@ export default function LoginScreen() {
               </View>
             )}
           </Pressable>
+
+          {process.env.EXPO_PUBLIC_AUTH_MODE === 'mock' && (
+            <Button
+              title="Continue as Mock User"
+              onPress={handleMockLogin}
+            />
+          )}
 
           {/* Helper text */}
           <Text style={styles.helperText}>

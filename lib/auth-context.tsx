@@ -20,6 +20,8 @@ import { determineUserRoleFromGraduation, calculateGraduationYear } from '@clstr
 import type { Session, User } from '@supabase/supabase-js';
 import type { ProfileSignupPayload } from '@clstr/core/api/profile';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 // Required for expo-web-browser auth sessions to complete properly on web
 WebBrowser.maybeCompleteAuthSession();
 
@@ -115,6 +117,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  hasCompletedOnboarding: boolean;
 
   // Core methods
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -130,6 +133,9 @@ interface AuthContextType {
 
   // Legacy compat (settings.tsx uses `refresh`)
   refresh: () => Promise<void>;
+
+  setMockSession: () => void;
+  setHasCompletedOnboarding: (value: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -137,6 +143,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  hasCompletedOnboarding: false,
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
   signOut: async () => {},
@@ -146,6 +153,8 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => ({ error: null }),
   signup: async () => ({ error: null }),
   refresh: async () => {},
+  setMockSession: () => {},
+  setHasCompletedOnboarding: () => {},
 });
 
 // ---------------------------------------------------------------------------
@@ -155,6 +164,25 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+
+  const setMockSession = useCallback(() => {
+    const mockSession = {
+      user: {
+        id: 'mock-user-001',
+        email: 'mockuser@example.com',
+        name: 'Mock User',
+        is_onboarded: true,
+      },
+      access_token: 'mock-token-xyz',
+    };
+
+    setSession(mockSession as unknown as Session);
+    setIsAuthenticated(true);
+    setHasCompletedOnboarding(true);
+    setIsLoading(false);
+  }, []);
 
   // Android: pre-warm the custom-tab browser so it opens faster on OAuth
   useEffect(() => {
@@ -166,6 +194,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Hydrate session on mount + subscribe to auth state changes
   useEffect(() => {
+    if (AUTH_MODE === 'mock') {
+      setMockSession();
+      return;
+    }
+
     let isMounted = true;
 
     const hydrateSession = async () => {
@@ -173,11 +206,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session: hydratedSession } } = await supabase.auth.getSession();
         if (isMounted) {
           setSession(hydratedSession);
+          setIsAuthenticated(!!hydratedSession?.user);
+          setHasCompletedOnboarding(
+            Boolean((hydratedSession?.user?.user_metadata as Record<string, unknown> | undefined)?.is_onboarded),
+          );
         }
       } catch (error) {
         console.error('[AuthProvider] Failed to hydrate session:', error);
         if (isMounted) {
           setSession(null);
+          setIsAuthenticated(false);
+          setHasCompletedOnboarding(false);
         }
       } finally {
         if (isMounted) {
@@ -192,6 +231,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event: string, s: Session | null) => {
       setSession(s);
+      setIsAuthenticated(!!s?.user);
+      setHasCompletedOnboarding(
+        Boolean((s?.user?.user_metadata as Record<string, unknown> | undefined)?.is_onboarded),
+      );
       setIsLoading(false);
     });
 
@@ -199,13 +242,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [setMockSession]);
 
   // --- Deep-link fallback for OAuth redirects ---
   // Catches redirects that bypass openAuthSessionAsync on some Android versions.
   // This follows the Supabase blog pattern exactly.
   const url = Linking.useURL();
   useEffect(() => {
+    if (AUTH_MODE === 'mock') return;
+
     if (url && (url.includes('access_token') || url.includes('code='))) {
       console.log('[AuthProvider] useURL received auth redirect:', url.substring(0, 100));
       createSessionFromUrl(url).catch((e) =>
@@ -217,26 +262,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // --- Core auth methods ---
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (AUTH_MODE === 'mock') {
+      setMockSession();
+      return { error: null };
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     return { error: null };
-  }, []);
+  }, [setMockSession]);
 
   const signUp = useCallback(async (email: string, password: string) => {
+    if (AUTH_MODE === 'mock') {
+      setMockSession();
+      return { error: null };
+    }
+
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) throw new Error(error.message);
     return { error: null };
-  }, []);
+  }, [setMockSession]);
 
   const signOut = useCallback(async () => {
+    if (AUTH_MODE === 'mock') return setMockSession();
+
     // Tear down all realtime channels before signing out
     subscriptionManager.unsubscribeAll();
     // Reset deep link queue to prevent stale links from replaying
     resetDeepLinkQueue();
     await supabase.auth.signOut();
-  }, []);
+    setHasCompletedOnboarding(false);
+  }, [setMockSession]);
 
   const signInWithOtp = useCallback(async (email: string) => {
+    if (AUTH_MODE === 'mock') {
+      setMockSession();
+      return { error: null };
+    }
+
     // Use web callback URL so Supabase recognises it from the redirect allowlist.
     // The user taps the magic link on their phone → opens the app via intent filter
     // or opens clstr.in/auth/callback in browser → app's auth/callback screen picks it up.
@@ -247,7 +310,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     if (error) throw new Error(error.message);
     return { error: null };
-  }, []);
+  }, [setMockSession]);
 
   /**
    * Google OAuth.
@@ -270,6 +333,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    *         createSessionFromUrl() parses tokens → onAuthStateChange fires.
    */
   const signInWithGoogle = useCallback(async () => {
+    if (AUTH_MODE === 'mock') {
+      setMockSession();
+      return { error: null };
+    }
+
     try {
       if (Platform.OS === 'web') {
         // Web: full-page redirect — avoids popup-blocker blank screen
@@ -331,12 +399,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('[signInWithGoogle] Error:', e.message);
       throw new Error(e.message || 'Google sign-in failed');
     }
-  }, []);
+  }, [setMockSession]);
 
 
 
   const completeOnboarding = useCallback(
     async (data: OnboardingPayload) => {
+      if (AUTH_MODE === 'mock') {
+        setHasCompletedOnboarding(true);
+        return;
+      }
+
       const user = session?.user;
       if (!user) throw new Error('Not authenticated');
 
@@ -465,13 +538,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn('[completeOnboarding] Faculty profile error:', facultyError);
         }
       }
+
+      setHasCompletedOnboarding(true);
     },
     [session],
   );
 
   const refresh = useCallback(async () => {
+    if (AUTH_MODE === 'mock') return setMockSession();
+
     await supabase.auth.refreshSession();
-  }, []);
+  }, [setMockSession]);
 
   return (
     <AuthContext.Provider
@@ -479,7 +556,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         user: session?.user ?? null,
         isLoading,
-        isAuthenticated: !!session?.user,
+        isAuthenticated,
+        hasCompletedOnboarding,
         signIn,
         signUp,
         signOut,
@@ -490,6 +568,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login: signIn,
         signup: signUp,
         refresh,
+        setMockSession,
+        setHasCompletedOnboarding,
       }}
     >
       {children}

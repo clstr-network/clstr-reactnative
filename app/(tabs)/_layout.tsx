@@ -104,6 +104,8 @@ function ClassicTabLayout() {
           backgroundColor: Platform.select({
             ios: "transparent",
             android: "#000000",
+            web: "#000000",
+            default: "#000000",
           }),
           borderTopWidth: 0,
           elevation: 0,

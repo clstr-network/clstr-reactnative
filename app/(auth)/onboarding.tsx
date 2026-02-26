@@ -39,6 +39,8 @@ import {
   calculateGraduationYear,
 } from '@clstr/core/api/alumni-identification';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -63,7 +65,7 @@ const ENROLLMENT_YEARS = Array.from({ length: 61 }, (_, i) => currentYear - i);
 export default function OnboardingScreen() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { completeOnboarding, user } = useAuth();
+  const { completeOnboarding, user, setHasCompletedOnboarding } = useAuth();
   const { uploadImage, isUploading } = useFileUpload();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
 
@@ -117,7 +119,7 @@ export default function OnboardingScreen() {
     switch (step) {
       case 0: return name.trim().length >= 2;
       case 1: return true; // Avatar is optional
-      case 2: return universityLabel.length > 0;
+      case 2: return universityLabel.trim().length > 0;
       case 3: return majorLabel.length > 0;
       case 4: return !!enrollmentYear;
       case 5: return interests.length >= 1;
@@ -131,11 +133,17 @@ export default function OnboardingScreen() {
   const handleNext = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
+    if (AUTH_MODE === 'mock') {
+      setHasCompletedOnboarding(true);
+      router.replace('/');
+      return;
+    }
+
     if (step === 0 && name.trim().length < 2) {
       Alert.alert('Name Required', 'Please enter your full name');
       return;
     }
-    if (step === 2 && !universityLabel) {
+    if (step === 2 && !universityLabel.trim()) {
       Alert.alert('University Required', 'Please select your university');
       return;
     }
@@ -177,7 +185,7 @@ export default function OnboardingScreen() {
         fullName: name.trim(),
         role: autoRole,
         department: majorLabel,
-        university: universityLabel,
+        university: universityLabel.trim(),
         major: majorLabel,
         enrollmentYear,
         courseDurationYears: courseDuration,
@@ -198,7 +206,7 @@ export default function OnboardingScreen() {
   }, [
     step, name, universityLabel, majorLabel, enrollmentYear, interests,
     avatarUri, user, uploadImage, completeOnboarding, autoRole,
-    courseDuration, calculatedGradYear, socialLinks, bio,
+    courseDuration, calculatedGradYear, socialLinks, bio, setHasCompletedOnboarding,
   ]);
 
   const handleBack = useCallback(() => {
@@ -288,6 +296,14 @@ export default function OnboardingScreen() {
             <Autocomplete
               options={universityOptions}
               value={universityLabel}
+              onChangeText={(text) => {
+                setUniversityLabel(text);
+
+                const exactMatch = universityOptions.find(
+                  (opt) => opt.label.toLowerCase() === text.trim().toLowerCase(),
+                );
+                setUniversity(exactMatch?.value ?? '');
+              }}
               onSelect={(val, label) => {
                 setUniversity(val);
                 setUniversityLabel(label);

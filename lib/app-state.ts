@@ -13,6 +13,8 @@ import { supabase } from '@/lib/adapters/core-client';
 import { subscriptionManager } from '@/lib/realtime/subscription-manager';
 import { QUERY_KEYS } from '@/lib/query-keys';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 /**
  * Basic AppState lifecycle hook (original — preserved for backward compat).
  */
@@ -65,6 +67,8 @@ export function useAppStateRealtimeLifecycle() {
   const lastReconnectAt = useRef(0);
 
   const handleForeground = useCallback(async () => {
+    if (AUTH_MODE === 'mock') return;
+
     const now = Date.now();
 
     // Debounce guard

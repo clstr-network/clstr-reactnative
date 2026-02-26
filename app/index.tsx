@@ -4,8 +4,14 @@ import { Redirect } from 'expo-router';
 import { useAuth } from '@/lib/auth-context';
 import { colors } from '@/constants/colors';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 export default function Index() {
   const { isAuthenticated, isLoading, user } = useAuth();
+
+  if (AUTH_MODE === 'mock') {
+    return <Redirect href="/(tabs)" />;
+  }
 
   if (isLoading) {
     return (

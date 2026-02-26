@@ -8,6 +8,8 @@ import { useProfile } from '@/contexts/ProfileContext';
 import { WifiOff } from 'lucide-react';
 import { useNetworkStatus } from '@/hooks/useNetwork';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 type PublicLayoutProps = {
   children: ReactNode;
 };
@@ -134,6 +136,7 @@ const PublicLayout = ({ children }: PublicLayoutProps) => {
   // But only if we've finished checking profile
   // OFFLINE FIX: Never redirect when offline or on network error
   if (
+    AUTH_MODE !== 'mock' &&
     authState === 'authenticated' &&
     !isProfileLoading &&
     isOnboardingRequired &&

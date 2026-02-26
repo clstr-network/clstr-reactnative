@@ -24,6 +24,8 @@ import { supabase } from '@/lib/adapters/core-client';
 import { useAuth } from '@/lib/auth-context';
 import { enqueue as enqueueDeepLink } from '@/lib/deep-link-queue';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 // ─── Expo Go detection ───────────────────────────────────────
 
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -122,6 +124,8 @@ export function usePushNotifications() {
 
   // ── Request permission + register token ──
   const requestPermission = useCallback(async () => {
+    if (AUTH_MODE === 'mock') return;
+
     const Notifications = getNotifications();
     if (!user || !Notifications) return;
     setState((prev) => ({ ...prev, isRegistering: true, error: null }));
@@ -191,6 +195,8 @@ export function usePushNotifications() {
 
   // ── Deactivate token (call on sign-out) ──
   const deactivateToken = useCallback(async () => {
+    if (AUTH_MODE === 'mock') return;
+
     if (!tokenRef.current) return;
     try {
       await (supabase.rpc as any)('deactivate_device_token', {
@@ -205,6 +211,8 @@ export function usePushNotifications() {
 
   // ── Notification listeners ──
   useEffect(() => {
+    if (AUTH_MODE === 'mock') return;
+
     const Notifications = getNotifications();
     if (!Notifications) return;
 
@@ -249,6 +257,8 @@ export function usePushNotifications() {
 
   // ── Auto-register on login if permission was previously granted ──
   useEffect(() => {
+    if (AUTH_MODE === 'mock') return;
+
     const Notifications = getNotifications();
     if (!user || !Notifications) return;
     let cancelled = false;

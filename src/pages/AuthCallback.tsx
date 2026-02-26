@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
 import { isValidAcademicEmail, getDomainFromEmail, getCollegeDomainFromEmail, getCollegeDomainFromEmailServer } from '@/lib/validation';
 import { isPublicEmailDomain, isPublicEmailDomainServer } from '@/lib/college-utils';
 import { FOUNDER_EMAIL } from '@/lib/admin-constants';
@@ -78,6 +80,11 @@ const AuthCallback = () => {
   const [statusMessage, setStatusMessage] = useState('Completing sign in...');
 
   useEffect(() => {
+    if (AUTH_MODE === 'mock') {
+      navigate('/home', { replace: true });
+      return;
+    }
+
     /**
      * Process authenticated user - validate email, check/update profile, redirect
      */
@@ -468,7 +475,11 @@ const AuthCallback = () => {
         description: "Let's complete your profile setup.",
       });
       
-      navigate('/onboarding', { replace: true });
+      if (AUTH_MODE !== 'mock') {
+        navigate('/onboarding', { replace: true });
+      } else {
+        navigate('/home', { replace: true });
+      }
     };
 
     const handleAuthCallback = async () => {
