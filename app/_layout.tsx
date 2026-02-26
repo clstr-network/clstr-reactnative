@@ -14,7 +14,7 @@
  */
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -45,33 +45,55 @@ SplashScreen.preventAutoHideAsync();
 // Auth guard hook
 // ---------------------------------------------------------------------------
 
+const AUTH_PUBLIC_ROUTES = new Set([
+  'login',
+  'signup',
+  'forgot-password',
+  'verify-email',
+  'magic-link-sent',
+  'academic-email-required',
+]);
+
 function useProtectedRoute() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { needsOnboarding, isLoading: idLoading } = useIdentityContext();
   const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
-  const hasRedirected = useRef(false);
 
   useEffect(() => {
     // Wait until both auth and identity are resolved
     if (authLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const authRouteName = inAuthGroup ? segments[1] : null;
+    const isPublicAuthRoute = inAuthGroup && !!authRouteName && AUTH_PUBLIC_ROUTES.has(authRouteName);
 
-    if (!isAuthenticated && !inAuthGroup) {
-      // Not signed in → send to login
-      hasRedirected.current = true;
+    if (__DEV__) {
+      console.log('[auth-guard]', {
+        pathname,
+        segments,
+        authLoading,
+        idLoading,
+        isAuthenticated,
+        needsOnboarding,
+        inAuthGroup,
+        authRouteName,
+        isPublicAuthRoute,
+      });
+    }
+
+    if (!isAuthenticated && !isPublicAuthRoute) {
+      // Unauthenticated users should only stay on public auth screens.
       router.replace('/(auth)/login');
-    } else if (isAuthenticated && !idLoading && needsOnboarding && !inAuthGroup) {
-      // Signed in but profile not set up → send to onboarding
-      hasRedirected.current = true;
+    } else if (isAuthenticated && !idLoading && needsOnboarding && authRouteName !== 'onboarding') {
+      // Signed in but profile not set up → force onboarding
       router.replace('/(auth)/onboarding');
     } else if (isAuthenticated && !idLoading && !needsOnboarding && inAuthGroup) {
       // Fully set up but still on an auth screen → send to main
-      hasRedirected.current = true;
       router.replace('/');
     }
-  }, [isAuthenticated, authLoading, idLoading, needsOnboarding, segments, router]);
+  }, [isAuthenticated, authLoading, idLoading, needsOnboarding, pathname, segments, router]);
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +119,6 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false, headerBackTitle: 'Back' }}>
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(main)" />
 
       {/* Phase 5 — Detail screens pushed on top of tabs */}
       <Stack.Screen
@@ -119,10 +140,6 @@ function RootLayoutNav() {
       <Stack.Screen
         name="create-post"
         options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-      />
-      <Stack.Screen
-        name="notifications"
-        options={{ headerShown: false, animation: 'slide_from_right' }}
       />
       <Stack.Screen
         name="settings"

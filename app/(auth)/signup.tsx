@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
@@ -33,6 +33,12 @@ export default function SignupScreen() {
   const [submittingMethod, setSubmittingMethod] = useState<'google' | 'magic' | null>(null);
   const [error, setError] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('[SignupScreen] rendered');
+    }
+  }, []);
 
   const isValidEmail = email.includes('@') && email.includes('.');
 

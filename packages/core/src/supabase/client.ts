@@ -21,6 +21,8 @@ export function createSupabaseClient(
       autoRefreshToken?: boolean;
       persistSession?: boolean;
       detectSessionInUrl?: boolean;
+      /** 'implicit' for mobile (avoids PKCE bad_oauth_state), 'pkce' for web. */
+      flowType?: 'implicit' | 'pkce';
     };
   }
 ): SupabaseClient<Database> {

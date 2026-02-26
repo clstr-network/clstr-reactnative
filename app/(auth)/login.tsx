@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
@@ -30,6 +30,12 @@ export default function LoginScreen() {
   const { signInWithGoogle } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('[LoginScreen] rendered');
+    }
+  }, []);
 
   async function handleGoogleLogin() {
     if (isSubmitting) return;

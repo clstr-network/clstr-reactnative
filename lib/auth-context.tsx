@@ -8,9 +8,9 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
-import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { supabase } from './adapters/core-client';
 import { subscriptionManager } from './realtime/subscription-manager';
@@ -20,19 +20,32 @@ import { determineUserRoleFromGraduation, calculateGraduationYear } from '@clstr
 import type { Session, User } from '@supabase/supabase-js';
 import type { ProfileSignupPayload } from '@clstr/core/api/profile';
 
-// Required for expo-web-browser auth sessions to complete properly
+// Required for expo-web-browser auth sessions to complete properly on web
 WebBrowser.maybeCompleteAuthSession();
 
-// Module-scope redirect URI — explicitly uses the "clstr" scheme.
-// In a dev build this returns "clstr://"; in Expo Go it would fall back to exp:// which won't work.
-const redirectTo = makeRedirectUri({ scheme: 'clstr' });
+/**
+ * Redirect URI for OAuth callbacks.
+ *
+ * Linking.createURL() produces the correct scheme for every environment:
+ *   • Dev build  → clstr://auth/callback   (custom scheme registered in app.json)
+ *   • Expo Go    → exp://192.168.x.x:8081/--/auth/callback
+ *
+ * The path "auth/callback" is important — Supabase's redirect-URL allowlist
+ * must contain this exact URI (or a wildcard like clstr://**).
+ */
+const redirectTo = Linking.createURL('auth/callback');
 
 /**
  * Extract session tokens from a Supabase OAuth callback URL.
- * Handles both hash fragments (#access_token=…) and query params (?code=…).
+ *
+ * Supports BOTH OAuth flows:
+ *   • Implicit → URL contains #access_token=…&refresh_token=…
+ *   • PKCE     → URL contains ?code=… (exchanged server-side for tokens)
+ *
+ * expo-auth-session's getQueryParams reads both query-string and hash params.
  */
 const createSessionFromUrl = async (url: string) => {
-  console.log('[createSessionFromUrl] Processing URL:', url?.substring(0, 100));
+  console.log('[createSessionFromUrl] Processing URL:', url?.substring(0, 120));
   const { params, errorCode } = QueryParams.getQueryParams(url);
 
   if (errorCode) {
@@ -40,20 +53,30 @@ const createSessionFromUrl = async (url: string) => {
     throw new Error(errorCode);
   }
 
-  const { access_token, refresh_token } = params;
+  const { access_token, refresh_token, code } = params;
 
+  // --- PKCE flow: exchange authorisation code for session ---
+  if (code) {
+    console.log('[createSessionFromUrl] Exchanging PKCE code for session…');
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw new Error(error.message);
+    console.log('[createSessionFromUrl] PKCE session set successfully');
+    return data.session;
+  }
+
+  // --- Implicit flow: set session from tokens directly ---
   if (!access_token) {
-    console.warn('[createSessionFromUrl] No access_token found in URL params');
+    console.warn('[createSessionFromUrl] No access_token or code found in URL params');
     return;
   }
 
-  console.log('[createSessionFromUrl] Setting session from tokens...');
+  console.log('[createSessionFromUrl] Setting session from implicit tokens…');
   const { data, error } = await supabase.auth.setSession({
     access_token,
     refresh_token,
   });
   if (error) throw new Error(error.message);
-  console.log('[createSessionFromUrl] Session set successfully');
+  console.log('[createSessionFromUrl] Implicit session set successfully');
   return data.session;
 };
 
@@ -133,12 +156,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Android: pre-warm the custom-tab browser so it opens faster on OAuth
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      WebBrowser.warmUpAsync();
+      return () => { WebBrowser.coolDownAsync(); };
+    }
+  }, []);
+
   // Hydrate session on mount + subscribe to auth state changes
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }: { data: { session: Session | null } }) => {
-      setSession(s);
-      setIsLoading(false);
-    });
+    let isMounted = true;
+
+    const hydrateSession = async () => {
+      try {
+        const { data: { session: hydratedSession } } = await supabase.auth.getSession();
+        if (isMounted) {
+          setSession(hydratedSession);
+        }
+      } catch (error) {
+        console.error('[AuthProvider] Failed to hydrate session:', error);
+        if (isMounted) {
+          setSession(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    hydrateSession();
 
     const {
       data: { subscription },
@@ -147,7 +195,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // --- Deep-link fallback for OAuth redirects ---
@@ -199,38 +250,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * Google OAuth — opens a system browser via expo-web-browser.
-   * Follows the official Supabase React Native auth guide:
-   * https://supabase.com/blog/react-native-authentication
+   * Google OAuth.
+   *
+   * Web:    Uses Supabase's built-in full-page redirect (no popup).
+   *
+   * Native: Opens a system browser via expo-web-browser.
+   *         The redirect URI is built with Linking.createURL('auth/callback')
+   *         which resolves to:
+   *           • Dev build  → clstr://auth/callback
+   *           • Expo Go    → exp://IP:PORT/--/auth/callback
+   *
+   *         IMPORTANT: This exact URI must be allow-listed in Supabase →
+   *         Authentication → URL Configuration → Redirect URLs.
+   *
+   *         Flow: User taps button → browser opens Google consent screen →
+   *         Google redirects to Supabase /auth/v1/callback →
+   *         Supabase redirects to our app via the deep-link URI →
+   *         WebBrowser.openAuthSessionAsync detects the redirect and closes →
+   *         createSessionFromUrl() parses tokens → onAuthStateChange fires.
    */
   const signInWithGoogle = useCallback(async () => {
     try {
-      console.log('[signInWithGoogle] redirectTo:', redirectTo);
+      if (Platform.OS === 'web') {
+        // Web: full-page redirect — avoids popup-blocker blank screen
+        const webCallbackUrl = Linking.createURL('auth/callback');
+        console.log('[signInWithGoogle] Web redirect →', webCallbackUrl);
+
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: webCallbackUrl,
+          },
+        });
+
+        if (error) throw new Error(error.message);
+        return { error: null };
+      }
+
+      // ----- Native (iOS / Android) -----
+      console.log('[signInWithGoogle] Native redirect URI:', redirectTo);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: true,
+          skipBrowserRedirect: true, // we open the browser ourselves
         },
       });
 
       if (error) throw new Error(error.message);
-      if (!data?.url) throw new Error('No OAuth URL returned');
+      if (!data?.url) throw new Error('No OAuth URL returned from Supabase');
 
-      console.log('[signInWithGoogle] Opening OAuth URL in browser...');
+      console.log('[signInWithGoogle] Opening system browser…');
 
+      // openAuthSessionAsync opens a Custom Tab (Android) / ASWebAuthenticationSession (iOS).
+      // It watches for any redirect whose URL starts with `redirectTo` and auto-closes.
       const result = await WebBrowser.openAuthSessionAsync(
         data.url,
         redirectTo,
+        {
+          // Show the share button on iOS for easier debugging in dev
+          showInRecents: true,
+          // Android: prefer Custom Tabs (default), fall back to browser
+          createTask: false,
+        },
       );
 
-      console.log('[signInWithGoogle] Browser result type:', result.type);
+      console.log('[signInWithGoogle] Browser result:', result.type);
 
-      if (result.type === 'success') {
-        const { url } = result;
-        console.log('[signInWithGoogle] Callback URL:', url?.substring(0, 100));
-        await createSessionFromUrl(url);
+      if (result.type === 'success' && result.url) {
+        console.log('[signInWithGoogle] Callback URL:', result.url.substring(0, 120));
+        await createSessionFromUrl(result.url);
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        console.log('[signInWithGoogle] User cancelled/dismissed the browser');
+        // Not an error — user simply closed the browser
       }
 
       return { error: null };

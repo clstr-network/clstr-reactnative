@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable, Platform,
   Alert, Switch, ActivityIndicator,
@@ -9,13 +9,23 @@ import { router } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import * as Haptics from 'expo-haptics';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useThemeColors } from '@/constants/colors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { useAuth } from '@/lib/auth-context';
 import { useFeatureAccess } from '@/lib/hooks/useFeatureAccess';
 import { createEvent } from '@/lib/api/events';
 import { QUERY_KEYS } from '@/lib/query-keys';
+
+type DateTimePickerProps = {
+  value: Date;
+  mode: 'date' | 'time';
+  display?: 'default' | 'spinner' | 'inline' | 'calendar' | 'clock';
+  onChange: (_event: unknown, selected?: Date) => void;
+  minimumDate?: Date;
+  themeVariant?: 'light' | 'dark';
+};
+
+type DateTimePickerComponent = React.ComponentType<DateTimePickerProps>;
 
 // ── Category chips ──────────────────────────────────────────────────
 type CategoryValue = 'Academic' | 'Career' | 'Social' | 'Workshop' | 'Sports';
@@ -47,6 +57,21 @@ export default function CreateEventScreen() {
   const { canCreateEvents } = useFeatureAccess();
   const queryClient = useQueryClient();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
+  const [NativeDateTimePicker, setNativeDateTimePicker] = useState<DateTimePickerComponent | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      import('@react-native-community/datetimepicker')
+        .then((module) => {
+          if (module.default) {
+            setNativeDateTimePicker(() => module.default as DateTimePickerComponent);
+          }
+        })
+        .catch(() => {
+          setNativeDateTimePicker(null);
+        });
+    }
+  }, []);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -87,7 +112,7 @@ export default function CreateEventScreen() {
   }, []);
 
   // Date/time picker handlers
-  const onDateChange = useCallback((_event: DateTimePickerEvent, selected?: Date) => {
+  const onDateChange = useCallback((_event: unknown, selected?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
     if (selected) {
       setDateObj(selected);
@@ -98,7 +123,7 @@ export default function CreateEventScreen() {
     }
   }, []);
 
-  const onTimeChange = useCallback((_event: DateTimePickerEvent, selected?: Date) => {
+  const onTimeChange = useCallback((_event: unknown, selected?: Date) => {
     if (Platform.OS === 'android') setShowTimePicker(false);
     if (selected) {
       setTimeObj(selected);
@@ -235,9 +260,9 @@ export default function CreateEventScreen() {
           <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
         </Pressable>
 
-        {showDatePicker && (
+        {showDatePicker && NativeDateTimePicker && (
           <View style={[styles.pickerContainer, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-            <DateTimePicker
+            <NativeDateTimePicker
               value={dateObj}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
@@ -261,9 +286,9 @@ export default function CreateEventScreen() {
           <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
         </Pressable>
 
-        {showTimePicker && (
+        {showTimePicker && NativeDateTimePicker && (
           <View style={[styles.pickerContainer, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-            <DateTimePicker
+            <NativeDateTimePicker
               value={timeObj ?? new Date()}
               mode="time"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}

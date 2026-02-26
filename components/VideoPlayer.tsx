@@ -7,7 +7,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { View, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, radius } from '@/constants/colors';
 
@@ -19,7 +19,11 @@ interface VideoPlayerProps {
 
 function VideoPlayer({ uri, poster, isVisible = true }: VideoPlayerProps) {
   const colors = useThemeColors();
-  const videoRef = useRef<Video>(null);
+  const player = useVideoPlayer(uri, (videoPlayer) => {
+    videoPlayer.loop = false;
+    videoPlayer.muted = false;
+  });
+  const hasStartedRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasStarted, setHasStarted] = useState(false);
@@ -27,46 +31,53 @@ function VideoPlayer({ uri, poster, isVisible = true }: VideoPlayerProps) {
   // Auto-pause when scrolled out of viewport
   useEffect(() => {
     if (!isVisible && isPlaying) {
-      videoRef.current?.pauseAsync();
+      player.pause();
     }
-  }, [isVisible, isPlaying]);
+  }, [isVisible, isPlaying, player]);
 
-  const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
-    if (!status.isLoaded) return;
-    setIsPlaying(status.isPlaying);
-    setIsLoading(status.isBuffering);
-    if (status.didJustFinish) {
-      videoRef.current?.setPositionAsync(0);
+  useEffect(() => {
+    const statusSub = player.addListener('statusChange', ({ status }) => {
+      setIsLoading(status === 'loading');
+    });
+
+    const playingSub = player.addListener('playingChange', ({ isPlaying: nextPlaying }) => {
+      setIsPlaying(nextPlaying);
+      if (nextPlaying) {
+        hasStartedRef.current = true;
+      }
+    });
+
+    const endSub = player.addListener('playToEnd', () => {
+      player.currentTime = 0;
       setHasStarted(false);
-    }
-  }, []);
+      hasStartedRef.current = false;
+      setIsPlaying(false);
+    });
+
+    return () => {
+      statusSub.remove();
+      playingSub.remove();
+      endSub.remove();
+    };
+  }, [player]);
 
   const togglePlayPause = useCallback(async () => {
-    if (!videoRef.current) return;
-    const status = await videoRef.current.getStatusAsync();
-    if (!status.isLoaded) return;
-
-    if (status.isPlaying) {
-      await videoRef.current.pauseAsync();
+    if (player.playing) {
+      player.pause();
     } else {
       setHasStarted(true);
-      await videoRef.current.playAsync();
+      hasStartedRef.current = true;
+      player.play();
     }
-  }, []);
+  }, [player]);
 
   return (
     <Pressable onPress={togglePlayPause} style={[styles.container, { backgroundColor: colors.surfaceElevated }]}>
-      <Video
-        ref={videoRef}
-        source={{ uri }}
+      <VideoView
+        player={player}
         style={styles.video}
-        resizeMode={ResizeMode.CONTAIN}
-        posterSource={poster ? { uri: poster } : undefined}
-        usePoster={!!poster}
-        onPlaybackStatusUpdate={onPlaybackStatusUpdate}
-        shouldPlay={false}
-        isLooping={false}
-        isMuted={false}
+        contentFit="contain"
+        nativeControls={false}
       />
 
       {/* Play/Pause overlay */}

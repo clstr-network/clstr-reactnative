@@ -59,6 +59,19 @@ function isAuthCallback(url: string): boolean {
  */
 function normalizePath(url: string): string {
   let p = url;
+
+  // Handle Expo Go/dev-client runtime URLs.
+  // Examples:
+  //   exp://192.168.0.5:8081            -> /
+  //   exp://192.168.0.5:8081/--/post/1  -> /post/1
+  const expoPathMatch = p.match(/^exps?:\/\/[^/]+\/--(\/.*)?$/);
+  if (expoPathMatch) {
+    return expoPathMatch[1] || '/';
+  }
+  if (/^exps?:\/\/[^/]+\/?$/.test(p)) {
+    return '/';
+  }
+
   // Strip custom scheme
   p = p.replace(/^clstr:\/\//, '/');
   // Strip universal link prefix
