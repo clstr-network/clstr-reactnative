@@ -70,17 +70,17 @@ function NativeTabLayout() {
         <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
         <Label>Network</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="create">
-        <Icon sf={{ default: "plus.circle.fill", selected: "plus.circle.fill" }} />
-        <Label>Create</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="messages">
         <Icon sf={{ default: "message", selected: "message.fill" }} />
         <Label>Messages</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person.circle", selected: "person.circle.fill" }} />
-        <Label>Profile</Label>
+      <NativeTabs.Trigger name="events">
+        <Icon sf={{ default: "calendar", selected: "calendar.fill" }} />
+        <Label>Events</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="more">
+        <Icon sf={{ default: "ellipsis.circle", selected: "ellipsis.circle.fill" }} />
+        <Label>More</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -161,23 +161,6 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="create"
-        options={{
-          title: "",
-          tabBarIcon: ({ color }) => <CreateTabButton color={colors.tint} />,
-          tabBarLabel: () => null,
-          headerShown: false,
-        }}
-        listeners={{
-          tabPress: (e) => {
-            // Prevent navigating to the stub screen
-            e.preventDefault();
-            // Open create-post modal
-            router.push("/create-post");
-          },
-        }}
-      />
-      <Tabs.Screen
         name="messages"
         options={{
           title: "Messages",
@@ -191,13 +174,26 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="events"
         options={{
-          title: "Profile",
+          title: "Events",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "person-circle" : "person-circle-outline"}
-              size={24}
+              name={focused ? "calendar" : "calendar-outline"}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: "More",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "ellipsis-horizontal-circle" : "ellipsis-horizontal-circle-outline"}
+              size={22}
               color={color}
             />
           ),
@@ -206,15 +202,15 @@ function ClassicTabLayout() {
 
       {/* ── Hidden tabs (accessible via navigation, not shown in tab bar) ── */}
       <Tabs.Screen
-        name="events"
+        name="create"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="profile"
         options={{ href: null }}
       />
       <Tabs.Screen
         name="notifications"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="more"
         options={{ href: null }}
       />
     </Tabs>

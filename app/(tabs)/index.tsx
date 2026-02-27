@@ -234,125 +234,112 @@ export default function FeedScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header: hamburger + search + avatar */}
       <View
         style={[
           styles.header,
           {
-            paddingTop: insets.top + webTopInset + 12,
+            paddingTop: insets.top + webTopInset + 8,
             borderBottomColor: colors.border,
           },
         ]}
       >
-        <Text style={[styles.title, { color: colors.text }]}>Feed</Text>
-        <View style={styles.headerActions}>
-          <Pressable
-            onPress={() => router.push('/(tabs)/events')}
-            style={styles.headerIconBtn}
-            hitSlop={8}
-          >
-            <Ionicons name="calendar-outline" size={22} color={colors.text} />
-          </Pressable>
-          <Pressable
-            onPress={() => router.push('/notifications')}
-            style={styles.headerIconBtn}
-            hitSlop={8}
-          >
-            <Ionicons name="notifications-outline" size={22} color={colors.text} />
-            {unreadCount > 0 && (
-              <View style={styles.notifBadge}>
-                <Text style={styles.notifBadgeText}>
-                  {unreadCount > 99 ? '99+' : String(unreadCount)}
+        <Pressable
+          onPress={() => router.push('/(tabs)/more')}
+          style={styles.headerIconBtn}
+          hitSlop={8}
+        >
+          <Ionicons name="menu" size={24} color={colors.text} />
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/search')}
+          style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <Ionicons name="search-outline" size={16} color={colors.textTertiary} />
+          <Text style={[styles.searchPlaceholder, { color: colors.textTertiary }]}>Search...</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/(tabs)/profile')}
+          hitSlop={8}
+        >
+          {user ? (
+            <View style={styles.avatarRing}>
+              <View style={[styles.avatarCircle, { backgroundColor: colors.tint }]}>
+                <Text style={styles.avatarInitial}>
+                  {(user.user_metadata?.full_name ?? user.email ?? 'U')[0].toUpperCase()}
                 </Text>
               </View>
-            )}
-          </Pressable>
-          {canCreatePost && (
-            <Pressable
-              onPress={() => router.push('/create-post')}
-              style={[styles.composeBtn, { backgroundColor: colors.primary }]}
-              hitSlop={8}
-            >
-              <Ionicons name="create-outline" size={20} color="#fff" />
-            </Pressable>
+            </View>
+          ) : (
+            <View style={[styles.avatarCircle, { backgroundColor: colors.surface }]}>
+              <Ionicons name="person" size={18} color={colors.textTertiary} />
+            </View>
           )}
-        </View>
+        </Pressable>
       </View>
 
-      {/* Phase 6 — Quick compose prompt */}
-      {canCreatePost && (
-        <Pressable
-          onPress={() => router.push('/create-post')}
-          style={[styles.quickCompose, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
+      {/* Quick compose — matches UI design */}
+      <View style={[styles.quickComposeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={styles.quickComposeRow}>
           <View style={[styles.quickComposeAvatar, { backgroundColor: colors.surfaceElevated }]}>
             <Ionicons name="person" size={16} color={colors.textTertiary} />
           </View>
-          <Text style={[styles.quickComposePlaceholder, { color: colors.textTertiary }]}>
-            What's on your mind?
-          </Text>
-        </Pressable>
-      )}
-
-      {/* Phase 12.1 — Network Stats Row */}
-      {user && (
-        <View style={[styles.statsRow, { borderBottomColor: colors.border }]}>
           <Pressable
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/connections'); }}
-            style={[styles.statCard, { backgroundColor: colors.surface }]}
+            onPress={() => canCreatePost && router.push('/create-post')}
+            style={[styles.quickComposeInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
           >
-            <Ionicons name="people-outline" size={18} color={colors.tint} />
-            <Text style={[styles.statNum, { color: colors.text }]}>{connectionCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Connections</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
-            style={[styles.statCard, { backgroundColor: colors.surface }]}
-          >
-            <Ionicons name="eye-outline" size={18} color={colors.tint} />
-            <Text style={[styles.statNum, { color: colors.text }]}>{profileViewsCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Profile Views</Text>
-          </Pressable>
-          {roleBadge && (
-            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-              <Ionicons
-                name={isAlumni ? 'school-outline' : isClub ? 'shield-outline' : 'ribbon-outline'}
-                size={18}
-                color={colors.accent}
-              />
-              <Text style={[styles.roleBadgeText, { color: colors.accent }]}>{roleBadge}</Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Phase 6 — Sort toggle */}
-      <View style={[styles.sortRow, { borderBottomColor: colors.border }]}>
-        {(['recent', 'top'] as const).map((s) => (
-          <Pressable
-            key={s}
-            onPress={() => {
-              if (sortOrder !== s) {
-                Haptics.selectionAsync();
-                setSortOrder(s);
-              }
-            }}
-            style={[
-              styles.sortChip,
-              sortOrder === s
-                ? { backgroundColor: colors.tint }
-                : { borderColor: colors.border, borderWidth: 1 },
-            ]}
-          >
-            <Ionicons
-              name={s === 'recent' ? 'time-outline' : 'trending-up-outline'}
-              size={14}
-              color={sortOrder === s ? '#fff' : colors.textSecondary}
-            />
-            <Text style={[styles.sortChipText, { color: sortOrder === s ? '#fff' : colors.textSecondary }]}>
-              {s === 'recent' ? 'Recent' : 'Top'}
+            <Text style={[styles.quickComposePlaceholder, { color: colors.textTertiary }]} numberOfLines={1}>
+              Share something with your network...
             </Text>
           </Pressable>
-        ))}
+        </View>
+        <View style={[styles.quickComposeActions, { borderTopColor: colors.border }]}>
+          <Pressable
+            onPress={() => canCreatePost && router.push('/create-post')}
+            style={styles.quickComposeActionBtn}
+          >
+            <Ionicons name="image-outline" size={18} color={colors.textSecondary} />
+            <Text style={[styles.quickComposeActionText, { color: colors.textSecondary }]}>Photo</Text>
+          </Pressable>
+          <View style={[styles.quickComposeDivider, { backgroundColor: colors.border }]} />
+          <Pressable
+            onPress={() => canCreatePost && router.push('/create-post')}
+            style={styles.quickComposeActionBtn}
+          >
+            <Ionicons name="videocam-outline" size={18} color={colors.textSecondary} />
+            <Text style={[styles.quickComposeActionText, { color: colors.textSecondary }]}>Video</Text>
+          </Pressable>
+          <View style={[styles.quickComposeDivider, { backgroundColor: colors.border }]} />
+          <Pressable
+            onPress={() => canCreatePost && router.push('/create-post')}
+            style={styles.quickComposeActionBtn}
+          >
+            <Ionicons name="document-outline" size={18} color={colors.textSecondary} />
+            <Text style={[styles.quickComposeActionText, { color: colors.textSecondary }]}>Document</Text>
+          </Pressable>
+        </View>
+      </View>
+
+
+
+      {/* Sort by row — right-aligned dropdown style */}
+      <View style={[styles.sortRow, { borderBottomColor: colors.border }]}>
+        <View style={styles.sortRowSpacer} />
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync();
+            setSortOrder(sortOrder === 'recent' ? 'top' : 'recent');
+          }}
+          style={styles.sortDropdown}
+        >
+          <Text style={[styles.sortDropdownLabel, { color: colors.textSecondary }]}>Sort by: </Text>
+          <Text style={[styles.sortDropdownValue, { color: colors.text }]}>
+            {sortOrder === 'recent' ? 'Recent' : 'Top'}
+          </Text>
+          <Ionicons name="chevron-down" size={14} color={colors.text} />
+        </Pressable>
       </View>
 
       {/* Phase 3.2 — "New posts" banner */}
@@ -439,26 +426,129 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // ── Header ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
   },
   headerIconBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 38,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+  },
+  searchPlaceholder: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.regular,
+    flex: 1,
+  },
+  avatarRing: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: '#a855f7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: {
+    color: '#fff',
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    fontFamily: fontFamily.bold,
+  },
+  // ── Quick Compose ──
+  quickComposeCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  quickComposeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  quickComposeAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  quickComposeInput: {
+    flex: 1,
+    height: 38,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+  },
+  quickComposePlaceholder: { fontSize: fontSize.md, fontFamily: fontFamily.regular },
+  quickComposeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+  },
+  quickComposeActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  quickComposeActionText: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.regular,
+  },
+  quickComposeDivider: {
+    width: 1,
+    height: 20,
+  },
+  // ── Sort row ──
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    marginTop: 4,
+  },
+  sortRowSpacer: { flex: 1 },
+  sortDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  sortDropdownLabel: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.regular,
+  },
+  sortDropdownValue: {
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    fontFamily: fontFamily.semiBold,
+  },
+  // ── Misc ──
   notifBadge: {
     position: 'absolute',
     top: 2,
@@ -471,23 +561,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  notifBadgeText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  title: {
-    fontSize: fontSize['3xl'],
-    fontWeight: '800',
-    fontFamily: fontFamily.extraBold,
-  },
-  composeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  notifBadgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   newPostsBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -507,22 +581,6 @@ const styles = StyleSheet.create({
   listContent: { paddingTop: 8, paddingBottom: 100 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 8 },
-  emptyText: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    fontFamily: fontFamily.semiBold,
-  },
+  emptyText: { fontSize: fontSize.lg, fontWeight: '600', fontFamily: fontFamily.semiBold },
   emptySubtext: { fontSize: fontSize.base, fontFamily: fontFamily.regular },
-  quickCompose: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 24, borderWidth: 1, gap: 10 },
-  quickComposeAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  quickComposePlaceholder: { fontSize: fontSize.base, fontFamily: fontFamily.regular },
-  sortRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8, borderBottomWidth: 1 },
-  sortChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
-  sortChipText: { fontSize: fontSize.md, fontWeight: '600', fontFamily: fontFamily.semiBold },
-  // Phase 12.1 — Stats row styles
-  statsRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 10, borderBottomWidth: 1 },
-  statCard: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, gap: 2 },
-  statNum: { fontSize: fontSize.xl, fontWeight: '700', fontFamily: fontFamily.bold },
-  statLabel: { fontSize: fontSize.xs, fontFamily: fontFamily.regular },
-  roleBadgeText: { fontSize: fontSize.md, fontWeight: '700', fontFamily: fontFamily.bold, marginTop: 2 },
 });
