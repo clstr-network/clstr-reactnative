@@ -4,6 +4,11 @@
  */
 
 import { withClient } from '../adapters/bind';
+import {
+  getMockProfileByIdData,
+  getMockConnectionCountData,
+  getMockProfileViewsCountData,
+} from '@/lib/mock-social-data';
 
 // --- profile.ts (core profile operations) ---
 import {
@@ -70,6 +75,8 @@ export type {
   SkillLevel,
 } from '@clstr/core/types';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 // Re-export pure helpers & constants
 export {
   normalizeProfileRecord,
@@ -87,7 +94,12 @@ export {
 };
 
 // Bound profile core functions
-export const getProfileById = withClient(_getProfileById);
+export async function getProfileById(profileId: string) {
+  if (AUTH_MODE === 'mock') {
+    return getMockProfileByIdData(profileId) as any;
+  }
+  return withClient(_getProfileById)(profileId as any);
+}
 export const createProfileRecord = withClient(_createProfileRecord);
 export const updateProfileRecord = withClient(_updateProfileRecord);
 export const uploadProfileAvatar = withClient(_uploadProfileAvatar);
@@ -121,6 +133,17 @@ export const getPendingConnectionRequests = withClient(_getPendingConnectionRequ
 export const getSentConnectionRequests = withClient(_getSentConnectionRequests);
 export const addConnectionRequest = withClient(_addConnectionRequest);
 export const blockConnection = withClient(_blockConnection);
-export const getConnectionCount = withClient(_getConnectionCount);
-export const getProfileViewsCount = withClient(_getProfileViewsCount);
+export async function getConnectionCount(profileId: string) {
+  if (AUTH_MODE === 'mock') {
+    return getMockConnectionCountData();
+  }
+  return withClient(_getConnectionCount)(profileId as any);
+}
+
+export async function getProfileViewsCount(profileId: string) {
+  if (AUTH_MODE === 'mock') {
+    return getMockProfileViewsCountData();
+  }
+  return withClient(_getProfileViewsCount)(profileId as any);
+}
 export const trackProfileView = withClient(_trackProfileView);

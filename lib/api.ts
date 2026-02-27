@@ -1,4 +1,17 @@
 import { supabase } from '@/lib/supabase';
+import {
+  getMockPostsData,
+  getMockPostByIdData,
+  getMockConnectionsData,
+  getMockEventsData,
+  toggleMockEventRegistrationData,
+  getMockProfileData,
+  toggleMockReactionData,
+  createMockRepostData,
+  deleteMockRepostData,
+} from '@/lib/mock-social-data';
+
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
 
 /**
  * Typed query helper — bypasses strict generic Database type resolution.
@@ -190,6 +203,10 @@ async function getUserCollegeDomain(): Promise<string | null> {
 // ─── Posts / Feed ───────────────────────────────────────────
 
 export async function getPosts(params?: { page?: number; limit?: number; category?: string; sort?: string }) {
+  if (AUTH_MODE === 'mock') {
+    return (await getMockPostsData(params)) as unknown as Post[];
+  }
+
   try {
     const user = await getAuthUser();
     const collegeDomain = await getUserCollegeDomain();
@@ -262,6 +279,10 @@ export async function getPosts(params?: { page?: number; limit?: number; categor
 }
 
 export async function getPostById(postId: string) {
+  if (AUTH_MODE === 'mock') {
+    return (await getMockPostByIdData(postId)) as unknown as Post;
+  }
+
   try {
     const user = await getAuthUser();
 
@@ -331,6 +352,10 @@ export async function createPost(content: string, images?: string[]) {
 }
 
 export async function toggleReaction(postId: string, reactionType: ReactionType) {
+  if (AUTH_MODE === 'mock') {
+    return toggleMockReactionData(postId, reactionType);
+  }
+
   try {
     const user = await getAuthUser();
 
@@ -373,6 +398,10 @@ export async function toggleReaction(postId: string, reactionType: ReactionType)
 // ─── Reposts ──────────────────────────────────────────────────
 
 export async function createRepost(originalPostId: string, commentary?: string) {
+  if (AUTH_MODE === 'mock') {
+    return createMockRepostData(originalPostId);
+  }
+
   try {
     const { data, error } = await (supabase.rpc as any)('create_repost', {
       p_original_post_id: originalPostId,
@@ -398,6 +427,10 @@ export async function createRepost(originalPostId: string, commentary?: string) 
 }
 
 export async function deleteRepost(originalPostId: string) {
+  if (AUTH_MODE === 'mock') {
+    return deleteMockRepostData(originalPostId);
+  }
+
   try {
     const { data, error } = await (supabase.rpc as any)('delete_repost', {
       p_original_post_id: originalPostId,
@@ -451,6 +484,10 @@ export async function addComment(postId: string, content: string, parentId?: str
 // ─── Connections / Network ──────────────────────────────────
 
 export async function getConnections() {
+  if (AUTH_MODE === 'mock') {
+    return (await getMockConnectionsData()) as unknown as Connection[];
+  }
+
   try {
     const user = await getAuthUser();
 
@@ -725,6 +762,10 @@ export async function markMessagesAsRead(partnerId: string) {
 // ─── Events ─────────────────────────────────────────────────
 
 export async function getEvents() {
+  if (AUTH_MODE === 'mock') {
+    return (await getMockEventsData()) as unknown as Event[];
+  }
+
   try {
     const user = await getAuthUser();
     const collegeDomain = await getUserCollegeDomain();
@@ -812,6 +853,10 @@ export async function getEventById(eventId: string) {
 }
 
 export async function toggleEventRegistration(eventId: string) {
+  if (AUTH_MODE === 'mock') {
+    return toggleMockEventRegistrationData(eventId);
+  }
+
   try {
     const user = await getAuthUser();
 
@@ -845,6 +890,10 @@ export async function toggleEventRegistration(eventId: string) {
 // ─── Profile ────────────────────────────────────────────────
 
 export async function getProfile(userId?: string) {
+  if (AUTH_MODE === 'mock') {
+    return (await getMockProfileData()) as unknown as Profile;
+  }
+
   try {
     const targetId = userId ?? (await getAuthUser()).id;
 

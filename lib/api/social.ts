@@ -5,6 +5,17 @@
 
 import { withClient } from '../adapters/bind';
 import {
+  getMockConnectionsData,
+  getMockPostsByUserData,
+  getMockUserPostsCountData,
+  toggleMockSavePostData,
+  voteMockPollData,
+  checkMockConnectionStatusData,
+  sendMockConnectionRequestData,
+  removeMockConnectionData,
+  countMockMutualConnectionsData,
+} from '@/lib/mock-social-data';
+import {
   createPost as _createPost,
   getPosts as _getPosts,
   getPostById as _getPostById,
@@ -68,13 +79,26 @@ export type {
 
 export { REACTION_EMOJI_MAP, REACTION_LABELS } from '@clstr/core/api/social-api';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 // Bound API functions
 export const createPost = withClient(_createPost);
 export const getPosts = withClient(_getPosts);
 export const getPostById = withClient(_getPostById);
 export const getPostByIdPublic = withClient(_getPostByIdPublic);
-export const getPostsByUser = withClient(_getPostsByUser);
-export const getUserPostsCount = withClient(_getUserPostsCount);
+export async function getPostsByUser(userId: string, params?: { cursor?: string | null; pageSize?: number }) {
+  if (AUTH_MODE === 'mock') {
+    return getMockPostsByUserData(userId, params);
+  }
+  return withClient(_getPostsByUser)(userId, params as any);
+}
+
+export async function getUserPostsCount(userId: string) {
+  if (AUTH_MODE === 'mock') {
+    return getMockUserPostsCountData(userId);
+  }
+  return withClient(_getUserPostsCount)(userId);
+}
 export const toggleReaction = withClient(_toggleReaction);
 export const togglePostLike = withClient(_togglePostLike);
 export const getComments = withClient(_getComments);
@@ -93,8 +117,19 @@ export const saveItem = withClient(_saveItem);
 export const unsaveItem = withClient(_unsaveItem);
 export const checkIfSaved = withClient(_checkIfSaved);
 export const getSavedPosts = withClient(_getSavedPosts);
-export const toggleSavePost = withClient(_toggleSavePost);
-export const voteOnPoll = withClient(_voteOnPoll);
+export async function toggleSavePost(postId: string) {
+  if (AUTH_MODE === 'mock') {
+    return toggleMockSavePostData(postId);
+  }
+  return withClient(_toggleSavePost)(postId);
+}
+
+export async function voteOnPoll(postId: string, optionIndex: number) {
+  if (AUTH_MODE === 'mock') {
+    return voteMockPollData();
+  }
+  return withClient(_voteOnPoll)(postId, optionIndex);
+}
 export const hasUserVotedOnPoll = withClient(_hasUserVotedOnPoll);
 export const createRepost = withClient(_createRepost);
 export const deleteRepost = withClient(_deleteRepost);
@@ -103,14 +138,40 @@ export const getPostReposts = withClient(_getPostReposts);
 export const getFeedWithReposts = withClient(_getFeedWithReposts);
 export const getTopCommentsBatch = withClient(_getTopCommentsBatch);
 export const getTopComments = withClient(_getTopComments);
-export const countMutualConnections = withClient(_countMutualConnections);
+export async function countMutualConnections(viewerId: string, targetId: string) {
+  if (AUTH_MODE === 'mock') {
+    return countMockMutualConnectionsData();
+  }
+  return withClient(_countMutualConnections)(viewerId, targetId);
+}
 export const countMutualConnectionsBatch = withClient(_countMutualConnectionsBatch);
 
 // Connection management
-export const getConnections = withClient(_getConnections);
+export async function getConnections() {
+  if (AUTH_MODE === 'mock') {
+    return getMockConnectionsData();
+  }
+  return withClient(_getConnections)();
+}
 export const getConnectionRequests = withClient(_getConnectionRequests);
-export const sendConnectionRequest = withClient(_sendConnectionRequest);
+export async function sendConnectionRequest(targetUserId: string) {
+  if (AUTH_MODE === 'mock') {
+    return sendMockConnectionRequestData(targetUserId);
+  }
+  return withClient(_sendConnectionRequest)(targetUserId);
+}
 export const acceptConnectionRequest = withClient(_acceptConnectionRequest);
 export const rejectConnectionRequest = withClient(_rejectConnectionRequest);
-export const removeConnection = withClient(_removeConnection);
-export const checkConnectionStatus = withClient(_checkConnectionStatus);
+export async function removeConnection(targetUserId: string) {
+  if (AUTH_MODE === 'mock') {
+    return removeMockConnectionData(targetUserId);
+  }
+  return withClient(_removeConnection)(targetUserId);
+}
+
+export async function checkConnectionStatus(targetUserId: string) {
+  if (AUTH_MODE === 'mock') {
+    return checkMockConnectionStatusData(targetUserId);
+  }
+  return withClient(_checkConnectionStatus)(targetUserId);
+}

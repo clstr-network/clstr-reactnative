@@ -5,6 +5,15 @@
 
 import { withClient } from '../adapters/bind';
 import {
+  getMockEcoItemsData,
+  getMockEcoRequestsData,
+  getMockMyEcoItemsData,
+  createMockEcoIntentData,
+  deleteMockEcoItemData,
+  createMockEcoItemData,
+  createMockEcoRequestData,
+} from '@/lib/mock-social-data';
+import {
   fetchSharedItems as _fetchSharedItems,
   fetchRequests as _fetchRequests,
   fetchMySharedItems as _fetchMySharedItems,
@@ -34,21 +43,71 @@ export type {
   ItemRequestResponse,
 } from '@clstr/core/api/ecocampus-api';
 
+const AUTH_MODE = process.env.EXPO_PUBLIC_AUTH_MODE;
+
 // Bound API functions
-export const fetchSharedItems = withClient(_fetchSharedItems);
-export const fetchRequests = withClient(_fetchRequests);
-export const fetchMySharedItems = withClient(_fetchMySharedItems);
+export async function fetchSharedItems() {
+  if (AUTH_MODE === 'mock') {
+    return getMockEcoItemsData();
+  }
+  return withClient(_fetchSharedItems)();
+}
+
+export async function fetchRequests() {
+  if (AUTH_MODE === 'mock') {
+    return getMockEcoRequestsData();
+  }
+  return withClient(_fetchRequests)();
+}
+
+export async function fetchMySharedItems() {
+  if (AUTH_MODE === 'mock') {
+    return getMockMyEcoItemsData('mock-user-001');
+  }
+  return withClient(_fetchMySharedItems)();
+}
 export const fetchMyRequests = withClient(_fetchMyRequests);
 export const uploadSharedItemImage = withClient(_uploadSharedItemImage);
-export const createSharedItem = withClient(_createSharedItem);
-export const createItemRequest = withClient(_createItemRequest);
+export async function createSharedItem(payload: {
+  title: string;
+  description?: string;
+  category?: string;
+  share_type?: 'donate' | 'sell' | 'rent';
+}) {
+  if (AUTH_MODE === 'mock') {
+    return createMockEcoItemData(payload);
+  }
+  return withClient(_createSharedItem)(payload as any);
+}
+
+export async function createItemRequest(payload: {
+  item: string;
+  description?: string;
+  urgency?: string;
+  preference?: string;
+}) {
+  if (AUTH_MODE === 'mock') {
+    return createMockEcoRequestData(payload);
+  }
+  return withClient(_createItemRequest)(payload as any);
+}
 export const updateSharedItemStatus = withClient(_updateSharedItemStatus);
-export const deleteSharedItem = withClient(_deleteSharedItem);
+export async function deleteSharedItem(itemId: string) {
+  if (AUTH_MODE === 'mock') {
+    return deleteMockEcoItemData(itemId);
+  }
+  return withClient(_deleteSharedItem)(itemId as any);
+}
 export const deleteItemRequest = withClient(_deleteItemRequest);
 export const updateSharedItemDetails = withClient(_updateSharedItemDetails);
 export const updateItemRequest = withClient(_updateItemRequest);
 export const fetchSharedItemIntents = withClient(_fetchSharedItemIntents);
-export const createSharedItemIntent = withClient(_createSharedItemIntent);
+export async function createSharedItemIntent(itemId: string, ownerId: string, intentType: string) {
+  if (AUTH_MODE === 'mock') {
+    return createMockEcoIntentData();
+  }
+  return withClient(_createSharedItemIntent)(itemId as any, ownerId as any, intentType as any);
+}
 export const deleteSharedItemIntent = withClient(_deleteSharedItemIntent);
 export const fetchItemRequestResponses = withClient(_fetchItemRequestResponses);
 export const createItemRequestResponse = withClient(_createItemRequestResponse);
